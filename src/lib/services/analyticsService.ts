@@ -139,6 +139,7 @@ export const updateUserAnalytics = async (): Promise<void> => {
     let vunnetTilbud = 0;
     let totalRevenue = 0;
     const monthlyDataMap = new Map<string, MonthlyData>();
+    const dailyDataMap = new Map<string, DailyData>();
     const jobbypeStatsMap = new Map<string, JobbtypeStats>();
     
     // Process customers
@@ -173,6 +174,30 @@ export const updateUserAnalytics = async (): Promise<void> => {
         const monthData = monthlyDataMap.get(monthKey)!;
         monthData.antallTilbud++;
         monthData.tilbudt += tilbud.belop;
+        
+        // Daily data (for all time, but we'll limit to last 30 days when saving)
+        const dayKey = date.toISOString().split('T')[0]; // YYYY-MM-DD format
+        const dayDisplay = date.toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' });
+        
+        if (!dailyDataMap.has(dayKey)) {
+          dailyDataMap.set(dayKey, {
+            date: dayDisplay,
+            fullDate: dayKey,
+            omsatt: 0,
+            tilbudt: 0,
+            antallTilbud: 0,
+            antallVunnet: 0,
+          });
+        }
+        
+        const dayData = dailyDataMap.get(dayKey)!;
+        dayData.antallTilbud++;
+        dayData.tilbudt += tilbud.belop;
+        
+        if (tilbud.status === 'vunnet') {
+          dayData.antallVunnet++;
+          dayData.omsatt += tilbud.belop;
+        }
         
         // Jobbtype statistics
         if (!jobbypeStatsMap.has(tilbud.jobbtype)) {
@@ -222,6 +247,9 @@ export const updateUserAnalytics = async (): Promise<void> => {
       monthlyData: Array.from(monthlyDataMap.values()).sort((a, b) => {
         return (a.year * 12 + a.month.length) - (b.year * 12 + b.month.length);
       }),
+      dailyData: Array.from(dailyDataMap.values())
+        .sort((a, b) => a.fullDate.localeCompare(b.fullDate))
+        .slice(-30), // Keep only the last 30 days
       jobbypeStats: Array.from(jobbypeStatsMap.values()).sort((a, b) => b.totalVerdi - a.totalVerdi),
     };
     
@@ -254,15 +282,19 @@ export const getUserAnalytics = async (): Promise<UserAnalytics | null> => {
     
     const analytics = snapshot.val() as UserAnalytics;
     
-    // Check if analytics are older than 1 hour, if so, update them
+    const existingAnalytics = snapshot.val() as UserAnalytics;
+    
+    // Check if analytics are older than 1 hour, or don't have dailyData, if so, update them
     const oneHourAgo = Date.now() - (60 * 60 * 1000);
-    if (analytics.lastUpdated < oneHourAgo) {
+    const needsUpdate = existingAnalytics.lastUpdated < oneHourAgo || !existingAnalytics.dailyData;
+    
+    if (needsUpdate) {
       await updateUserAnalytics();
       const updatedSnapshot = await get(analyticsRef);
-      return updatedSnapshot.exists() ? updatedSnapshot.val() : analytics;
+      return updatedSnapshot.exists() ? updatedSnapshot.val() : existingAnalytics;
     }
     
-    return analytics;
+    return existingAnalytics;
   } catch (error) {
     throw handleDatabaseError(error, 'hente analyser');
   }
@@ -923,38 +955,148 @@ const calculatePercentageChange = (current: number, previous: number): number =>
 };
 
 // Get chart data for the main dashboard chart
-export const getDashboardChartData = async () => {
+export const getDashboardChartData = async (timeRange: '7d' | '30d' | '1y' | 'all' = '1y') => {
   try {
     const analytics = await getUserAnalytics();
     
-    if (!analytics || !analytics.monthlyData || analytics.monthlyData.length === 0) {
-      // Return current year months with zero data if no data exists
-      const currentYear = new Date().getFullYear();
+    if (!analytics) {
+      return generateEmptyChartData(timeRange);
+    }
+
+    switch (timeRange) {
+      case '7d':
+        return getDailyChartData(analytics, 7);
+      case '30d':
+        return getDailyChartData(analytics, 30);
+      case '1y':
+        return getMonthlyChartData(analytics, 12);
+      case 'all':
+        return getAllTimeChartData(analytics);
+      default:
+        return getMonthlyChartData(analytics, 12);
+    }
+  } catch (error) {
+    throw handleDatabaseError(error, 'hente diagram data');
+  }
+};
+
+// Helper functions for chart data
+const generateEmptyChartData = (timeRange: '7d' | '30d' | '1y' | 'all') => {
+  const now = new Date();
+  
+  switch (timeRange) {
+    case '7d':
+      return Array.from({ length: 7 }, (_, i) => {
+        const date = new Date(now.getTime() - (6 - i) * 24 * 60 * 60 * 1000);
+        return {
+          date: date.toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' }),
+          omsatt: 0,
+          tilbudt: 0
+        };
+      }).reverse();
+    case '30d':
+      return Array.from({ length: 30 }, (_, i) => {
+        const date = new Date(now.getTime() - (29 - i) * 24 * 60 * 60 * 1000);
+        return {
+          date: date.toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' }),
+          omsatt: 0,
+          tilbudt: 0
+        };
+      }).reverse();
+    case '1y':
       const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Des'];
       return months.map(month => ({
         date: month,
         omsatt: 0,
         tilbudt: 0
-      }));
-    }
+      })).reverse();
+    case 'all':
+      // For 'all' time, return empty array - will be handled by getAllTimeChartData
+      return [];
+    default:
+      return [];
+  }
+};
 
-    // Sort by year and month, take last 12 months
-    const sortedData = analytics.monthlyData
-      .sort((a, b) => {
-        if (a.year !== b.year) return a.year - b.year;
-        const monthOrder = ['jan', 'feb', 'mar', 'apr', 'mai', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'des'];
-        return monthOrder.indexOf(a.month.toLowerCase()) - monthOrder.indexOf(b.month.toLowerCase());
-      })
-      .slice(-12); // Take last 12 months
+const getDailyChartData = (analytics: UserAnalytics, days: number) => {
+  if (!analytics.dailyData || analytics.dailyData.length === 0) {
+    return generateEmptyChartData(days === 7 ? '7d' : '30d').reverse();
+  }
 
-    return sortedData.map(data => ({
-      date: data.month,
+  // Get the most recent N days of available daily data
+  const sortedDailyData = analytics.dailyData
+    .sort((a, b) => b.fullDate.localeCompare(a.fullDate)) // Most recent first
+    .slice(0, days) // Take the most recent N days
+    .reverse(); // Put back in chronological order
+
+  // If we have enough data, use it
+  if (sortedDailyData.length === days) {
+    return sortedDailyData.map(data => ({
+      date: data.date,
       omsatt: data.omsatt,
       tilbudt: data.tilbudt
-    }));
-  } catch (error) {
-    throw handleDatabaseError(error, 'hente diagram data');
+    })).reverse(); // Reverse to show newest first
   }
+
+  // If we don't have enough data, pad with the available data
+  const result = sortedDailyData.map(data => ({
+    date: data.date,
+    omsatt: data.omsatt,
+    tilbudt: data.tilbudt
+  }));
+
+  // Pad with empty data if needed
+  while (result.length < days) {
+    const lastDate = result.length > 0 ? new Date(result[result.length - 1].date + ' 2025') : new Date();
+    const nextDate = new Date(lastDate.getTime() + 24 * 60 * 60 * 1000);
+    result.push({
+      date: nextDate.toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' }),
+      omsatt: 0,
+      tilbudt: 0
+    });
+  }
+
+  return result.reverse(); // Reverse to show newest first
+};
+
+const getMonthlyChartData = (analytics: UserAnalytics, months: number) => {
+  if (!analytics.monthlyData || analytics.monthlyData.length === 0) {
+    return generateEmptyChartData('1y');
+  }
+
+  // Sort by year and month, take last N months
+  const sortedData = analytics.monthlyData
+    .sort((a, b) => {
+      if (a.year !== b.year) return a.year - b.year;
+      const monthOrder = ['jan', 'feb', 'mar', 'apr', 'mai', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'des'];
+      return monthOrder.indexOf(a.month.toLowerCase()) - monthOrder.indexOf(b.month.toLowerCase());
+    })
+    .slice(-months);
+
+  return sortedData.map(data => ({
+    date: data.month,
+    omsatt: data.omsatt,
+    tilbudt: data.tilbudt
+  })).reverse(); // Reverse to show newest first
+};
+
+const getAllTimeChartData = (analytics: UserAnalytics) => {
+  if (!analytics.monthlyData || analytics.monthlyData.length === 0) {
+    return generateEmptyChartData('1y');
+  }
+
+  // Return all monthly data
+  return analytics.monthlyData
+    .sort((a, b) => {
+      if (a.year !== b.year) return a.year - b.year;
+      const monthOrder = ['jan', 'feb', 'mar', 'apr', 'mai', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'des'];
+      return monthOrder.indexOf(a.month.toLowerCase()) - monthOrder.indexOf(b.month.toLowerCase());
+    })
+    .map(data => ({
+      date: `${data.month} ${data.year}`,
+      omsatt: data.omsatt,
+      tilbudt: data.tilbudt
+    })).reverse(); // Reverse to show newest first
 };
 
 // Get recent activity feed from actual data

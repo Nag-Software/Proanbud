@@ -13,6 +13,7 @@ import {
 } from 'recharts';
 import { getDashboardChartData } from '@/lib/services/analyticsService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/shared/Card';
+import { Button } from '@/components/ui/button';
 
 interface CustomTooltipProps {
   active?: boolean;
@@ -46,11 +47,12 @@ interface ChartDataPoint {
 export const MainChart = () => {
   const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
   const [loading, setLoading] = useState(true);
+  const [timeRange, setTimeRange] = useState<'7d' | '30d' | '1y' | 'all'>('1y');
 
   useEffect(() => {
     const loadChartData = async () => {
       try {
-        const data = await getDashboardChartData();
+        const data = await getDashboardChartData(timeRange);
         setChartData(data);
       } catch (error) {
         console.error('Failed to load chart data:', error);
@@ -62,7 +64,7 @@ export const MainChart = () => {
     };
 
     loadChartData();
-  }, []);
+  }, [timeRange]);
 
   if (loading) {
     return (
@@ -82,7 +84,39 @@ export const MainChart = () => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Omsetning vs. Tilbudt Verdi</CardTitle>
+        <div className="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+          <CardTitle>Omsetning vs. Tilbudt Verdi</CardTitle>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant={timeRange === '7d' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setTimeRange('7d')}
+            >
+              7 dager
+            </Button>
+            <Button
+              variant={timeRange === '30d' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setTimeRange('30d')}
+            >
+              30 dager
+            </Button>
+            <Button
+              variant={timeRange === '1y' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setTimeRange('1y')}
+            >
+              1 år
+            </Button>
+            <Button
+              variant={timeRange === 'all' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setTimeRange('all')}
+            >
+              Fra start
+            </Button>
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
         <div style={{ width: '100%', height: 350 }}>
