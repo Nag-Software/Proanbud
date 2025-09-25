@@ -1,6 +1,7 @@
 
 'use client';
 
+
 import React, { useState, useEffect } from 'react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/shared/Card';
@@ -15,16 +16,11 @@ import {
 } from '@/lib/services/businessService';
 
 const INDUSTRIES = [
-  'Bygg og anlegg',
-  'IT og teknologi',
-  'Rådgivning',
-  'Handel',
-  'Transport og logistikk',
-  'Helse og omsorg',
-  'Utdanning',
-  'Finans og forsikring',
-  'Eiendom',
-  'Annet'
+    "Tømrer",
+    "Anlegg",
+    "Rørlegger",
+    "Elektriker",
+    "Maler",
 ];
 
 const BUSINESS_TYPES = [
@@ -99,7 +95,14 @@ export default function BedriftPage() {
         settings = await initializeBusinessSettings({});
       }
       
-      setBusinessSettings(settings);
+      // Ensure arrays are properly initialized
+      const settingsWithDefaults = {
+        ...settings,
+        serviceAreas: settings.serviceAreas || [],
+        specializations: settings.specializations || []
+      };
+      
+      setBusinessSettings(settingsWithDefaults);
       
       if (settings.logoUrl) {
         setLogoPreview(settings.logoUrl);
@@ -445,7 +448,7 @@ export default function BedriftPage() {
                 </label>
                 <input
                   type="text"
-                  value={businessSettings.serviceAreas.join(', ')}
+                  value={(businessSettings.serviceAreas || []).join(', ')}
                   onChange={(e) => handleArrayInputChange('serviceAreas', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                   placeholder="Oslo, Bergen, Trondheim"
@@ -459,7 +462,7 @@ export default function BedriftPage() {
                 </label>
                 <input
                   type="text"
-                  value={businessSettings.specializations.join(', ')}
+                  value={(businessSettings.specializations || []).join(', ')}
                   onChange={(e) => handleArrayInputChange('specializations', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                   placeholder="Webutvikling, App-utvikling, Rådgivning"
