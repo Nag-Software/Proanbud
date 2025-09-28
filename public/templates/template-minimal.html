@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="no">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Proanbud Tilbud - Minimal</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        margin: 0;
+        padding: 20px;
+        background: #ffffff;
+        color: #1a1a1a;
+        line-height: 1.5;
+      }
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
+        background: white;
+        padding: 40px;
+      }
+      .business-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; padding-bottom: 20px; border-bottom: 1px solid #e5e5e5; }
+      .business-info { text-align: right; }
+      .business-name { font-size: 1.4rem; font-weight: 600; color: #1a1a1a; margin: 0; }
+      .business-details { font-size: 0.85rem; color: #666; margin: 2px 0 0 0; }
+      .business-logo { max-width: 100px; max-height: 50px; }
+      .header {
+        text-align: center;
+        margin-bottom: 40px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid #e5e5e5;
+      }
+      .header h1 {
+        color: #1a1a1a;
+        margin: 0 0 8px 0;
+        font-size: 2rem;
+        font-weight: 600;
+      }
+      .header p {
+        color: #666;
+        font-size: 1rem;
+        margin: 0;
+      }
+      .section {
+        margin-bottom: 32px;
+      }
+      .section h2 {
+        color: #1a1a1a;
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin: 0 0 12px 0;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .info-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-bottom: 24px;
+      }
+      .info-item {
+        font-size: 0.9rem;
+      }
+      .info-item .label {
+        color: #666;
+        font-weight: 500;
+      }
+      .info-item .value {
+        color: #1a1a1a;
+        margin-top: 2px;
+      }
+      .divider {
+        height: 1px;
+        background: #e5e5e5;
+        margin: 24px 0;
+      }
+      .customer-info, .project-info {
+        background: #f8f9fa;
+        padding: 16px;
+        border-radius: 4px;
+      }
+      .customer-info .name {
+        font-weight: 600;
+        color: #1a1a1a;
+        font-size: 1.1rem;
+        margin: 0 0 8px 0;
+      }
+      .customer-info .contact {
+        font-size: 0.9rem;
+        color: #666;
+        margin: 2px 0;
+      }
+      .project-info .title {
+        font-weight: 600;
+        color: #1a1a1a;
+        margin: 0 0 4px 0;
+      }
+      .project-info .detail {
+        color: #666;
+        margin: 2px 0;
+        font-size: 0.9rem;
+      }
+      .price-section {
+        background: #1a1a1a;
+        color: white;
+        padding: 24px;
+        text-align: center;
+        border-radius: 4px;
+      }
+      .price-section .label {
+        font-size: 0.9rem;
+        margin-bottom: 8px;
+        opacity: 0.8;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .price-section .amount {
+        font-size: 2.5rem;
+        font-weight: 600;
+        margin: 0;
+      }
+      .price-section .vat {
+        font-size: 0.8rem;
+        margin-top: 8px;
+        opacity: 0.7;
+      }
+      .terms {
+        font-size: 0.85rem;
+        color: #666;
+        line-height: 1.4;
+      }
+      .terms .term {
+        margin: 0 0 8px 0;
+      }
+      .footer {
+        text-align: center;
+        color: #999;
+        font-size: 0.8rem;
+        border-top: 1px solid #e5e5e5;
+        padding-top: 24px;
+        margin-top: 32px;
+      }
+      .footer p {
+        margin: 0 0 4px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="business-header">
+        <div class="business-logo">
+          <img src="{{business.logoUrl}}" alt="{{business.name}} logo" style="max-width: 100px; max-height: 50px;" onerror="this.style.display='none'" />
+        </div>
+        <div class="business-info">
+          <h2 class="business-name">{{business.name}}</h2>
+          <p class="business-details">Org.nr: {{business.orgnr}}</p>
+          <p class="business-details">{{business.address}}, {{business.postalCode}} {{business.city}}</p>
+          <p class="business-details">{{business.phone}}</p>
+          <p class="business-details">{{business.email}}</p>
+        </div>
+      </div>
+
+      <div class="header">
+        <h1>Tilbud</h1>
+        <p>{{quote.prosjekt}}</p>
+      </div>
+
+      <div class="section">
+        <h2>Detaljer</h2>
+        <div class="info-grid">
+          <div class="info-item">
+            <div class="label">Tilbudsnummer</div>
+            <div class="value">TB-{{quote.id}}</div>
+          </div>
+          <div class="info-item">
+            <div class="label">Dato</div>
+            <div class="value">{{quote.dato}}</div>
+          </div>
+          <div class="info-item">
+            <div class="label">Svarfrist</div>
+            <div class="value">{{quote.svarfrist}}</div>
+          </div>
+          <div class="info-item">
+            <div class="label">Status</div>
+            <div class="value">{{quote.status}}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="section">
+        <h2>Kunde</h2>
+        <div class="customer-info">
+          <p class="name">{{quote.kundenavn}}</p>
+          <p class="contact">{{customer.epost}}</p>
+          <p class="contact">{{customer.telefon}}</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Prosjekt</h2>
+        <div class="project-info">
+          <p class="title">{{quote.prosjekt}}</p>
+          <p class="detail">{{quote.jobbtype}}</p>
+          {{#quote.beskrivelse}}
+          <div style="margin-top: 12px; padding: 12px; background: #f9fafb; border-radius: 4px; border-left: 3px solid #666;">
+            <h4 style="margin: 0 0 6px 0; color: #1a1a1a; font-size: 0.85rem; font-weight: 600;">Melding fra oss:</h4>
+            <p style="margin: 0; color: #666; line-height: 1.4; font-size: 0.85rem;">{{quote.beskrivelse}}</p>
+          </div>
+          {{/quote.beskrivelse}}
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Pris</h2>
+        <div class="price-breakdown">
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+            <thead>
+              <tr style="border-bottom: 1px solid #e5e5e5;">
+                <th style="padding: 8px; text-align: left; font-weight: 600; color: #1a1a1a;">Beskrivelse</th>
+                <th style="padding: 8px; text-align: center; font-weight: 600; color: #1a1a1a;">Antall</th>
+                <th style="padding: 8px; text-align: center; font-weight: 600; color: #1a1a1a;">Enhetspris</th>
+                <th style="padding: 8px; text-align: right; font-weight: 600; color: #1a1a1a;">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{quote.prisgrunnlag}}
+            </tbody>
+            <tfoot>
+              <tr style="border-top: 1px solid #e5e5e5;">
+                <td colspan="3" style="padding: 12px; text-align: right; font-weight: 600; color: #1a1a1a;">Totalbeløp:</td>
+                <td style="padding: 12px; text-align: right; font-weight: 600; font-size: 1.1rem; color: #1a1a1a;">{{quote.belop}}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        <div class="price-section">
+          <p class="vat">Alle priser er inkl. mva</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Vilkår</h2>
+        <div class="terms">
+          <p class="term">• Gyldig til {{quote.svarfrist}}</p>
+          <p class="term">• Inkluderer materialer og arbeid</p>
+          <p class="term">• Betaling etter fullført arbeid</p>
+          <p class="term">• Endringer kan påvirke prisen</p>
+        </div>
+      </div>
+
+      <div class="footer">
+        <p><strong>{{business.name}}</strong></p>
+        <p>{{business.address}}, {{business.postalCode}} {{business.city}}</p>
+        <p>{{business.phone}} | {{business.email}}</p>
+        <p>Org.nr: {{business.orgnr}}</p>
+        <p>Takk for din interesse</p>
+        <p>Kontakt oss ved spørsmål</p>
+      </div>
+    </div>
+  </body>
+</html>

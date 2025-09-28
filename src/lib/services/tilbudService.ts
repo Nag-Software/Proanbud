@@ -15,8 +15,47 @@ import {
 } from 'firebase/database';
 import { db, testFirebaseConnection } from '@/lib/firebase';
 import { auth } from '@/lib/firebase';
-import { Tilbud } from '@/lib/types';
+import { Tilbud, PriceComponent } from '@/lib/types';
 import { updateCustomerQuoteStats, getCustomers } from './customerService';
+import { updateUserAnalytics } from './analyticsService';
+
+// Get unique categories from all user's quotes
+export const getUniqueCategoriesFromQuotes = async (): Promise<string[]> => {
+  try {
+    await ensureConnection();
+    const userId = getCurrentUserId();
+    
+    const tilbudRef = ref(db, getUserPath(userId, 'tilbud'));
+    const snapshot = await get(tilbudRef);
+    
+    if (!snapshot.exists()) {
+      return [];
+    }
+    
+    const categorySet = new Set<string>();
+    
+    // Add default categories
+    const defaultCategories = ['materialer', 'arbeid', 'transport', 'utstyr', 'margin', 'annet'];
+    defaultCategories.forEach(cat => categorySet.add(cat));
+    
+    // Extract categories from all quotes
+    const tilbudData = snapshot.val() as Record<string, any>;
+    Object.values(tilbudData).forEach((tilbud: any) => {
+      if (tilbud.prisgrunnlag) {
+        tilbud.prisgrunnlag.forEach((component: any) => {
+          if (component.category && !defaultCategories.includes(component.category)) {
+            categorySet.add(component.category);
+          }
+        });
+      }
+    });
+    
+    return Array.from(categorySet).sort();
+  } catch (error) {
+    console.warn('Could not load categories from quotes:', error);
+    return ['materialer', 'arbeid', 'transport', 'utstyr', 'margin', 'annet'];
+  }
+};
 
 export interface TilbudFormData {
   kundenavn: string;
@@ -28,6 +67,8 @@ export interface TilbudFormData {
   svarfrist: string;
   beskrivelse?: string;
   notater?: string;
+  prisgrunnlag?: PriceComponent[];
+  template?: string;
 }
 
 export interface RealtimeTilbud extends Omit<Tilbud, 'id'> {
@@ -80,6 +121,7 @@ const convertRealtimeTilbud = (key: string, data: RealtimeTilbud): Tilbud => {
     status: data.status,
     dato: data.dato,
     svarfrist: data.svarfrist,
+    prisgrunnlag: (data as any).prisgrunnlag,
   };
 };
 
@@ -94,12 +136,13 @@ const convertSingleRealtimeTilbud = (snapshot: DataSnapshot): Tilbud => {
   return {
     id: snapshot.key!,
     kundenavn: data.kundenavn,
-    prosjekt: data.prosjekt,
+    prosjekt: data.jobbtype,
     jobbtype: data.jobbtype,
     belop: data.belop,
     status: data.status,
     dato: data.dato,
     svarfrist: data.svarfrist,
+    prisgrunnlag: (data as any).prisgrunnlag,
   };
 };
 
@@ -189,6 +232,12 @@ export const createTilbud = async (tilbudData: TilbudFormData): Promise<string> 
     if (tilbudData.notater?.trim()) {
       (newTilbud as any).notater = tilbudData.notater.trim();
     }
+    if (tilbudData.prisgrunnlag) {
+      (newTilbud as any).prisgrunnlag = tilbudData.prisgrunnlag;
+    }
+    if (tilbudData.template) {
+      (newTilbud as any).template = tilbudData.template;
+    }
 
     // Add to user's Realtime Database path
     const tilbudRef = ref(db, getUserPath(userId, 'tilbud'));
@@ -203,6 +252,13 @@ export const createTilbud = async (tilbudData: TilbudFormData): Promise<string> 
       }
     } catch (error) {
       console.warn('Could not update customer quote stats:', error);
+    }
+
+    // Update analytics
+    try {
+      await updateUserAnalytics();
+    } catch (error) {
+      console.warn('Could not update user analytics:', error);
     }
 
     return newTilbudRef.key!;
@@ -230,9 +286,13 @@ export const getTilbud = async (): Promise<Tilbud[]> => {
     const tilbud: Tilbud[] = [];
     const tilbudData = snapshot.val() as Record<string, RealtimeTilbud>;
     
-    // Convert to array and sort by creation date (descending)
+    // Convert to array and sort by last modified date (descending)
     Object.entries(tilbudData)
-      .sort(([, a], [, b]) => b.opprettet - a.opprettet)
+      .sort(([, a], [, b]) => {
+        const aDate = a.oppdatert || a.opprettet;
+        const bDate = b.oppdatert || b.opprettet;
+        return bDate - aDate;
+      })
       .forEach(([key, data]) => {
         try {
           tilbud.push(convertRealtimeTilbud(key, data));
@@ -265,9 +325,13 @@ export const getTilbudPaginated = async (limitCount: number = 50): Promise<Tilbu
     const tilbud: Tilbud[] = [];
     const tilbudData = snapshot.val() as Record<string, RealtimeTilbud>;
     
-    // Convert to array and sort by creation date (descending), then limit results
+    // Convert to array and sort by last modified date (descending), then limit results
     Object.entries(tilbudData)
-      .sort(([, a], [, b]) => b.opprettet - a.opprettet)
+      .sort(([, a], [, b]) => {
+        const aDate = a.oppdatert || a.opprettet;
+        const bDate = b.oppdatert || b.opprettet;
+        return bDate - aDate;
+      })
       .slice(0, limitCount) // Apply limit after sorting
       .forEach(([key, data]) => {
         try {
@@ -278,6 +342,28 @@ export const getTilbudPaginated = async (limitCount: number = 50): Promise<Tilbu
       });
     
     return tilbud;
+  } catch (error) {
+    throw handleDatabaseError(error, 'hente tilbud');
+  }
+};
+
+// Get a single tilbud by ID
+export const getTilbudById = async (tilbudId: string): Promise<Tilbud | null> => {
+  try {
+    // Test connection first
+    await ensureConnection();
+
+    // Get current user ID
+    const userId = getCurrentUserId();
+
+    const tilbudRef = ref(db, `${getUserPath(userId, 'tilbud')}/${tilbudId}`);
+    const snapshot = await get(tilbudRef);
+
+    if (!snapshot.exists()) {
+      return null;
+    }
+
+    return convertSingleRealtimeTilbud(snapshot);
   } catch (error) {
     throw handleDatabaseError(error, 'hente tilbud');
   }
@@ -347,6 +433,8 @@ export const updateTilbud = async (tilbudId: string, updates: Partial<TilbudForm
     if (updates.svarfrist !== undefined) updateData.svarfrist = updates.svarfrist;
     if (updates.beskrivelse !== undefined) updateData.beskrivelse = updates.beskrivelse?.trim() || null;
     if (updates.notater !== undefined) updateData.notater = updates.notater?.trim() || null;
+    if (updates.prisgrunnlag !== undefined) updateData.prisgrunnlag = updates.prisgrunnlag;
+    if (updates.template !== undefined) updateData.template = updates.template;
 
     // Get current data to check status change and update stats accordingly
     let shouldUpdateStats = false;
@@ -397,6 +485,13 @@ export const updateTilbud = async (tilbudId: string, updates: Partial<TilbudForm
         console.warn('Could not update customer quote stats:', error);
       }
     }
+
+    // Update analytics
+    try {
+      await updateUserAnalytics();
+    } catch (error) {
+      console.warn('Could not update user analytics:', error);
+    }
   } catch (error) {
     throw handleDatabaseError(error, 'oppdatere tilbud');
   }
@@ -442,6 +537,13 @@ export const deleteTilbud = async (tilbudId: string): Promise<void> => {
         console.warn('Could not update customer quote stats after deletion:', error);
       }
     }
+
+    // Update analytics
+    try {
+      await updateUserAnalytics();
+    } catch (error) {
+      console.warn('Could not update user analytics:', error);
+    }
   } catch (error) {
     throw handleDatabaseError(error, 'slette tilbud');
   }
@@ -465,18 +567,21 @@ export const getTilbudByStatus = async (status: 'venter' | 'vunnet' | 'tapt'): P
     const tilbud: Tilbud[] = [];
     const tilbudData = snapshot.val() as Record<string, RealtimeTilbud>;
     
-    Object.entries(tilbudData).forEach(([key, data]) => {
-      try {
-        if (data.status === status) {
+    // Filter by status and sort by last modified date (descending)
+    Object.entries(tilbudData)
+      .filter(([, data]) => data.status === status)
+      .sort(([, a], [, b]) => {
+        const aDate = a.oppdatert || a.opprettet;
+        const bDate = b.oppdatert || b.opprettet;
+        return bDate - aDate;
+      })
+      .forEach(([key, data]) => {
+        try {
           tilbud.push(convertRealtimeTilbud(key, data));
+        } catch (error) {
+          console.warn('Skipping invalid tilbud data:', key, error);
         }
-      } catch (error) {
-        console.warn('Skipping invalid tilbud data:', key, error);
-      }
-    });
-    
-    // Sort by creation date (descending)
-    tilbud.sort((a, b) => new Date(b.dato).getTime() - new Date(a.dato).getTime());
+      });
     
     return tilbud;
   } catch (error) {

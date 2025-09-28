@@ -48,8 +48,6 @@ export const resetPassword = async (email: string) => {
     return { error: error.message };
   }
 };
-
-// Helper function to get error messages in a user-friendly format
 export const getAuthErrorMessage = (errorCode: string): string => {
   switch (errorCode) {
     case 'auth/user-not-found':
@@ -64,6 +62,18 @@ export const getAuthErrorMessage = (errorCode: string): string => {
       return 'Invalid email address';
     case 'auth/too-many-requests':
       return 'Too many failed attempts. Please try again later';
+    case 'auth/invalid-phone-number':
+      return 'Invalid phone number format';
+    case 'auth/missing-phone-number':
+      return 'Phone number is required';
+    case 'auth/too-many-requests':
+      return 'Too many requests. Please try again later';
+    case 'auth/invalid-verification-code':
+      return 'Invalid verification code';
+    case 'auth/code-expired':
+      return 'Verification code has expired';
+    case 'auth/missing-verification-code':
+      return 'Verification code is required';
     default:
       return 'An error occurred. Please try again';
   }

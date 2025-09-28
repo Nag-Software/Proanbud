@@ -3,6 +3,10 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/shared/Card';
 import * as Icons from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { storage, db } from '@/lib/firebase';
+import { ref as storageRef, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { ref as dbRef, set } from 'firebase/database';
 
 export const BusinessSettings = () => {
   const [businessSettings, setBusinessSettings] = useState({
@@ -36,8 +40,57 @@ export const BusinessSettings = () => {
   };
 
   const handleSave = () => {
-    // TODO: Implement save functionality
-    console.log('Saving business settings:', businessSettings);
+    // Save other business settings here (not implemented)
+    console.log('Saving business settings (local):', businessSettings);
+
+    // If a logo file is selected, upload it to Firebase Storage and save URL to Realtime DB
+    if (businessSettings.logo && user?.uid) {
+      uploadLogoAndSaveUrl(businessSettings.logo, user.uid);
+    }
+  };
+
+  const { user } = useAuth();
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (!businessSettings.logo) {
+      setPreviewUrl(null);
+      return;
+    }
+
+    const url = URL.createObjectURL(businessSettings.logo);
+    setPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [businessSettings.logo]);
+
+  const uploadLogoAndSaveUrl = async (file: File, uid: string) => {
+    try {
+      const path = `users/${uid}/business/logo_${Date.now()}_${file.name}`;
+      const sRef = storageRef(storage, path);
+      const uploadTask = uploadBytesResumable(sRef, file);
+
+      uploadTask.on('state_changed', (snapshot) => {
+        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        setUploadProgress(Math.round(progress));
+      });
+
+      await uploadTask;
+      const downloadUrl = await getDownloadURL(sRef);
+
+      // Save URL under UID/businessSettings in Realtime Database
+      await set(dbRef(db, `${uid}/businessSettings`), {
+        imageUrl: downloadUrl,
+        updatedAt: Date.now()
+      });
+
+      setUploadProgress(null);
+      // Optionally update local state to reflect saved URL
+      console.log('Logo uploaded and URL saved:', downloadUrl);
+    } catch (err) {
+      console.error('Failed to upload logo and save URL:', err);
+      setUploadProgress(null);
+    }
   };
 
   return (

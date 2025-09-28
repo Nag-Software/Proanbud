@@ -15,6 +15,18 @@ const firebaseConfig = {
   measurementId: "G-B35G6SB47M"
 };
 
+// NOTE: CRITICAL - Phone authentication setup required:
+// 1. Go to Firebase Console: https://console.firebase.google.com/
+// 2. Select project: proanbudas
+// 3. Go to Authentication → Sign-in method
+// 4. Find "Phone" in the provider list
+// 5. Click "Enable" and save
+// 6. Add authorized domains (including localhost for development)
+// 7. For production: Add your domain and configure reCAPTCHA settings
+//
+// Without this setup, you'll get: "auth/operation-not-allowed"
+// The current setup uses automatic reCAPTCHA verification
+
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 

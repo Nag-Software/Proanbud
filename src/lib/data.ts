@@ -2,6 +2,7 @@ import {
   KpiData, 
   ChartDataPoint, 
   ActivityItem, 
+  InboxMessage,
   Tilbud, 
   Kunde,
   JobbtypeAnalyse, 
@@ -91,6 +92,100 @@ export const activityFeed: ActivityItem[] = [
     description: 'Oppbevaring - Loft og kjeller',
     timestamp: '2 dager siden',
     amount: 125000
+  }
+];
+
+export const inboxMessages: InboxMessage[] = [
+  {
+    id: 'M001',
+    from: 'Olsen Familie',
+    subject: 'Tilbud sendt - Kjøkkenrenovering',
+    message: 'Vi har sendt deg et tilbud på kjøkkenrenovering. Du kan se detaljene ved å klikke på lenken i e-posten.',
+    timestamp: '2024-12-20 14:30',
+    isRead: false,
+    quoteId: 'T001',
+    customerId: 'K001',
+    type: 'quote_sent',
+    customerName: 'Olsen Familie',
+    quoteTitle: 'Kjøkkenrenovering'
+  },
+  {
+    id: 'M002',
+    from: 'Hansen Bygg AS',
+    subject: 'Tilbud åpnet - Baderomsprosjekt',
+    message: 'Kunden har åpnet tilbudet på baderomsprosjekt. De har 7 dager igjen på svarfristen.',
+    timestamp: '2024-12-19 09:15',
+    isRead: false,
+    quoteId: 'T003',
+    customerId: 'K002',
+    type: 'quote_opened',
+    customerName: 'Hansen Bygg AS',
+    quoteTitle: 'Baderomsprosjekt'
+  },
+  {
+    id: 'M003',
+    from: 'Villa Solberg',
+    subject: 'Spørsmål om kjøkkenrenovering',
+    message: 'Hei! Vi har et spørsmål om tilbudet på kjøkkenrenovering. Kan dere spesifisere hvilke materialer som inngår i prisen?',
+    timestamp: '2024-12-18 16:45',
+    isRead: true,
+    quoteId: 'T004',
+    customerId: 'K003',
+    type: 'quote_question',
+    customerName: 'Villa Solberg',
+    quoteTitle: 'Kjøkkenrenovering'
+  },
+  {
+    id: 'M004',
+    from: 'Torggata 15',
+    subject: 'Tilbud godkjent - Baderomsrenovering',
+    message: 'Gratulerer! Kunden har godkjent tilbudet på baderomsrenovering til en verdi av 95.000 kr.',
+    timestamp: '2024-12-17 11:20',
+    isRead: true,
+    quoteId: 'T002',
+    customerId: 'K004',
+    type: 'quote_approved',
+    customerName: 'Torggata 15',
+    quoteTitle: 'Baderomsrenovering'
+  },
+  {
+    id: 'M005',
+    from: 'Strandveien 42',
+    subject: 'Tilbud åpnet - Terrasseprosjekt',
+    message: 'Kunden har åpnet tilbudet på terrasseprosjekt. De har 5 dager igjen på svarfristen.',
+    timestamp: '2024-12-16 13:10',
+    isRead: true,
+    quoteId: 'T005',
+    customerId: 'K005',
+    type: 'quote_opened',
+    customerName: 'Strandveien 42',
+    quoteTitle: 'Terrasseprosjekt'
+  },
+  {
+    id: 'M006',
+    from: 'Bakke Familie',
+    subject: 'Avklaring om materialvalg',
+    message: 'Takk for tilbudet! Vi lurer på om vi kan velge mellom forskjellige materialer, eller om dere har en fast spesifikasjon?',
+    timestamp: '2024-12-15 10:30',
+    isRead: false,
+    quoteId: 'T006',
+    customerId: 'K006',
+    type: 'quote_question',
+    customerName: 'Bakke Familie',
+    quoteTitle: 'Stueombygging'
+  },
+  {
+    id: 'M007',
+    from: 'Kontoret AS',
+    subject: 'Tilbud sendt - Kontorinnredning',
+    message: 'Vi har sendt deg et tilbud på kontorinnredning. Du kan se detaljene ved å klikke på lenken i e-posten.',
+    timestamp: '2024-12-14 15:45',
+    isRead: true,
+    quoteId: 'T007',
+    customerId: 'K007',
+    type: 'quote_sent',
+    customerName: 'Kontoret AS',
+    quoteTitle: 'Kontorinnredning'
   }
 ];
 
@@ -321,9 +416,9 @@ export const navLinks: NavLink[] = [
     icon: 'Users'
   },
   {
-    href: '/analyse',
-    label: 'Analyse',
-    icon: 'BarChart3'
+    href: '/innboks',
+    label: 'Innboks',
+    icon: 'Inbox'
   },
   {
     href: '/bedrift',

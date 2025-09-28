@@ -1,0 +1,1136 @@
+{
+    "Oppussing": [
+        {
+            "pris": "6.000",
+            "kontekst": "gjennomsnittlig pris per kvadratmeter for sanering"
+        },
+        {
+            "pris": "4.000",
+            "kontekst": "laveste estimerte pris per kvadratmeter for sanering"
+        },
+        {
+            "pris": "25.000",
+            "kontekst": "høyeste estimerte pris per kvadratmeter for sanering"
+        },
+        {
+            "pris": "60.000",
+            "kontekst": "estimert totalpris for å sanere et område på 10 kvadratmeter"
+        },
+        {
+            "pris": "10.000 til 30.000 kroner per kvadratmeter",
+            "kontekst": "kostnad for å renovere et verneverdig hus"
+        },
+        {
+            "pris": "omtrent 17.000 kroner per kvadratmeter",
+            "kontekst": "gjennomsnittlig pris for å renovere verneverdig hus"
+        },
+        {
+            "pris": "ca. 15.000 kroner",
+            "kontekst": "gjennomsnittlig kostnad for restaurering av verneverdig hus"
+        },
+        {
+            "pris": "50.000 til 500.000 kroner",
+            "kontekst": "pris for en ny murt peis, avhenger av størrelse og luksusnivå"
+        },
+        {
+            "pris": "100.000 til 300.000 kroner",
+            "kontekst": "gjennomsnittlig pris for en murt peis med materialer og arbeid"
+        },
+        {
+            "pris": "10.000 til over 100.000 kroner",
+            "kontekst": "pris for modulbaserte peiser, med lavere pris for de rimeligste og høyere for eksklusive modeller"
+        },
+        {
+            "pris": "ca. 20.000 kroner",
+            "kontekst": "kostnad for å rive en gammel peis"
+        },
+        {
+            "pris": "2.500 til 3.000 kroner per meter",
+            "kontekst": "kostnad for å utbedre pipe med rustfritt piperør"
+        },
+        {
+            "pris": "8.000 til 25.000 kroner per kvadratmeter",
+            "kontekst": "prisen for totalrenovering av et gammelt hus, per kvadratmeter"
+        },
+        {
+            "pris": "14.000 kroner per kvm",
+            "kontekst": "gjennomsnittlig pris for renovering av et gammelt hus per kvadratmeter"
+        },
+        {
+            "pris": "50.000 til 250.000 kroner",
+            "kontekst": "kostnad for arkitekt i forbindelse med tilbygg eller påbygg"
+        },
+        {
+            "pris": "750 kroner per time",
+            "kontekst": "gjennomsnittlig timepris for en entreprenør, inklusive alle omkostninger"
+        },
+        {
+            "pris": "600 til 850 kroner per time",
+            "kontekst": "priser for entreprenørtjenester, varierer mellom ulike typer prosjekter"
+        },
+        {
+            "pris": "14.000 kroner per kvadratmeter",
+            "kontekst": "innvendig totalrenovering av enebolig"
+        },
+        {
+            "pris": "2,8 millioner kroner",
+            "kontekst": "kostnad for totalrenovering av en 200 kvadratmeter stor bolig, med gjennomsnittlig standard"
+        },
+        {
+            "pris": "8.000 kroner per kvadratmeter",
+            "kontekst": "totalrenovering av enebolig med enklere løsninger"
+        },
+        {
+            "pris": "15.000 kroner per kvadratmeter",
+            "kontekst": "utvendig totalrenovering av enebolig"
+        },
+        {
+            "pris": "5 millioner kroner",
+            "kontekst": "kostnad for utvendig totalrenovering av 200 kvadratmeter bolig"
+        },
+        {
+            "pris": "50.000 til 100.000 kroner",
+            "kontekst": "kostnad for kjøkkeninnredning, avhenger av standard og materialvalg"
+        },
+        {
+            "pris": "75.000 kroner",
+            "kontekst": "Laveste pris for oppussing av kjøkken"
+        },
+        {
+            "pris": "300.000 kroner",
+            "kontekst": "Høyeste pris for oppussing av kjøkken"
+        },
+        {
+            "pris": "150.000 kroner",
+            "kontekst": "Snittpris for oppussing av kjøkken"
+        },
+        {
+            "pris": "8.000 kr",
+            "kontekst": "Riving og bortkjøring av gammelt kjøkken"
+        },
+        {
+            "pris": "35.000 kr",
+            "kontekst": "Montering av nytt kjøkken med 15 skap"
+        },
+        {
+            "pris": "6.000 kr",
+            "kontekst": "Fliser mellom kjøkkenbenk og overskap"
+        },
+        {
+            "pris": "9.000 kr",
+            "kontekst": "Diverse tilpasninger og maling"
+        },
+        {
+            "pris": "8.000 kr",
+            "kontekst": "Elektrikerarbeid"
+        },
+        {
+            "pris": "13.000 kr",
+            "kontekst": "Rørleggerarbeid, inkludert Water Guard"
+        },
+        {
+            "pris": "85.000 kr",
+            "kontekst": "Kostnad for selve kjøkkenet (alt inkludert, eksempel fra IKEA)"
+        },
+        {
+            "pris": "164.000 kr",
+            "kontekst": "Total kostnad for oppussing av et middels stort kjøkken (eksempel)"
+        },
+        {
+            "pris": "15.000 kroner per kvadratmeter",
+            "kontekst": "Gjennomsnittspris for å restaurere en gammel bolig, inklusive materialer, produkter og fagfolk"
+        },
+        {
+            "pris": "10.000 kroner per kvadratmeter",
+            "kontekst": "Lavere pris for restaurering av en gammel bolig, kan gjelde mindre eller enklere prosjekter"
+        },
+        {
+            "pris": "30.000 kroner per kvadratmeter",
+            "kontekst": "Høyere pris for restaurering av en gammel bolig, kan gjelde større eller mer omfattende prosjekter"
+        },
+        {
+            "pris": "1200-1500 kroner per time",
+            "kontekst": "Timepris for interiørarkitekt"
+        },
+        {
+            "pris": "40.000 kroner",
+            "kontekst": "Pris for basispakke til en bolig på 100 kvm hos Unilon"
+        },
+        {
+            "pris": "60.000 kroner",
+            "kontekst": "Pris for oppgradert pakke til en bolig på 100 kvm hos Unilon"
+        },
+        {
+            "pris": "90.000 kroner",
+            "kontekst": "Pris for totalpakke til en bolig på 100 kvm hos Unilon"
+        },
+        {
+            "pris": "70.000 til 150.000 kroner",
+            "kontekst": "kostnad for luft-til-vann-varmepumpe"
+        },
+        {
+            "pris": "130.000 kroner og oppover",
+            "kontekst": "kostnad for væske-til-vann-varmepumpe"
+        },
+        {
+            "pris": "80.000 til 120.000 kroner",
+            "kontekst": "kostnad for bio-ovn med vannkappe, inkl. tankpakke"
+        },
+        {
+            "pris": "50.000 til 150.000 kroner",
+            "kontekst": "kostnad for bio-kjelen som går på pellets eller flis"
+        },
+        {
+            "pris": "75.000 kroner",
+            "kontekst": "kostnad for solfangere montert på tak eller vegg"
+        },
+        {
+            "pris": "1.500 kr og opp til 3.000 kr per kvadratmeter",
+            "kontekst": "kostnad for installering av røringssystem for vannbåren varme (inkl. materiale) i gulvvarme"
+        },
+        {
+            "pris": "2.000 - 4.000 kr per kvm",
+            "kontekst": "Prisen for å bytte kledning og etterisolere en bygning"
+        },
+        {
+            "pris": "1.700 - 3.500 kr per kvm",
+            "kontekst": "Prisen for å legge nytt tak på huset"
+        },
+        {
+            "pris": "5.000 - 10.000 kr per løpemeter",
+            "kontekst": "Prisen for drenering av eiendom"
+        },
+        {
+            "pris": "8.000 - 25.000 kr per kvm",
+            "kontekst": "Prisen for innvendig renovering av boligen"
+        },
+        {
+            "pris": "250.000 - 500.000 kr",
+            "kontekst": "Prisen for oppbygging av et nytt bad"
+        },
+        {
+            "pris": "27.000 - 45.000 kr per kvm",
+            "kontekst": "Prisen for å bygge et tilbygg på boligen"
+        },
+        {
+            "pris": "120.000 - 300.000 kr",
+            "kontekst": "Prisen for å bygge en ark"
+        },
+        {
+            "pris": "ca 2,5 millioner",
+            "kontekst": "innvendig totalrenovering av en bolig på 200 kvadratmeter med gjennomsnittlig standard, pris basert på snittpris på 14.000 kr per kvadratmeter"
+        },
+        {
+            "pris": "8.000 kr per kvm",
+            "kontekst": "laveste pris for innvendig totalrenovering per kvadratmeter, ved en enkel standard og lav kompleksitet"
+        },
+        {
+            "pris": "25.000 kr per kvm",
+            "kontekst": "høyere pris med mer omfattende eller eksklusiv standard for innvendig totalrenovering"
+        },
+        {
+            "pris": "1,4 millioner",
+            "kontekst": "kostnad for totalrenovering av en 200 kvm bolig med lav standard, basert på 8.000 kr per kvm"
+        },
+        {
+            "pris": "4 millioner",
+            "kontekst": "kostnad for totalrenovering av en 200 kvm bolig med høy standard, basert på 25.000 kr per kvm"
+        },
+        {
+            "pris": "ca 25.000 kr per kvm",
+            "kontekst": "gjennomsnittlig pris for utvendig totalrenovering (tak, fasade, etterisolering, etc.)"
+        },
+        {
+            "pris": "20.000 kr per kvm",
+            "kontekst": "lav pris for utvendig totalrenovering per kvadratmeter"
+        },
+        {
+            "pris": "45.000 kr per kvm",
+            "kontekst": "høy pris for utvendig totalrenovering per kvadratmeter"
+        },
+        {
+            "pris": "ca 33.000 kr per kvm",
+            "kontekst": "gjennomsnittlig pris for å bygge nytt per kvadratmeter, brukt til å sammenligne med totalrenoveringskostnader"
+        },
+        {
+            "pris": "350.000 kr",
+            "kontekst": "kostnad for rigg, drift, riving, container i et eksempelprosjekt på totalrenovering"
+        },
+        {
+            "pris": "570.000 kr",
+            "kontekst": "kostnad for to bad i totalrenoveringsprosjektet"
+        },
+        {
+            "pris": "120.000 kr",
+            "kontekst": "kostnad for vaskerom i totalrenoveringsprosjektet"
+        },
+        {
+            "pris": "500.000 kr",
+            "kontekst": "kostnad for komplett vannbåren varmesystem i totalrenoveringsprosjektet"
+        },
+        {
+            "pris": "170.000 kr",
+            "kontekst": "kostnad for annet rørleggerarbeid i totalrenoveringsprosjektet"
+        },
+        {
+            "pris": "870.000 kr",
+            "kontekst": "kostnad for snekker og malerarbeid i totalrenoveringsprosjektet"
+        },
+        {
+            "pris": "380.000 kr",
+            "kontekst": "kostnad for elektrikerarbeid i totalrenoveringsprosjektet"
+        },
+        {
+            "pris": "70.000 kr",
+            "kontekst": "kostnad for endring av bærende konstruksjon i totalrenoveringsprosjektet"
+        },
+        {
+            "pris": "310.000 kr",
+            "kontekst": "kostnad for å bytte vinduer i totalrenoveringsprosjektet"
+        },
+        {
+            "pris": "60.000 kr",
+            "kontekst": "kostnad for å bytte ytterdører i totalrenoveringsprosjektet"
+        },
+        {
+            "pris": "730.000 kr",
+            "kontekst": "kostnad for kledning, inkludert etterisolering, i totalrenoveringsprosjektet"
+        },
+        {
+            "pris": "330.000 kr",
+            "kontekst": "kostnad for nytt tak i totalrenoveringsprosjektet"
+        },
+        {
+            "pris": "280.000 kr",
+            "kontekst": "kostnad for drenering og etterisolering av grunnmur i totalrenoveringsprosjektet"
+        },
+        {
+            "pris": "110.000 kr",
+            "kontekst": "kostnad for å bygge støttemur ved innkjørsel i totalrenoveringsprosjektet"
+        },
+        {
+            "pris": "4.850.000 kr",
+            "kontekst": "total tilbudspris fra entreprenør for totalrenovering av en enebolig på ca 240 kvm"
+        },
+        {
+            "pris": "590.000 kr",
+            "kontekst": "kostnad for egne innkjøp av materialer (parkett, fliser, kjøkken, baderomsmøbler, armaturer)"
+        },
+        {
+            "pris": "5.440.000 kr",
+            "kontekst": "samlet totalpris for totalrenovering av en enebolig med innvendige og utvendige jobber"
+        },
+        {
+            "pris": "ca 22.000 kr per kvm",
+            "kontekst": "gjennomsnittlig kostnad per kvadratmeter for totalreno av en enebolig på ca 250 kvm"
+        },
+        {
+            "pris": "ca. 14.000 kr per kvadratmeter",
+            "kontekst": "gjennomsnittlig pris per kvadratmeter for totalrenovering av leilighet"
+        },
+        {
+            "pris": "8.000 kr per kvadratmeter",
+            "kontekst": "lavere endring i byggekostnader per kvadratmeter for oppussing av leilighet"
+        },
+        {
+            "pris": "25.000 kr per kvadratmeter",
+            "kontekst": "høyeste pris per kvadratmeter for oppussing av leilighet, inklusiv alt arbeid og materialer"
+        },
+        {
+            "pris": "55.000 kr",
+            "kontekst": "kostnad for riving, rigg og drift ved totalrenovering"
+        },
+        {
+            "pris": "240.000 kr",
+            "kontekst": "kostnad for oppussing av bad"
+        },
+        {
+            "pris": "80.000 kr",
+            "kontekst": "kostnad for oppussing av vaskerom"
+        },
+        {
+            "pris": "40.000 kr",
+            "kontekst": "kostnad for å flytte på røropplegg til det nye kjøkkenet"
+        },
+        {
+            "pris": "150.000 kr",
+            "kontekst": "kostnad for snekkerarbeid (gulv, vegger og romløsning endringer)"
+        },
+        {
+            "pris": "70.000 kr",
+            "kontekst": "kostnad for maling og oppfrisking av overflater"
+        },
+        {
+            "pris": "170.000 kr",
+            "kontekst": "kostnad for elektrikerarbeid"
+        },
+        {
+            "pris": "1.035.000 kr",
+            "kontekst": "total kostnad for komplett oppussing av en ca. 80 kvadratmeter stor leilighet, inkludert alle materialer og arbeid"
+        },
+        {
+            "pris": "ca. 13.000 kr per kvadratmeter",
+            "kontekst": "total gjennomsnittlig kvadratmeterpris for totalrenovering av leilighet"
+        },
+        {
+            "pris": "200.000 - 500.000 kr",
+            "kontekst": "kostnad for oppussing av bad (totaloppussing)"
+        },
+        {
+            "pris": "100.000 kr",
+            "kontekst": "kostnad for kjøkkeninkludert montering, rørlegger og elektriker"
+        },
+        {
+            "pris": "14.000 kroner per kvadratmeter",
+            "kontekst": "kostnad for innvendig totaloppussing av hus (enebolig/tomannsbolig) i gjennomsnitt, inkludert materialer og arbeid"
+        },
+        {
+            "pris": "25.000 kroner per kvadratmeter",
+            "kontekst": "høyere standard innvendig oppussing av hus"
+        },
+        {
+            "pris": "8.000 kroner per kvadratmeter",
+            "kontekst": "enklere standard innvendig oppussing av hus med basisløsninger"
+        },
+        {
+            "pris": "18.000 kr per kvm",
+            "kontekst": "totaloppussing av bolig på 250 kvadratmeter med høy standard og kompleksitet, totalt 4.5 millioner kroner"
+        },
+        {
+            "pris": "10.000 kr per kvm",
+            "kontekst": "oppussing av bolig på 150 kvadratmeter med moderat standard og begrenset kompleksitet, totalt 1.5 millioner kroner"
+        },
+        {
+            "pris": "20.000 kroner per kvadratmeter",
+            "kontekst": "utvendig oppussing, eksempel på utvendige arbeider som taklegging, fasadefornyelse, etterisolering og drenering"
+        },
+        {
+            "pris": "45.000 kroner per kvadratmeter",
+            "kontekst": "utvendig oppussing med meget høy standard, fullstendig totalrenovering av boligen"
+        },
+        {
+            "pris": "8.000 kroner per kvadratmeter",
+            "kontekst": "Pris for de enkleste og minste innvendige renoveringsprosjektene"
+        },
+        {
+            "pris": "25.000 kroner per kvadratmeter",
+            "kontekst": "Pris for de største innvendige renoveringsprosjektene"
+        },
+        {
+            "pris": "14.000 kroner per kvadratmeter",
+            "kontekst": "Gjennomsnittlig pris for innvendig renovering per kvadratmeter"
+        },
+        {
+            "pris": "20.000 kroner per kvadratmeter",
+            "kontekst": "Startpris for utvendig og innvendig totalrenovering for de minste prosjektene"
+        },
+        {
+            "pris": "45.000 kroner per kvadratmeter",
+            "kontekst": "Øvre pris for omfattende utvendig og innvendig renovering"
+        },
+        {
+            "pris": "33.000 kroner inkl. mva",
+            "kontekst": "Snittprisen for oppføring av enebolig, inklusive alle kostnader"
+        },
+        {
+            "pris": "250.000 til 400.000 kroner",
+            "kontekst": "Kostnadsestimat for totalrenovering av bad, avhengig av størrelse og standard"
+        },
+        {
+            "pris": "ca. 4.000 kr per kvadratmeter",
+            "kontekst": "overflateoppussing av leilighet eller hus"
+        },
+        {
+            "pris": "ca. 14.000 kr per kvadratmeter",
+            "kontekst": "totaloppussing eller totalrenovering av leilighet eller hus"
+        },
+        {
+            "pris": "ned mot 8.000 kr per kvadratmeter",
+            "kontekst": "totaloppussing eller totalrenovering av leilighet eller hus (lavere endring)"
+        },
+        {
+            "pris": "opp mot 25.000 kr per kvadratmeter",
+            "kontekst": "totaloppussing eller totalrenovering av leilighet eller hus (mer omfattende prosjekter)"
+        },
+        {
+            "pris": "opp mot 20.000 kr per kvadratmeter",
+            "kontekst": "utvendig renovering (tak, fasade, drenering, etc.)"
+        },
+        {
+            "pris": "opp mot 30.000 kr per kvadratmeter",
+            "kontekst": "bygging av nytt (utvendig renovering eller nye byggeprosjekter)"
+        },
+        {
+            "pris": "200.000 kr for et lite bad",
+            "kontekst": "priseksempel for totaloppussing av et lite bad (baderomsrenovering)"
+        },
+        {
+            "pris": "500.000 kr for store bad med eksklusive tillegg",
+            "kontekst": "priseksempel for totaloppussing av et stort bad (høyere standard)"
+        },
+        {
+            "pris": "minst 100.000 kr for et nytt kjøkken",
+            "kontekst": "kostnad for et helt nytt kjøkken, inkludert montering og rør/el-arbeid"
+        }
+    ],
+    "Grunnarbeider og betong": [
+        {
+            "pris": "7000",
+            "kontekst": "gjennomsnittsprisen for grunnarbeid per kvadratmeter"
+        },
+        {
+            "pris": "3000-12000",
+            "kontekst": "prisintervallet for utførelse av grunnarbeid per kvadratmeter"
+        },
+        {
+            "pris": "21.000 kr",
+            "kontekst": "fundament for garasje"
+        },
+        {
+            "pris": "24.000 kr",
+            "kontekst": "gulv på grunn, 120 mm betong uten isolasjon i garasjegulv"
+        },
+        {
+            "pris": "45.000 kr",
+            "kontekst": "sum for fundament og gulv på grunn til garasje på 40 kvadratmeter"
+        },
+        {
+            "pris": "55.000 kr",
+            "kontekst": "såle (fundament) for enebolig"
+        },
+        {
+            "pris": "100.000 kr",
+            "kontekst": "Gulv på grunn med 300 mm isolasjon og 80 mm betong for enebolig med grunnflate på 110 kvadratmeter"
+        },
+        {
+            "pris": "35.000 kr",
+            "kontekst": "radonsperre for enebolig"
+        },
+        {
+            "pris": 800,
+            "kontekst": "gjennomsnittspris for å bygge en ringmur per løpemeter"
+        },
+        {
+            "pris": {
+                "minimum": 600,
+                " maksimum": 1400
+            },
+            "kontekst": "prisintervallet for å betale per løpemeter for ringmuren, inkludert materialer og arbeid"
+        },
+        {
+            "pris": "250.000 kroner",
+            "kontekst": "gjennomsnittspris for å bygge grunnmur for enebolig med grunnflate på 100 kvadratmeter"
+        },
+        {
+            "pris": "150.000 til 500.000 kroner",
+            "kontekst": "spenn for totale kostnader ved bygging av grunnmur for enebolig, avhengig av prosjektets kompleksitet og forhold"
+        },
+        {
+            "pris": "250.000",
+            "kontekst": "gjennomsnittspris på bygging av grunnmur (materialer og arbeid, ikke gravearbeid)"
+        },
+        {
+            "pris": "150.000",
+            "kontekst": "minimumspris for bygging av grunnmur basert på prisdatabase"
+        },
+        {
+            "pris": "500.000",
+            "kontekst": "maksimumspris for bygging av grunnmur basert på prisdatabase"
+        },
+        {
+            "pris": "550 kroner til 850 kroner per time",
+            "kontekst": "Timespriser for forskalingsarbeidere med erfaring og kompetanse, brukt for å sette opp forskaling til fundament."
+        },
+        {
+            "pris": "opp til 2500 kilo per kubikkmeter",
+            "kontekst": "Vekt på betong for herding av forskaling, som påvirker krav til soliditet og formstabilitet."
+        },
+        {
+            "pris": "ca. 1.300 kroner per time",
+            "kontekst": "gjennomsnittspris på gravearbeid per time"
+        },
+        {
+            "pris": "1.000 kroner per time",
+            "kontekst": "laveste pris på gravearbeid per time"
+        },
+        {
+            "pris": "2.000 kroner per time",
+            "kontekst": "pris for større maskiner brukt i gravearbeid per time"
+        },
+        {
+            "pris": "fra 2.500 til 12.000 kr per kvm",
+            "kontekst": "kostnad for gravearbeid for oppføring av nye hus og hytter per kvadratmeter"
+        },
+        {
+            "pris": "fra 5.000 til 10.000 kr per løpemeter",
+            "kontekst": "kostnad for dreneringsarbeid per løpemeter"
+        },
+        {
+            "pris": "fra 500 kr per løpemeter",
+            "kontekst": "kostnad for graving av grøfter per løpemeter"
+        }
+    ],
+    "Tilbygg": [
+        {
+            "pris": "25.000 kroner per kvadratmeter",
+            "kontekst": "Gjennomsnittlig pris for å bygge anneks per kvadratmeter"
+        },
+        {
+            "pris": "20.000 kroner per kvadratmeter",
+            "kontekst": "Lavere pris for enklere eller mindre omfattende anneksprosjekter per kvadratmeter"
+        },
+        {
+            "pris": "35.000 kroner per kvadratmeter",
+            "kontekst": "Høyere pris for mer omfattende eller avanserte anneksprosjekter per kvadratmeter"
+        },
+        {
+            "pris": "60.000 kroner",
+            "kontekst": "Minimumspris for ferdigprodusert anneksbyggesett, sett opp selv"
+        },
+        {
+            "pris": "350.000 kroner",
+            "kontekst": "Øvre pris for større eller mer avanserte ferdige anneks byggesett"
+        },
+        {
+            "pris": "800 - 1.500 kroner timen",
+            "kontekst": "Prisestandard for arkitekttjenester for design eller byggesøknad"
+        },
+        {
+            "pris": "50.000 til 100.000 kroner",
+            "kontekst": "kostnad for å bygge en overbygd terrasse inklusiv materialer og arbeidskraft"
+        },
+        {
+            "pris": "40.000 til over 100.000 kroner",
+            "kontekst": "pris for ferdigproduserte hagestuer laget av aluminium, som kan være innglasset"
+        },
+        {
+            "pris": "10.000 til 70.000 kroner",
+            "kontekst": "Pris på å bygge en pergola"
+        },
+        {
+            "pris": "mer enn 120.000 kroner",
+            "kontekst": "Pris på eksklusive og større pergolaer"
+        },
+        {
+            "pris": " mellom 10.000 og 70.000 kroner",
+            "kontekst": "Typisk prisintervall for standard pergolaer"
+        },
+        {
+            "pris": "25.000 kroner per kvadratmeter",
+            "kontekst": "kostnad for å bygge et anneks per kvadratmeter"
+        },
+        {
+            "pris": "50.000 kroner per kvadratmeter",
+            "kontekst": "høyere endring av prisen per kvadratmeter for anneks"
+        },
+        {
+            "pris": "38.000 kroner per kvadratmeter",
+            "kontekst": "snittpris for bygging av anneks per kvadratmeter"
+        },
+        {
+            "pris": "200.000 til 400.000 kroner",
+            "kontekst": "pris for et ferdig leveringsklart anneks på omtrent 15 til 20 kvadratmeter"
+        },
+        {
+            "pris": "100.000 kroner",
+            "kontekst": "pris for små bygg eller hytter rundt 10 kvadratmeter"
+        },
+        {
+            "pris": "500.000 kroner",
+            "kontekst": "pris for større eller mer kostbare anneksvarianter"
+        },
+        {
+            "pris": "grunngebyr på 2.600 kroner",
+            "kontekst": "grunnavgift for behandling av byggesøknad i kommunen for mindre tiltak"
+        },
+        {
+            "pris": "tillegg på rundt 6.000-7.000 kroner",
+            "kontekst": "ekstra kostnad ved søknad om dispensasjoner, ofte for flere etasjer"
+        },
+        {
+            "pris": "900 til 1.500 kroner",
+            "kontekst": "timepris for arkitekthjelp i tillegg til byggekostnadene"
+        },
+        {
+            "pris": "150.000 kroner",
+            "kontekst": "kostnad for graving i forbindelse med bygging av anneks"
+        },
+        {
+            "pris": "90.000 kroner",
+            "kontekst": "kostnad for grunnmur i byggeprosjektet"
+        },
+        {
+            "pris": "960.000 kroner",
+            "kontekst": "kostnad for tømrerarbeid ved bygging av anneks på 50 kvadratmeter"
+        },
+        {
+            "pris": "70.000 kroner",
+            "kontekst": "kostnad for malerarbeid i prosjektet"
+        },
+        {
+            "pris": "65.000 kroner",
+            "kontekst": "kostnad for elektrikerarbeid i prosjektet"
+        },
+        {
+            "pris": "10.000 kroner",
+            "kontekst": "kostnad for blikkenslagerarbeid i prosjektet"
+        },
+        {
+            "pris": "43.000 kroner per kvadratmeter",
+            "kontekst": "Gjennomsnittlig pris for tilbygg per kvadratmeter, inkludert materialer, produkter og arbeidstimer fra entreprenør"
+        },
+        {
+            "pris": "32.000 kroner",
+            "kontekst": "Nedre prissjikt for tilbygg per kvadratmeter, passende for enklere prosjekter eller mindre standard"
+        },
+        {
+            "pris": "54.000 kroner",
+            "kontekst": "Øvre prissjikt for tilbygg per kvadratmeter, for mer omfattende eller mer spesialtilpassede prosjekter"
+        },
+        {
+            "pris": "900 til 1.500 kroner timen",
+            "kontekst": "Timepris for arkitekt tjenester, avhengig av prosjektets omfang"
+        },
+        {
+            "pris": "20.000 kroner",
+            "kontekst": "Arkitektkostnad for mindre tilbyggprosjekter"
+        },
+        {
+            "pris": "over 200.000 kroner",
+            "kontekst": "Arkitektkostnad for større eller mer omfattende tilbyggprosjekter"
+        },
+        {
+            "pris": "32.000 - 54.000",
+            "kontekst": "gjennomsnittsprisen for bygg av vindfang per kvadratmeter"
+        },
+        {
+            "pris": "43.000",
+            "kontekst": "gjennomsnittspris per kvadratmeter for å bygge vindfang"
+        },
+        {
+            "pris": "300.000",
+            "kontekst": "ca. kostnad for å bygge et vindfang på 7 kvadratmeter"
+        },
+        {
+            "pris": "645.000",
+            "kontekst": "estimat for å bygge et større vindfang på 15 kvadratmeter"
+        },
+        {
+            "pris": "800 - 1.500 kroner timen",
+            "kontekst": "typisk timespris for en arkitekt"
+        }
+    ],
+    "Isolering": [],
+    "Kjeller": [
+        {
+            "pris": "30.000 kroner per kvadratmeter",
+            "kontekst": "Gjennomsnittspris for å bygge en hybel fra råkjeller til full innredet leilighet"
+        },
+        {
+            "pris": "20.000 kroner per kvadratmeter",
+            "kontekst": "Lavere priseksempel for bygging av hybel per kvadratmeter"
+        },
+        {
+            "pris": "40.000 kroner per kvadratmeter",
+            "kontekst": "Høyere priseksempel for bygging av hybel per kvadratmeter"
+        },
+        {
+            "pris": "én til to millioner kroner",
+            "kontekst": "Total kostnad for å bygge en utleiedel / hybel"
+        },
+        {
+            "pris": "et par hundre tusen kroner",
+            "kontekst": "Mulig lavere kostnad for prosjekt med godt utgangspunkt og ønsket standard"
+        },
+        {
+            "pris": "50.000 til 70.000 kroner",
+            "kontekst": "Kostnad for å bruke arkitekt til søknadsdokument og planløsning for en liten hybel"
+        },
+        {
+            "pris": "20.000 til 40.000 kroner per kvadratmeter",
+            "kontekst": "full kjellerutbygging inkl. mva, gjennomsnittspriser"
+        },
+        {
+            "pris": "ca. 30.000 kroner per kvadratmeter",
+            "kontekst": "snittpris for full kjellerutbygging"
+        },
+        {
+            "pris": "90.000 kr",
+            "kontekst": "arkitekt for søknad til kommunen ved kjellerutbygging"
+        },
+        {
+            "pris": "210.000 kr",
+            "kontekst": "utvendig drenering ved kjellerutbygging"
+        },
+        {
+            "pris": "395.000 kr",
+            "kontekst": "pigging 50 cm ned ved kjellerutbygging"
+        },
+        {
+            "pris": "60.000 kr",
+            "kontekst": "betongarbeider for nytt gulv i kjellerutbygging"
+        },
+        {
+            "pris": "55.000 kr",
+            "kontekst": "varme i gulvet ved kjellerutbygging"
+        },
+        {
+            "pris": "60.000 kr",
+            "kontekst": "annet elektrisk arbeid i kjellerutbygging"
+        },
+        {
+            "pris": "135.000 kr",
+            "kontekst": "gulv, inkludert selve gulvet, ved kjellerutbygging"
+        },
+        {
+            "pris": "210.000 kr",
+            "kontekst": "innvendige vegger og himling ved kjellerutbygging"
+        },
+        {
+            "pris": "1.215.000 kroner totalt",
+            "kontekst": "totalkostnad for kjellerutbygging på 60 kvadratmeter i eksempelprosjekt"
+        },
+        {
+            "pris": "ca. 20.250 kr per kvadratmeter",
+            "kontekst": "kvadratmeterpris i eksempelprosjekt for kjellerutbygging"
+        },
+        {
+            "pris": "ca. 250.000 kroner",
+            "kontekst": "totaloppussing av lite bad i kjellerutbygging"
+        },
+        {
+            "pris": "opp mot 400.000 kroner eller mer",
+            "kontekst": "totaloppussing av større og mer eksklusivt bad i kjellerutbygging"
+        },
+        {
+            "pris": "minst 100.000 kr",
+            "kontekst": "kjøkken inkludert selve kjøkkenet og montering (rør og el) i kjellerutbygging"
+        },
+        {
+            "pris": "30.000 kr per kvm",
+            "kontekst": "Full kjellerutbygging inkl. grunnarbeider og innvendige arbeider"
+        },
+        {
+            "pris": "20.000 kr per kvm",
+            "kontekst": "Lavere prisnivå for full kjellerutbygging, inkl. materialer og arbeid"
+        },
+        {
+            "pris": "40.000 kr per kvm",
+            "kontekst": "Høyere prisnivå for full kjellerutbygging, inkl. materialer og arbeid"
+        },
+        {
+            "pris": "Ca. halvparten av full kjellerutbygging",
+            "kontekst": "Innvendige overflatearbeider (rimeligere enn full utbygging)"
+        },
+        {
+            "pris": "75.000 kr",
+            "kontekst": "Arkitekt, inkludert tegninger og søknad, for kjellerutbyggingsprosjekt"
+        },
+        {
+            "pris": "285.000 kr",
+            "kontekst": "Drenering, 35 løpemeter à 5.500 kr per lm"
+        },
+        {
+            "pris": "60.000 kr",
+            "kontekst": "Betongsaging for nye vinduer, 4 stk à 10.000 kr per stykk"
+        },
+        {
+            "pris": "330.000 kr",
+            "kontekst": "Pigging, 40 kubikkmeter à 5.500 kr per kubikk"
+        },
+        {
+            "pris": "45.000 kr",
+            "kontekst": "Gulvstøp for 50 kvm à 650 kr per kvm"
+        },
+        {
+            "pris": "270.000 kr",
+            "kontekst": "Bad i kjellerutbyggingsprosjekt"
+        },
+        {
+            "pris": "130.000 kr",
+            "kontekst": "Kjøkken inkludert kjøkkeninnredning"
+        },
+        {
+            "pris": "200.000 kr",
+            "kontekst": "Gulv, himlinger, innervegger for 40 kvm à 3.500 kr per kvm"
+        },
+        {
+            "pris": "1.395.000 kr",
+            "kontekst": "Totalkostnad for kjellerutbyggingsprosjekt på ca 50 kvm utleiedel"
+        },
+        {
+            "pris": "28.000 kr per kvm",
+            "kontekst": "Pris per kvm i det detaljerte eksempelprosjektet med oppgradering fra råkjeller til hybel"
+        },
+        {
+            "pris": "5.000 - 10.000 kr per løpemeter",
+            "kontekst": "drenering ved utgraving av kjeller"
+        },
+        {
+            "pris": "10.000 - 25.000 kr per kvadratmeter",
+            "kontekst": "innvendige grunnarbeider, inkludert pigging og bortkjøring av masser ved utgraving av kjeller"
+        },
+        {
+            "pris": "ca. 7.000 kroner per løpemeter",
+            "kontekst": "Pris for å isolere en kjeller, inkludert kostnader til drenering og etterisolering av grunnmuren"
+        },
+        {
+            "pris": "30.000 kroner per kvadratmeter",
+            "kontekst": "snittpris for oppussing av kjeller inkludert alt når det er behov for utbedringer for å endre bruken av boligen"
+        },
+        {
+            "pris": "15.000 kroner per kvadratmeter",
+            "kontekst": "pris for oppussing av kjeller med god takhøyde fra før og kjeller godkjent for varig opphold"
+        },
+        {
+            "pris": "over 40.000 kroner per kvadratmeter",
+            "kontekst": "pris for mer omfattende kjelleroppussing med høy standard"
+        },
+        {
+            "pris": "20.000 kroner per kvadratmeter",
+            "kontekst": "pris for enklere kjelleroppussingsprosjekter"
+        },
+        {
+            "pris": "5.000 til 10.000 kroner per løpemeter",
+            "kontekst": "kostnad for drenering som nesten alltid er nødvendig ved kjelleroppussing"
+        }
+    ],
+    "Tak": [
+        {
+            "pris": "150.000 kr - 250.000 kr",
+            "kontekst": "Kostnad for et standard solcelleanlegg på taket til et hus, inkludert montering."
+        },
+        {
+            "pris": "noen titusenlapper",
+            "kontekst": "Kostnad for et lite solcelleanlegg på hytta."
+        },
+        {
+            "pris": "150.000 og 250.000",
+            "kontekst": "kostnad for et solcelleanlegg, avhengig av type og størrelse"
+        },
+        {
+            "pris": "rundt 150.000 kroner",
+            "kontekst": "vanlig kostnad for solcellepanel på hus"
+        },
+        {
+            "pris": "opptil 32.500 kroner",
+            "kontekst": "støtte fra Enova for solcellepanel"
+        },
+        {
+            "pris": "noen titusenlapper",
+            "kontekst": "kostnad for lite solcelleanlegg til hytte utenfor strømnettet"
+        },
+        {
+            "pris": "nærmere en million kroner",
+            "kontekst": "kostnad for å dekke stort sameies takoverflate med solceller"
+        },
+        {
+            "pris": "4.000 kroner per kvadratmeter",
+            "kontekst": "gjennomsnittspris for takstol inklusive materialer og arbeidskraft, undertak og taktekking"
+        },
+        {
+            "pris": "2.000 kroner per kvadratmeter",
+            "kontekst": "rimeligere prosjekter for takstol inklusive materialer, arbeidskraft, undertak og taktekking"
+        },
+        {
+            "pris": "8.000 kroner per kvadratmeter",
+            "kontekst": "mer kompliserte prosjekter for takstol inklusive materialer, arbeidskraft, undertak og taktekking"
+        },
+        {
+            "pris": "800–1.500 kroner per time",
+            "kontekst": "pris for arkitekt per time, brukt blant annet til utarbeiding av tegninger og søknad"
+        },
+        {
+            "pris": "ca. 600 kroner per kvadratmeter",
+            "kontekst": "kostnad for nytt undertak, gjennomsnittspris inkludert materialer og arbeidskraft"
+        },
+        {
+            "pris": "så lite som 300 kroner per kvadratmeter",
+            "kontekst": "laveste prisobservasjon for nytt undertak"
+        },
+        {
+            "pris": "så mye som 1.200 kroner per kvadratmeter",
+            "kontekst": "høyeste prisobservasjon for nytt undertak"
+        },
+        {
+            "pris": "2300 kroner per kvadratmeter",
+            "kontekst": "snittpris for omlegging av tak inkludert arbeid og materialer"
+        },
+        {
+            "pris": "1700 kroner per kvadratmeter",
+            "kontekst": "laveste pris observert for omlegging av tak per kvadratmeter"
+        },
+        {
+            "pris": "3500 kroner per kvadratmeter",
+            "kontekst": "høyeste pris observert for omlegging av tak per kvadratmeter"
+        },
+        {
+            "pris": "2.300 kroner per kvadratmeter",
+            "kontekst": "gjennomsnittspris for å bygge mansardtak per kvadratmeter"
+        },
+        {
+            "pris": "1.700 kroner per kvadratmeter",
+            "kontekst": "nedre prisgrense per kvadratmeter for mansardtak"
+        },
+        {
+            "pris": "2.300 kroner per kvadratmeter",
+            "kontekst": "øvre prisgrense per kvadratmeter for mansardtak"
+        },
+        {
+            "pris": "15.000 kr",
+            "kontekst": "stillas inkludert montering og demontering ved takbytte på mansardtak (110 kvm)"
+        },
+        {
+            "pris": "30.000 kr",
+            "kontekst": "riving og avfall ved takbytte på mansardtak (110 kvm)"
+        },
+        {
+            "pris": "120.000 kr",
+            "kontekst": "snekkerarbeid inkludert materialer ved takbytte på mansardtak (110 kvm)"
+        },
+        {
+            "pris": "90.000 kr",
+            "kontekst": "blikkenslagerarbeid inkludert materialer ved takbytte på mansardtak (110 kvm)"
+        },
+        {
+            "pris": "25.000 kr",
+            "kontekst": "taktekking inkludert materialer ved takbytte på mansardtak (110 kvm)"
+        },
+        {
+            "pris": "280.000 kr",
+            "kontekst": "totalpris for takbytte på mansardtak med 110 kvm takflate"
+        },
+        {
+            "pris": "2.545 kroner per kvadratmeter",
+            "kontekst": "pris per kvadratmeter for takbytte på mansardtak med 110 kvm takflate i eksemplet"
+        },
+        {
+            "pris": "1.700 til 3.500 kroner per kvadratmeter",
+            "kontekst": "pris for Decra-tak inkludert materialer til taklegging og montering"
+        },
+        {
+            "pris": "rundt 2.300 kroner per kvadratmeter",
+            "kontekst": "snittpris for Decra-tak inkludert materialer og montering"
+        },
+        {
+            "pris": "1.700 til 3.500 kroner per kvadratmeter",
+            "kontekst": "kostnad for valmtak per kvadratmeter, inkludert materialer og montering"
+        },
+        {
+            "pris": "2.300 kroner per kvadratmeter (snittpris)",
+            "kontekst": "gjennomsnittspris for valmtak per kvadratmeter, inkludert materialer og montering"
+        },
+        {
+            "pris": "35.000 kr",
+            "kontekst": "kostnad for stillas ved utskiftning av valmet tak på en enebolig med 140 kvm takflate"
+        },
+        {
+            "pris": "45.000 kr",
+            "kontekst": "kostnad for rivearbeider og avfallshåndtering ved utskiftning av valmet tak, enebolig 140 kvm"
+        },
+        {
+            "pris": "210.000 kr",
+            "kontekst": "kostnad for tømrerarbeid ved utskiftning av valmet tak på en enebolig med 140 kvm takflate"
+        },
+        {
+            "pris": "45.000 kr",
+            "kontekst": "kostnad for blikkenslagerarbeid ved utskiftning av valmet tak på en enebolig med 140 kvm takflate"
+        },
+        {
+            "pris": "50.000 kr",
+            "kontekst": "kostnad for undertak ved utskiftning av valmet tak på en enebolig med 140 kvm takflate"
+        },
+        {
+            "pris": "100-200 kroner per kvadratmeter",
+            "kontekst": "pris på takshingel materialer uten montering"
+        },
+        {
+            "pris": "20.000-40.000 kroner",
+            "kontekst": "kostnad for shingeltak på et hus med 200 kvm takareal uten profesjonell håndverker"
+        },
+        {
+            "pris": "1.100 kroner per kvadratmeter",
+            "kontekst": "gjennomsnittspris inkludert materialer og montering for shingeltak"
+        },
+        {
+            "pris": "600-1.600 kroner per kvadratmeter",
+            "kontekst": "variasjon i prisnivå for shingeltak per kvadratmeter inkludert materialer og montering"
+        },
+        {
+            "pris": "5.000 kroner",
+            "kontekst": "rigg og drift for omlegging av shingeltak på garasje (50 kvm)"
+        },
+        {
+            "pris": "8.000 kroner",
+            "kontekst": "rivearbeider inklusive bortkjøring for omlegging av shingeltak på garasje (50 kvm)"
+        },
+        {
+            "pris": "35.000 kroner",
+            "kontekst": "taktekker arbeid inklusive materialer for omlegging av shingeltak på garasje (50 kvm)"
+        },
+        {
+            "pris": "48.000 kroner",
+            "kontekst": "totalsum for omlegging av shingeltak på garasje (50 kvm), inkludert arbeid, materialer og mva"
+        },
+        {
+            "pris": "960 kroner per kvadratmeter",
+            "kontekst": "pris per kvadratmeter regnet ut fra totalsum for tak på 50 kvm med shingeltak"
+        },
+        {
+            "pris": "4000 til 5000 kroner per kvadratmeter",
+            "kontekst": "pris for solcelletakstein per kvadratmeter inkludert montering og el-installasjon"
+        },
+        {
+            "pris": "2300 kroner per kvadratmeter",
+            "kontekst": "gjennomsnittspris for vanlig takstein per kvadratmeter"
+        },
+        {
+            "pris": "250.000 kroner",
+            "kontekst": "kostnad for 50 kvm solcelletakstein i et priseksempel"
+        },
+        {
+            "pris": "250.000 kroner",
+            "kontekst": "kostnad for 100 kvm vanlig takstein i et priseksempel"
+        },
+        {
+            "pris": "125.000 kroner",
+            "kontekst": "kostnad for elektroinstallasjon i et priseksempel ved takbytte med solcelletakstein"
+        },
+        {
+            "pris": "625.000 kroner",
+            "kontekst": "totalsum for takbytte med solcelletakstein på 50 kvm inkludert materialer, arbeid og mva i et priseksempel"
+        },
+        {
+            "pris": "20.000 til 50.000 kroner",
+            "kontekst": "pris per Velux takvindu inkludert materialer, verktøy og montering"
+        },
+        {
+            "pris": "cirka 15.000 kroner",
+            "kontekst": "gjennomsnittlig kostnad per takvindu inkludert vindu og montering"
+        },
+        {
+            "pris": "10.000 kroner",
+            "kontekst": "lavere pris for takvindu per vindu, ved riktige valg"
+        },
+        {
+            "pris": "20.000 kroner",
+            "kontekst": "dyrere pris for mer eksklusivt takvindu per vindu"
+        },
+        {
+            "pris": "1.700 - 3.500 kroner per kvadratmeter",
+            "kontekst": "pris for bygge pulttak per kvadratmeter takflate, inkludert arbeidskraft og materialer"
+        },
+        {
+            "pris": "cirka 2.300 kroner per kvadratmeter",
+            "kontekst": "gjennomsnittspris for bygging av pulttak per kvadratmeter takflate"
+        },
+        {
+            "pris": "1.700 kroner per kvadratmeter",
+            "kontekst": "laveste pris som kan oppnås for bygge pulttak ved valg av rimelig taktekke og materialer"
+        },
+        {
+            "pris": "3.500 kroner per kvadratmeter",
+            "kontekst": "høyeste pris som kan oppnås for bygge pulttak ved valg av beste taktekke og materialer"
+        }
+    ]
+}

@@ -205,9 +205,13 @@ export const getCustomers = async (): Promise<Kunde[]> => {
     const customers: Kunde[] = [];
     const customerData = snapshot.val() as Record<string, RealtimeCustomer>;
     
-    // Convert to array and sort by creation date (descending)
+    // Convert to array and sort by last modified date (descending)
     Object.entries(customerData)
-      .sort(([, a], [, b]) => b.opprettet - a.opprettet)
+      .sort(([, a], [, b]) => {
+        const aDate = a.oppdatert || a.opprettet;
+        const bDate = b.oppdatert || b.opprettet;
+        return bDate - aDate;
+      })
       .forEach(([key, data]) => {
         try {
           customers.push(convertRealtimeCustomer(key, data));
@@ -240,9 +244,13 @@ export const getCustomersPaginated = async (limitCount: number = 50): Promise<Ku
     const customers: Kunde[] = [];
     const customerData = snapshot.val() as Record<string, RealtimeCustomer>;
     
-    // Convert to array and sort by creation date (descending), then limit results
+    // Convert to array and sort by last modified date (descending), then limit results
     Object.entries(customerData)
-      .sort(([, a], [, b]) => b.opprettet - a.opprettet)
+      .sort(([, a], [, b]) => {
+        const aDate = a.oppdatert || a.opprettet;
+        const bDate = b.oppdatert || b.opprettet;
+        return bDate - aDate;
+      })
       .slice(0, limitCount) // Apply limit after sorting
       .forEach(([key, data]) => {
         try {
@@ -255,6 +263,28 @@ export const getCustomersPaginated = async (limitCount: number = 50): Promise<Ku
     return customers;
   } catch (error) {
     throw handleDatabaseError(error, 'hente kunder');
+  }
+};
+
+// Get a single customer by ID
+export const getCustomer = async (customerId: string): Promise<Kunde | null> => {
+  try {
+    // Test connection first
+    await ensureConnection();
+
+    // Get current user ID
+    const userId = getCurrentUserId();
+
+    const customerRef = ref(db, `${getUserPath(userId, 'kunder')}/${customerId}`);
+    const snapshot = await get(customerRef);
+
+    if (!snapshot.exists()) {
+      return null;
+    }
+
+    return convertSingleRealtimeCustomer(snapshot);
+  } catch (error) {
+    throw handleDatabaseError(error, 'hente kunde');
   }
 };
 

@@ -156,7 +156,7 @@ export const updateUserAnalytics = async (): Promise<void> => {
         totalTilbud++;
         
         // Monthly data
-        const date = new Date(tilbud.dato);
+        const date = new Date(tilbud.opprettet);
         const monthKey = `${date.getFullYear()}-${date.getMonth() + 1}`;
         const monthName = date.toLocaleDateString('nb-NO', { month: 'short' });
         
@@ -173,7 +173,9 @@ export const updateUserAnalytics = async (): Promise<void> => {
         
         const monthData = monthlyDataMap.get(monthKey)!;
         monthData.antallTilbud++;
-        monthData.tilbudt += tilbud.belop;
+        if (tilbud.status !== 'tapt') {
+          monthData.tilbudt += tilbud.belop;
+        }
         
         // Daily data (for all time, but we'll limit to last 30 days when saving)
         const dayKey = date.toISOString().split('T')[0]; // YYYY-MM-DD format
@@ -192,13 +194,15 @@ export const updateUserAnalytics = async (): Promise<void> => {
         
         const dayData = dailyDataMap.get(dayKey)!;
         dayData.antallTilbud++;
-        dayData.tilbudt += tilbud.belop;
-        
+        if (tilbud.status !== 'tapt') {
+          dayData.tilbudt += tilbud.belop;
+        }
+
         if (tilbud.status === 'vunnet') {
           dayData.antallVunnet++;
           dayData.omsatt += tilbud.belop;
         }
-        
+
         // Jobbtype statistics
         if (!jobbypeStatsMap.has(tilbud.jobbtype)) {
           jobbypeStatsMap.set(tilbud.jobbtype, {
@@ -426,7 +430,7 @@ const calculateAnalyticsFromTilbud = (tilbudData: any, kundData: any): UserAnaly
       const jobbypeStats = jobbypeStatsMap.get(jobbtype)!;
       jobbypeStats.antallTilbud++;
       jobbypeStats.totalVerdi += tilbud.belop || 0;
-      
+
       // Check if tilbud is won
       if (tilbud.status === 'vunnet') {
         vunnetTilbud++;
@@ -993,7 +997,7 @@ const generateEmptyChartData = (timeRange: '7d' | '30d' | '1y' | 'all') => {
           omsatt: 0,
           tilbudt: 0
         };
-      }).reverse();
+      });
     case '30d':
       return Array.from({ length: 30 }, (_, i) => {
         const date = new Date(now.getTime() - (29 - i) * 24 * 60 * 60 * 1000);
@@ -1002,7 +1006,7 @@ const generateEmptyChartData = (timeRange: '7d' | '30d' | '1y' | 'all') => {
           omsatt: 0,
           tilbudt: 0
         };
-      }).reverse();
+      });
     case '1y':
       const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Des'];
       return months.map(month => ({
@@ -1019,44 +1023,50 @@ const generateEmptyChartData = (timeRange: '7d' | '30d' | '1y' | 'all') => {
 };
 
 const getDailyChartData = (analytics: UserAnalytics, days: number) => {
-  if (!analytics.dailyData || analytics.dailyData.length === 0) {
-    return generateEmptyChartData(days === 7 ? '7d' : '30d').reverse();
-  }
+  // Generate date range for the last N days (including today)
+  const now = new Date();
+  const dateRange = Array.from({ length: days }, (_, i) => {
+    const date = new Date(now.getTime() - (days - 1 - i) * 24 * 60 * 60 * 1000);
+    const fullDate = date.toISOString().split('T')[0]; // YYYY-MM-DD format
+    const displayDate = date.toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' });
+    return { fullDate, displayDate };
+  });
 
-  // Get the most recent N days of available daily data
-  const sortedDailyData = analytics.dailyData
-    .sort((a, b) => b.fullDate.localeCompare(a.fullDate)) // Most recent first
-    .slice(0, days) // Take the most recent N days
-    .reverse(); // Put back in chronological order
-
-  // If we have enough data, use it
-  if (sortedDailyData.length === days) {
-    return sortedDailyData.map(data => ({
-      date: data.date,
-      omsatt: data.omsatt,
-      tilbudt: data.tilbudt
-    })).reverse(); // Reverse to show newest first
-  }
-
-  // If we don't have enough data, pad with the available data
-  const result = sortedDailyData.map(data => ({
-    date: data.date,
-    omsatt: data.omsatt,
-    tilbudt: data.tilbudt
-  }));
-
-  // Pad with empty data if needed
-  while (result.length < days) {
-    const lastDate = result.length > 0 ? new Date(result[result.length - 1].date + ' 2025') : new Date();
-    const nextDate = new Date(lastDate.getTime() + 24 * 60 * 60 * 1000);
-    result.push({
-      date: nextDate.toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' }),
-      omsatt: 0,
-      tilbudt: 0
+  // Create a map of existing daily data by fullDate for quick lookup
+  const existingDataMap = new Map<string, DailyData>();
+  if (analytics.dailyData) {
+    analytics.dailyData.forEach(data => {
+      existingDataMap.set(data.fullDate, data);
     });
   }
 
-  return result.reverse(); // Reverse to show newest first
+  // Build result array with carry-forward logic
+  const result: { date: string; omsatt: number; tilbudt: number }[] = [];
+  let lastKnownData: { omsatt: number; tilbudt: number } = { omsatt: 0, tilbudt: 0 };
+
+  for (const { fullDate, displayDate } of dateRange) {
+    const existingData = existingDataMap.get(fullDate);
+
+    if (existingData) {
+      // Use existing data for this date
+      result.push({
+        date: existingData.date,
+        omsatt: existingData.omsatt,
+        tilbudt: existingData.tilbudt
+      });
+      // Update last known data
+      lastKnownData = { omsatt: existingData.omsatt, tilbudt: existingData.tilbudt };
+    } else {
+      // No data for this date, carry forward from previous day
+      result.push({
+        date: displayDate,
+        omsatt: lastKnownData.omsatt,
+        tilbudt: lastKnownData.tilbudt
+      });
+    }
+  }
+
+  return result;
 };
 
 const getMonthlyChartData = (analytics: UserAnalytics, months: number) => {
@@ -1077,7 +1087,7 @@ const getMonthlyChartData = (analytics: UserAnalytics, months: number) => {
     date: data.month,
     omsatt: data.omsatt,
     tilbudt: data.tilbudt
-  })).reverse(); // Reverse to show newest first
+  })); // Return in chronological order
 };
 
 const getAllTimeChartData = (analytics: UserAnalytics) => {
@@ -1096,7 +1106,7 @@ const getAllTimeChartData = (analytics: UserAnalytics) => {
       date: `${data.month} ${data.year}`,
       omsatt: data.omsatt,
       tilbudt: data.tilbudt
-    })).reverse(); // Reverse to show newest first
+    })); // Return in chronological order
 };
 
 // Get recent activity feed from actual data
@@ -1113,14 +1123,51 @@ export const getDashboardActivityFeed = async () => {
     
     const activities: any[] = [];
     
+    // Helper function to safely parse dates
+    const parseDate = (dateValue: any): Date => {
+      // Handle Firebase server timestamp (number in milliseconds)
+      if (typeof dateValue === 'number') {
+        // Firebase serverTimestamp returns milliseconds since epoch
+        return new Date(dateValue);
+      }
+      
+      // Handle string dates (YYYY-MM-DD format from forms)
+      if (typeof dateValue === 'string') {
+        if (dateValue.match(/^\d{4}-\d{2}-\d{2}$/)) {
+          return new Date(dateValue + 'T12:00:00'); // Use noon to avoid timezone issues
+        }
+        return new Date(dateValue);
+      }
+      
+      // Handle Firebase timestamp objects (if they exist)
+      if (dateValue && typeof dateValue === 'object') {
+        if (dateValue.toDate && typeof dateValue.toDate === 'function') {
+          return dateValue.toDate();
+        }
+        if (typeof dateValue.seconds === 'number') {
+          return new Date(dateValue.seconds * 1000);
+        }
+      }
+      
+      // Fallback to current date
+      console.warn('Could not parse date value:', dateValue, 'falling back to current date');
+      return new Date();
+    };
+    
     // Process tilbud data for activities
     if (tilbudSnapshot.exists()) {
       const tilbudData = tilbudSnapshot.val();
       Object.entries(tilbudData).forEach(([id, tilbud]: [string, any]) => {
-        const date = new Date(tilbud.dato);
+        // Use opprettet as primary date (when tilbud was created), oppdatert for updates, dato as fallback
+        const lastModified = tilbud.oppdatert || tilbud.opprettet || tilbud.dato;
+        const date = parseDate(lastModified);
         const now = new Date();
-        const diffTime = Math.abs(now.getTime() - date.getTime());
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        // Calculate days difference more accurately
+        const nowDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const activityDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+        const diffTime = nowDate.getTime() - activityDate.getTime();
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
         
         let timestamp = '';
         if (diffDays === 0) {
@@ -1172,10 +1219,16 @@ export const getDashboardActivityFeed = async () => {
       const kundeData = kundeSnapshot.val();
       Object.entries(kundeData).forEach(([id, kunde]: [string, any]) => {
         if (kunde.opprettet) {
-          const date = new Date(kunde.opprettet);
+          // Use oppdatert date if available, otherwise use opprettet
+          const lastModified = kunde.oppdatert || kunde.opprettet;
+          const date = parseDate(lastModified);
           const now = new Date();
-          const diffTime = Math.abs(now.getTime() - date.getTime());
-          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          
+          // Calculate days difference more accurately
+          const nowDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          const activityDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+          const diffTime = nowDate.getTime() - activityDate.getTime();
+          const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
           
           let timestamp = '';
           if (diffDays === 0) {
@@ -1201,12 +1254,207 @@ export const getDashboardActivityFeed = async () => {
     }
     
     // Sort by date (most recent first) and take top 5
-    return activities
-      .sort((a, b) => b.date - a.date)
-      .slice(0, 5)
-      .map(({ date, ...activity }) => activity); // Remove date field used for sorting
+    const sortedActivities = activities
+      .filter(activity => activity.date && !isNaN(activity.date)) // Filter out invalid dates
+      .sort((a, b) => {
+        const dateA = a.date || 0;
+        const dateB = b.date || 0;
+        
+        // First sort by date (most recent first)
+        const dateDiff = dateB - dateA;
+        if (dateDiff !== 0) {
+          return dateDiff;
+        }
+        
+        // If dates are equal, prioritize tilbud activities over kunde activities
+        const aIsTilbud = a.type.startsWith('tilbud_');
+        const bIsTilbud = b.type.startsWith('tilbud_');
+        if (aIsTilbud && !bIsTilbud) return -1;
+        if (!aIsTilbud && bIsTilbud) return 1;
+        
+        return 0; // Keep original order if same type
+      })
+      .slice(0, 5);
+    
+    return sortedActivities.map(({ date, ...activity }) => activity); // Remove date field used for sorting
       
   } catch (error) {
     throw handleDatabaseError(error, 'hente aktivitets feed');
   }
 };
+
+// Interface for pie chart data
+export interface TilbudStatusData {
+  name: string;
+  value: number;
+  count: number;
+  color: string;
+}
+
+// Get tilbud status distribution for pie chart
+export const getTilbudStatusData = async (): Promise<TilbudStatusData[]> => {
+  try {
+    await ensureConnection();
+    const userId = getCurrentUserId();
+    
+    const tilbudRef = ref(db, getUserPath(userId, 'tilbud'));
+    const snapshot = await get(tilbudRef);
+    
+    if (!snapshot.exists()) {
+      return [
+        { name: 'Venter', value: 0, count: 0, color: '#FFBB28' },
+        { name: 'Vunnet', value: 0, count: 0, color: '#00C49F' },
+        { name: 'Tapt', value: 0, count: 0, color: '#FF8042' },
+      ];
+    }
+    
+    const tilbudData = snapshot.val() as Record<string, any>;
+    const statusCounts = {
+      venter: 0,
+      vunnet: 0,
+      tapt: 0
+    };
+    
+    // Count tilbud by status
+    Object.values(tilbudData).forEach((tilbud: any) => {
+      const status = tilbud.status?.toLowerCase();
+      if (status && statusCounts.hasOwnProperty(status)) {
+        statusCounts[status as keyof typeof statusCounts]++;
+      }
+    });
+    
+    const total = statusCounts.venter + statusCounts.vunnet + statusCounts.tapt;
+    
+    // Return data with percentages
+    return [
+      {
+        name: 'Venter',
+        value: total > 0 ? Math.round((statusCounts.venter / total) * 100) : 0,
+        count: statusCounts.venter,
+        color: '#FFBB28'
+      },
+      {
+        name: 'Vunnet',
+        value: total > 0 ? Math.round((statusCounts.vunnet / total) * 100) : 0,
+        count: statusCounts.vunnet,
+        color: '#00C49F'
+      },
+      {
+        name: 'Tapt',
+        value: total > 0 ? Math.round((statusCounts.tapt / total) * 100) : 0,
+        count: statusCounts.tapt,
+        color: '#FF8042'
+      }
+    ].filter(item => item.count > 0); // Only show statuses that have data
+    
+  } catch (error) {
+    throw handleDatabaseError(error, 'hente tilbudsstatus data');
+  }
+};
+
+// Interface for quick stats data
+export interface QuickStatItem {
+  title: string;
+  value: string;
+  change: string;
+  icon: string;
+  color: string;
+  bgColor: string;
+}
+
+// Get quick stats data for dashboard widget
+export const getQuickStatsData = async (): Promise<QuickStatItem[]> => {
+  try {
+    await ensureConnection();
+    const userId = getCurrentUserId();
+    
+    // Get current analytics
+    const analytics = await getUserAnalytics();
+    
+    // Get tilbud data for active projects count
+    const tilbudRef = ref(db, getUserPath(userId, 'tilbud'));
+    const tilbudSnapshot = await get(tilbudRef);
+    
+    let activeProjects = 0;
+    let avgQuoteValue = 0;
+    let totalQuoteValue = 0;
+    
+    if (tilbudSnapshot.exists()) {
+      const tilbudData = tilbudSnapshot.val() as Record<string, any>;
+      const tilbudList = Object.values(tilbudData);
+      
+      // Count active projects (venter status)
+      activeProjects = tilbudList.filter((t: any) => t.status === 'venter').length;
+      
+      // Calculate average quote value
+      const totalValue = tilbudList.reduce((sum: number, t: any) => sum + (t.belop || 0), 0);
+      avgQuoteValue = tilbudList.length > 0 ? totalValue / tilbudList.length : 0;
+      totalQuoteValue = totalValue;
+    }
+    
+    // Get customer count for "new customers" (simplified - showing total)
+    const customersRef = ref(db, getUserPath(userId, 'kunder'));
+    const customersSnapshot = await get(customersRef);
+    const customerCount = customersSnapshot.exists() ? Object.keys(customersSnapshot.val()).length : 0;
+    
+    // Calculate monthly growth (simplified - comparing with previous month)
+    const currentMonth = new Date().getMonth();
+    let monthlyGrowth = 0;
+    
+    if (analytics && analytics.monthlyData && analytics.monthlyData.length > 0) {
+      const thisMonthData = analytics.monthlyData.find(m => m.month === getMonthName(currentMonth));
+      const lastMonthData = analytics.monthlyData.find(m => m.month === getMonthName(currentMonth - 1));
+      
+      if (thisMonthData && lastMonthData && lastMonthData.omsatt > 0) {
+        monthlyGrowth = ((thisMonthData.omsatt - lastMonthData.omsatt) / lastMonthData.omsatt) * 100;
+      }
+    }
+    
+    return [
+      {
+        title: 'Aktive Tilbud',
+        value: activeProjects.toString(),
+        change: '+0', // Could be calculated by comparing with previous period
+        icon: 'FileText',
+        color: 'text-blue-600',
+        bgColor: 'bg-blue-50',
+      },
+      {
+        title: 'Totale Kunder',
+        value: customerCount.toString(),
+        change: '+0', // Could be calculated by comparing with previous period
+        icon: 'Users',
+        color: 'text-green-600',
+        bgColor: 'bg-green-50',
+      },
+      {
+        title: 'Månedlig Vekst',
+        value: `${monthlyGrowth.toFixed(1)}%`,
+        change: monthlyGrowth >= 0 ? `+${monthlyGrowth.toFixed(1)}%` : `${monthlyGrowth.toFixed(1)}%`,
+        icon: 'TrendingUp',
+        color: 'text-purple-600',
+        bgColor: 'bg-purple-50',
+      },
+      {
+        title: 'Gj.snitt Verdi',
+        value: `${Math.round(avgQuoteValue / 1000)}k`,
+        change: '+0k', // Could be calculated by comparing with previous period
+        icon: 'DollarSign',
+        color: 'text-orange-600',
+        bgColor: 'bg-orange-50',
+      },
+    ];
+    
+  } catch (error) {
+    throw handleDatabaseError(error, 'hente hurtigstatistikk data');
+  }
+};
+
+// Helper function to get month name
+function getMonthName(monthIndex: number): string {
+  const months = [
+    'Januar', 'Februar', 'Mars', 'April', 'Mai', 'Juni',
+    'Juli', 'August', 'September', 'Oktober', 'November', 'Desember'
+  ];
+  return months[monthIndex] || months[0];
+}

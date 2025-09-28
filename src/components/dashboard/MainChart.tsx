@@ -12,6 +12,7 @@ import {
   Legend,
 } from 'recharts';
 import { getDashboardChartData } from '@/lib/services/analyticsService';
+import { updateUserAnalytics } from '@/lib/services/analyticsService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/shared/Card';
 import { Button } from '@/components/ui/button';
 
@@ -47,11 +48,13 @@ interface ChartDataPoint {
 export const MainChart = () => {
   const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
   const [loading, setLoading] = useState(true);
-  const [timeRange, setTimeRange] = useState<'7d' | '30d' | '1y' | 'all'>('1y');
+  const [timeRange, setTimeRange] = useState<'7d' | '30d' | '1y' | 'all'>('30d');
 
   useEffect(() => {
     const loadChartData = async () => {
       try {
+        // Force update analytics before loading chart data
+        await updateUserAnalytics();
         const data = await getDashboardChartData(timeRange);
         setChartData(data);
       } catch (error) {
@@ -82,69 +85,84 @@ export const MainChart = () => {
   }
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="h-full flex flex-col">
+      <CardHeader className="flex-shrink-0">
         <div className="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-          <CardTitle>Omsetning vs. Tilbudt Verdi</CardTitle>
+          <CardTitle className="text-base sm:text-lg">Omsetning vs. Tilbudt Verdi</CardTitle>
           <div className="flex flex-wrap gap-2">
             <Button
               variant={timeRange === '7d' ? 'default' : 'outline'}
               size="sm"
               onClick={() => setTimeRange('7d')}
+              className="text-xs"
             >
-              7 dager
+              7d
             </Button>
             <Button
               variant={timeRange === '30d' ? 'default' : 'outline'}
               size="sm"
               onClick={() => setTimeRange('30d')}
+              className="text-xs"
             >
-              30 dager
+              30d
             </Button>
             <Button
               variant={timeRange === '1y' ? 'default' : 'outline'}
               size="sm"
               onClick={() => setTimeRange('1y')}
+              className="text-xs"
             >
-              1 år
+              1år
             </Button>
             <Button
               variant={timeRange === 'all' ? 'default' : 'outline'}
               size="sm"
               onClick={() => setTimeRange('all')}
+              className="text-xs"
             >
-              Fra start
+              Alle
             </Button>
           </div>
         </div>
       </CardHeader>
-      <CardContent>
-        <div style={{ width: '100%', height: 350 }}>
-          <ResponsiveContainer>
+      <CardContent className="flex-1 flex flex-col min-h-0">
+        <div className="flex-1 w-full min-h-[200px]">
+          <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
-              <XAxis dataKey="date" tick={{ fill: '#6D6D72', fontSize: 12 }} />
+              <XAxis 
+                dataKey="date" 
+                tick={{ fill: '#6D6D72', fontSize: 11 }}
+                interval="preserveStartEnd"
+              />
               <YAxis
                 tickFormatter={(value) => `${(value / 1000).toLocaleString()}k`}
-                tick={{ fill: '#6D6D72', fontSize: 12 }}
+                tick={{ fill: '#6D6D72', fontSize: 11 }}
+                width={60}
               />
               <Tooltip content={<CustomTooltip />} />
-              <Legend wrapperStyle={{ paddingTop: '20px' }} />
+              <Legend 
+                wrapperStyle={{ paddingTop: '10px', fontSize: '12px' }}
+                iconSize={12}
+              />
               <Line
                 type="monotone"
                 dataKey="tilbudt"
                 stroke="#1A4314"
                 strokeWidth={1.5}
                 strokeDasharray="5 5"
-                dot={{ r: 3, fill: '#1A4314' }}
-                activeDot={{ r: 6 }}
+                dot={{ r: 2, fill: '#1A4314' }}
+                activeDot={{ r: 4 }}
+                name="Tilbudt"
               />
               <Line
                 type="monotone"
                 dataKey="omsatt"
                 stroke="#26cd63b6"
                 strokeWidth={2}
-                dot={{ r: 4, fill: '#329d59ff' }}
+                dot={{ r: 3, fill: '#329d59ff' }}
+                activeDot={{ r: 5 }}
+                name="Omsatt"
               />
             </LineChart>
           </ResponsiveContainer>

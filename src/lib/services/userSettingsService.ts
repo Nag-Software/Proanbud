@@ -16,13 +16,15 @@ export interface UserSettingsData {
   emailNotifications: boolean;
   language: string;
   timezone: string;
+  dashboardLayout?: any[];
   lastUpdated?: number;
 }
 
 // Helper function to ensure user is authenticated
-const getCurrentUserId = (): string => {
+const getCurrentUserId = (): string | null => {
   if (!auth.currentUser) {
-    throw new Error('User not authenticated. Please log in.');
+    console.warn('User not authenticated when trying to access user settings');
+    return null;
   }
   return auth.currentUser.uid;
 };
@@ -31,6 +33,11 @@ const getCurrentUserId = (): string => {
 export const getUserSettings = async (): Promise<UserSettingsData | null> => {
   try {
     const userId = getCurrentUserId();
+    if (!userId) {
+      console.warn('Cannot get user settings: user not authenticated');
+      return null;
+    }
+    
     const settingsRef = ref(db, `users/${userId}/userSettings`);
     const snapshot = await get(settingsRef);
     
@@ -48,6 +55,11 @@ export const getUserSettings = async (): Promise<UserSettingsData | null> => {
 export const saveUserSettings = async (settings: Omit<UserSettingsData, 'lastUpdated'>): Promise<void> => {
   try {
     const userId = getCurrentUserId();
+    if (!userId) {
+      console.warn('Cannot save user settings: user not authenticated');
+      throw new Error('User not authenticated. Please log in.');
+    }
+    
     const settingsRef = ref(db, `users/${userId}/userSettings`);
     
     const settingsWithTimestamp = {
@@ -66,6 +78,11 @@ export const saveUserSettings = async (settings: Omit<UserSettingsData, 'lastUpd
 export const updateUserSettings = async (updates: Partial<UserSettingsData>): Promise<void> => {
   try {
     const userId = getCurrentUserId();
+    if (!userId) {
+      console.warn('Cannot update user settings: user not authenticated');
+      throw new Error('User not authenticated. Please log in.');
+    }
+    
     const settingsRef = ref(db, `users/${userId}/userSettings`);
     
     const updateData = {
@@ -84,6 +101,11 @@ export const updateUserSettings = async (updates: Partial<UserSettingsData>): Pr
 export const initializeUserSettings = async (userData: { name: string; email: string }): Promise<void> => {
   try {
     const userId = getCurrentUserId();
+    if (!userId) {
+      console.warn('Cannot initialize user settings: user not authenticated');
+      return;
+    }
+    
     const settingsRef = ref(db, `users/${userId}/userSettings`);
     
     // Check if settings already exist
@@ -100,6 +122,13 @@ export const initializeUserSettings = async (userData: { name: string; email: st
       emailNotifications: true,
       language: 'no',
       timezone: 'Europe/Oslo',
+      dashboardLayout: [
+        { i: 'kpi-cards', x: 0, y: 0, w: 12, h: 4, minH: 4 },
+        { i: 'main-chart', x: 0, y: 4, w: 8, h: 8, minH: 6 },
+        { i: 'quick-stats', x: 8, y: 4, w: 4, h: 4, minH: 4 },
+        { i: 'pie-chart', x: 8, y: 8, w: 4, h: 6, minH: 4 },
+        { i: 'activity-feed', x: 0, y: 12, w: 12, h: 6, minH: 4 },
+      ],
       lastUpdated: Date.now()
     };
     

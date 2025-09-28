@@ -2,9 +2,45 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, User, FileText, Calendar, DollarSign, Briefcase, Clock, Edit3, Save, XCircle, ExternalLink, Eye, Download } from 'lucide-react';
-import { Tilbud, Kunde } from '@/lib/types';
+import { Tilbud, Kunde, BusinessSettings, PriceComponent } from '@/lib/types';
 import { Card } from '@/components/shared/Card';
 import { updateTilbud, TilbudFormData } from '@/lib/services/tilbudService';
+import { getBusinessSettings } from '@/lib/services/businessService';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+
+
+async function downloadTemplate(templateName: string): Promise<string> {
+  let url = "";
+  switch (templateName) {
+    case 'modern':
+      url = "/templates/template-modern.html";
+      break;
+    case 'classic':
+      url = "/templates/template-classic.html";
+      break;
+    case 'minimal':
+      url = "/templates/template-minimal.html";
+      break;
+    default:
+      url = "/templates/template-modern.html";
+  }
+
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch template: ${response.statusText}`);
+    }
+    return await response.text();
+  } catch (error) {
+    console.error('Error loading template:', error);
+    return '<div>Error loading template</div>';
+  }
+}
 
 interface QuoteDetailsDrawerProps {
   quote: Tilbud | null;
@@ -26,6 +62,11 @@ export function QuoteDetailsDrawer({
   const [isEditing, setIsEditing] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [editedQuote, setEditedQuote] = useState<Partial<TilbudFormData>>({});
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [templateHtml, setTemplateHtml] = useState<string>('');
+  const [isLoadingTemplate, setIsLoadingTemplate] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<string>('modern');
+  const [businessSettings, setBusinessSettings] = useState<BusinessSettings | null>(null);
 
   // Reset editing state when drawer closes
   useEffect(() => {
@@ -35,21 +76,48 @@ export function QuoteDetailsDrawer({
     }
   }, [open]);
 
+  // Set selected template based on quote
+  useEffect(() => {
+    if (quote?.template) {
+      setSelectedTemplate(quote.template);
+    } else {
+      setSelectedTemplate('modern');
+    }
+  }, [quote]);
+
+  // Fetch business settings on component mount
+  useEffect(() => {
+    const fetchBusinessSettings = async () => {
+      try {
+        const settings = await getBusinessSettings();
+        setBusinessSettings(settings);
+      } catch (error) {
+        console.error('Error fetching business settings:', error);
+      }
+    };
+
+    fetchBusinessSettings();
+  }, []);
+
   if (!quote) return null;
 
+  // At this point, quote is guaranteed to be non-null
+  const currentQuote = quote;
+
   // Find the customer for this quote
-  const relatedCustomer = customers.find(customer => customer.navn === quote.kundenavn);
+  const relatedCustomer = customers.find(customer => customer.navn === currentQuote.kundenavn);
 
   // Initialize edited quote data when editing starts
   const startEditing = () => {
     setEditedQuote({
-      kundenavn: quote.kundenavn,
-      prosjekt: quote.prosjekt,
-      jobbtype: quote.jobbtype,
-      belop: quote.belop,
-      status: quote.status,
-      dato: quote.dato,
-      svarfrist: quote.svarfrist,
+      kundenavn: currentQuote.kundenavn,
+      prosjekt: currentQuote.prosjekt,
+      jobbtype: currentQuote.jobbtype,
+      belop: currentQuote.belop,
+      status: currentQuote.status,
+      dato: currentQuote.dato,
+      svarfrist: currentQuote.svarfrist,
+      template: currentQuote.template || 'modern',
     });
     setIsEditing(true);
   };
@@ -62,8 +130,7 @@ export function QuoteDetailsDrawer({
   const saveChanges = async () => {
     try {
       setIsUpdating(true);
-      await updateTilbud(quote.id, editedQuote);
-      quote = editedQuote as Tilbud; // Update local quote reference
+      await updateTilbud(currentQuote.id, editedQuote);
       setIsEditing(false);
       setEditedQuote({});
       onQuoteUpdated?.();
@@ -134,6 +201,91 @@ export function QuoteDetailsDrawer({
   };
 
   const daysUntilDeadline = getDaysUntilDeadline(quote.svarfrist);
+
+  const truncateFilename = (filename: string, maxLength: number = 30) => {
+    if (filename.length <= maxLength) return filename;
+    return filename.substring(0, maxLength - 3) + '...';
+  };
+
+  const handleTemplateChange = async (template: string) => {
+    setSelectedTemplate(template);
+    if (isEditing) {
+      setEditedQuote(prev => ({ ...prev, template }));
+    }
+    setIsLoadingTemplate(true);
+    try {
+      const templateContent = await downloadTemplate(template);
+      setTemplateHtml(templateContent);
+    } catch (error) {
+      console.error('Error loading template:', error);
+    } finally {
+      setIsLoadingTemplate(false);
+    }
+  };
+
+  const handlePreview = async () => {
+    setIsLoadingTemplate(true);
+    try {
+      const template = await downloadTemplate(selectedTemplate);
+      setTemplateHtml(template);
+      setIsPreviewOpen(true);
+    } catch (error) {
+      console.error('Error loading template for preview:', error);
+      // You could show an error message to the user here
+    } finally {
+      setIsLoadingTemplate(false);
+    }
+  };
+
+  const generatePreviewHtml = () => {
+    let html = templateHtml;
+
+    // Replace quote placeholders
+    html = html.replace(/\{\{quote\.prosjekt\}\}/g, quote.prosjekt);
+    html = html.replace(/\{\{quote\.id\}\}/g, quote.id.slice(-6).toUpperCase());
+    html = html.replace(/\{\{quote\.dato\}\}/g, formatDate(quote.dato));
+    html = html.replace(/\{\{quote\.svarfrist\}\}/g, formatDate(quote.svarfrist));
+    html = html.replace(/\{\{quote\.status\}\}/g, getStatusText(quote.status));
+    html = html.replace(/\{\{quote\.kundenavn\}\}/g, quote.kundenavn);
+    html = html.replace(/\{\{quote\.jobbtype\}\}/g, quote.jobbtype);
+    html = html.replace(/\{\{quote\.belop\}\}/g, formatCurrency(quote.belop));
+
+    // Replace customer placeholders
+    if (relatedCustomer) {
+      html = html.replace(/\{\{customer\.epost\}\}/g, relatedCustomer.epost);
+      html = html.replace(/\{\{customer\.telefon\}\}/g, relatedCustomer.telefon);
+    } else {
+      html = html.replace(/\{\{customer\.epost\}\}/g, 'Ikke tilgjengelig');
+      html = html.replace(/\{\{customer\.telefon\}\}/g, 'Ikke tilgjengelig');
+    }
+
+    // Replace business placeholders
+    if (businessSettings) {
+      html = html.replace(/\{\{business\.name\}\}/g, businessSettings.companyName || 'Bedriftsnavn');
+      html = html.replace(/\{\{business\.orgnr\}\}/g, businessSettings.organizationNumber || 'Org.nr');
+      html = html.replace(/\{\{business\.address\}\}/g, businessSettings.address || '');
+      html = html.replace(/\{\{business\.postalCode\}\}/g, businessSettings.postalCode || '');
+      html = html.replace(/\{\{business\.city\}\}/g, businessSettings.city || '');
+      html = html.replace(/\{\{business\.phone\}\}/g, businessSettings.phone || '');
+      html = html.replace(/\{\{business\.email\}\}/g, businessSettings.email || '');
+      html = html.replace(/\{\{business\.website\}\}/g, businessSettings.website || '');
+      html = html.replace(/\{\{business\.logoUrl\}\}/g, businessSettings.logoUrl || '');
+      html = html.replace(/\{\{business\.bankAccount\}\}/g, businessSettings.bankAccount || '');
+    } else {
+      html = html.replace(/\{\{business\.name\}\}/g, 'Bedriftsnavn');
+      html = html.replace(/\{\{business\.orgnr\}\}/g, 'Org.nr');
+      html = html.replace(/\{\{business\.address\}\}/g, '');
+      html = html.replace(/\{\{business\.postalCode\}\}/g, '');
+      html = html.replace(/\{\{business\.city\}\}/g, '');
+      html = html.replace(/\{\{business\.phone\}\}/g, '');
+      html = html.replace(/\{\{business\.email\}\}/g, '');
+      html = html.replace(/\{\{business\.website\}\}/g, '');
+      html = html.replace(/\{\{business\.logoUrl\}\}/g, '');
+      html = html.replace(/\{\{business\.bankAccount\}\}/g, '');
+    }
+
+    return html;
+  };
 
   return (
     <>
@@ -300,6 +452,67 @@ export function QuoteDetailsDrawer({
               </div>
             </Card>
 
+            {/* Price Breakdown */}
+            {quote.prisgrunnlag && quote.prisgrunnlag.length > 0 && (
+              <Card>
+                <div className="p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <DollarSign className="h-5 w-5 text-green-600" />
+                    Prisgrunnlag
+                  </h3>
+                  <div className="space-y-3">
+                    {quote.prisgrunnlag.map((component, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-medium text-gray-900">{component.name}</span>
+                            {component.confidence > 0 && (
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                                component.confidence >= 80 ? 'bg-green-100 text-green-700' :
+                                component.confidence >= 60 ? 'bg-yellow-100 text-yellow-700' :
+                                'bg-red-100 text-red-700'
+                              }`}>
+                                {component.confidence}% sikkerhet
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-600">{component.description}</p>
+                          <div className="flex items-center gap-4 mt-1 text-xs text-gray-500">
+                            <span>Kategori: {component.category.charAt(0).toUpperCase() + component.category.slice(1)}</span>
+                            {component.quantity && component.unit && (
+                              <span>Antall: {component.quantity} {component.unit}</span>
+                            )}
+                            {component.unitPrice && (
+                              <span>Enhetspris: kr {component.unitPrice.toLocaleString('nb-NO')}</span>
+                            )}
+                            {component.priceMarkup && component.priceMarkup > 0 && (
+                              <span>Prispåslag: {component.priceMarkup}%</span>
+                            )}
+                            {component.materialMarkup && component.materialMarkup > 0 && (
+                              <span>Materialpåslag: {component.materialMarkup}%</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-semibold text-gray-900">
+                            kr {component.amount.toLocaleString('nb-NO')}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    <div className="border-t pt-3 mt-4">
+                      <div className="flex justify-between items-center">
+                        <span className="font-semibold text-gray-900">Total</span>
+                        <span className="font-bold text-lg text-gray-900">
+                          kr {quote.belop.toLocaleString('nb-NO')}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            )}
+
             {/* Timeline Information */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Card>
@@ -381,15 +594,19 @@ export function QuoteDetailsDrawer({
                       </div>
                       <div>
                         <div className="font-medium text-gray-900">
-                          Tilbud_{quote.prosjekt.replace(/\s+/g, '_')}_{quote.dato.replace(/-/g, '')}.pdf
+                          {truncateFilename(`Tilbud_${quote.prosjekt.replace(/\s+/g, '_')}_${quote.dato.replace(/-/g, '')}.pdf`)}
                         </div>
                         <div className="text-sm text-gray-600">PDF Dokument</div>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <button className="flex items-center gap-2 px-3 py-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                      <button 
+                        onClick={handlePreview}
+                        disabled={isLoadingTemplate}
+                        className="flex items-center gap-2 px-3 py-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
                         <Eye className="h-4 w-4" />
-                        Forhåndsvis
+                        {isLoadingTemplate ? 'Laster...' : 'Forhåndsvis'}
                       </button>
                       <button className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">
                         <Download className="h-4 w-4" />
@@ -440,6 +657,65 @@ export function QuoteDetailsDrawer({
           </div>
         </div>
       </div>
+
+      {/* Preview Dialog */}
+      <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Tilbudsforhåndsvisning - {quote.prosjekt}</DialogTitle>
+          </DialogHeader>
+
+          {/* Template Selector */}
+          <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+            <h3 className="text-sm font-medium text-gray-700 mb-3">Velg mal:</h3>
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleTemplateChange('modern')}
+                disabled={isLoadingTemplate}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  selectedTemplate === 'modern'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                Moderne
+              </button>
+              <button
+                onClick={() => handleTemplateChange('classic')}
+                disabled={isLoadingTemplate}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  selectedTemplate === 'classic'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                Klassisk
+              </button>
+              <button
+                onClick={() => handleTemplateChange('minimal')}
+                disabled={isLoadingTemplate}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  selectedTemplate === 'minimal'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                Minimal
+              </button>
+            </div>
+            {isLoadingTemplate && (
+              <p className="text-xs text-gray-500 mt-2">Laster mal...</p>
+            )}
+          </div>
+
+          <div className="mt-4">
+            <div
+              className="bg-white border rounded-lg shadow-sm"
+              dangerouslySetInnerHTML={{ __html: generatePreviewHtml() }}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

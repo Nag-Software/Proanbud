@@ -5,9 +5,11 @@ import { PageHeader } from '@/components/shared/PageHeader';
 import { DataTable } from '@/components/shared/DataTable';
 import { NewCustomerDrawer, CustomerDetailsDrawer } from '@/components/kunder';
 import { QuoteDetailsDrawer } from '@/components/tilbud';
-import { kundeData, tilbudData } from '@/lib/data';
 import { getCustomers } from '@/lib/services/customerService';
 import { getTilbud } from '@/lib/services/tilbudService';
+import { ref, onValue, off } from 'firebase/database';
+import { db } from '@/lib/firebase';
+import { auth } from '@/lib/firebase';
 import { Kunde, ColumnDef, Tilbud } from '@/lib/types';
 import { PlusCircle } from 'lucide-react';
 
@@ -48,48 +50,127 @@ export default function KunderPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Load customers from Firebase
+  // Set up real-time listeners for customers and quotes
   useEffect(() => {
-    loadCustomers();
+    let customersUnsubscribe: (() => void) | null = null;
+    let quotesUnsubscribe: (() => void) | null = null;
+
+    const setupRealtimeListeners = async () => {
+      try {
+        // Wait for auth to be ready
+        if (!auth.currentUser) {
+          setError('Bruker ikke autentisert');
+          setIsLoading(false);
+          return;
+        }
+
+        setIsLoading(true);
+        setError(null);
+
+        const userId = auth.currentUser.uid;
+
+        // Set up listener for customers
+        const customersRef = ref(db, `users/${userId}/kunder`);
+        customersUnsubscribe = onValue(customersRef, (customersSnapshot) => {
+          try {
+            let firebaseCustomers: Kunde[] = [];
+            if (customersSnapshot.exists()) {
+              const customerData = customersSnapshot.val() as Record<string, any>;
+              firebaseCustomers = Object.entries(customerData)
+                .sort(([, a], [, b]) => (b.oppdatert || b.opprettet) - (a.oppdatert || a.opprettet))
+                .map(([key, data]) => ({
+                  id: key,
+                  navn: data.navn,
+                  epost: data.epost,
+                  telefon: data.telefon,
+                  antallTilbud: data.antallTilbud || 0,
+                  antallVunnet: data.antallVunnet || 0,
+                  sistAktivitet: new Date(data.sistAktivitet).toISOString().split('T')[0],
+                  addresser: data.addresser || [],
+                  tilbud: [] // Will be populated when quotes are loaded
+                }));
+            }
+
+            // Update customers state (quotes will be added when quotes listener fires)
+            setCustomers(prevCustomers => {
+              // Merge with existing quotes data if available
+              return firebaseCustomers.map(customer => ({
+                ...customer,
+                tilbud: prevCustomers.find(c => c.id === customer.id)?.tilbud || []
+              }));
+            });
+
+            setIsLoading(false);
+          } catch (error) {
+            console.error('Error processing customers:', error);
+            setError('Kunne ikke behandle kunder');
+            setIsLoading(false);
+          }
+        }, (error) => {
+          console.error('Firebase customers listener error:', error);
+          setError('Kunne ikke lytte til kunder');
+          setIsLoading(false);
+        });
+
+        // Set up listener for quotes
+        const quotesRef = ref(db, `users/${userId}/tilbud`);
+        quotesUnsubscribe = onValue(quotesRef, (quotesSnapshot) => {
+          try {
+            let firebaseQuotes: Tilbud[] = [];
+            if (quotesSnapshot.exists()) {
+              const quoteData = quotesSnapshot.val() as Record<string, any>;
+              firebaseQuotes = Object.entries(quoteData)
+                .sort(([, a], [, b]) => (b.oppdatert || b.opprettet) - (a.oppdatert || a.opprettet))
+                .map(([key, data]) => ({
+                  id: key,
+                  kundenavn: data.kundenavn,
+                  prosjekt: data.prosjekt,
+                  jobbtype: data.jobbtype,
+                  belop: data.belop,
+                  status: data.status,
+                  dato: data.dato,
+                  svarfrist: data.svarfrist,
+                  prisgrunnlag: data.prisgrunnlag || [],
+                  template: data.template
+                }));
+            }
+
+            // Update customers with quotes
+            setCustomers(prevCustomers => {
+              return prevCustomers.map(customer => ({
+                ...customer,
+                tilbud: firebaseQuotes.filter(quote => quote.kundenavn === customer.navn)
+              }));
+            });
+          } catch (error) {
+            console.error('Error processing quotes:', error);
+          }
+        }, (error) => {
+          console.error('Firebase quotes listener error:', error);
+        });
+
+      } catch (error) {
+        console.error('Error setting up real-time listeners:', error);
+        setError(error instanceof Error ? error.message : 'Kunne ikke sette opp sanntidsoppdatering');
+        setIsLoading(false);
+      }
+    };
+
+    setupRealtimeListeners();
+
+    // Cleanup function
+    return () => {
+      if (customersUnsubscribe) {
+        customersUnsubscribe();
+      }
+      if (quotesUnsubscribe) {
+        quotesUnsubscribe();
+      }
+    };
   }, []);
 
-  const loadCustomers = async () => {
-    try {
-      // Load both customers and quotes
-      const [firebaseCustomers, firebaseQuotes] = await Promise.all([
-        getCustomers(),
-        getTilbud()
-      ]);
-      
-      // Connect quotes to customers
-      const customersWithQuotes = firebaseCustomers.map(customer => ({
-        ...customer,
-        tilbud: firebaseQuotes.filter(quote => quote.kundenavn === customer.navn)
-      }));
-      
-      setCustomers(customersWithQuotes);
-    } catch (err: any) {
-      console.error('Error loading customers:', err);
-      
-      // Show specific error message
-      const errorMessage = err.message || 'Kunne ikke koble til database';
-      setError(`${errorMessage} - Viser eksempeldata i stedet.`);
-      
-      // Keep static data as fallback - connect static quotes to static customers
-      const staticCustomersWithQuotes = kundeData.map(customer => ({
-        ...customer,
-        tilbud: tilbudData.filter(quote => quote.kundenavn === customer.navn)
-      }));
-      
-      setCustomers(staticCustomersWithQuotes);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleCustomerCreated = () => {
-    // Reload customers after creation
-    loadCustomers();
+    // Data will automatically update via real-time listeners
   };
 
   const handleCustomerClick = (customer: Kunde) => {
@@ -101,6 +182,25 @@ export default function KunderPage() {
     setSelectedQuote(quote);
     setIsQuoteDetailsOpen(true);
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <p className="text-red-500 mb-4">{error}</p>
+          <p className="text-sm text-gray-500">Last siden på nytt for å prøve igjen</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -134,7 +234,6 @@ export default function KunderPage() {
         customer={selectedCustomer}
         open={isCustomerDetailsOpen}
         onOpenChange={setIsCustomerDetailsOpen}
-        onCustomerUpdated={loadCustomers}
         onOpenQuoteDrawer={handleQuoteClick}
       />
       

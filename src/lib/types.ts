@@ -20,6 +20,20 @@ export interface ActivityItem {
   amount?: number;
 }
 
+export interface InboxMessage {
+  id: string;
+  from: string;
+  subject: string;
+  message: string;
+  timestamp: string;
+  isRead: boolean;
+  quoteId?: string;
+  customerId?: string;
+  type: 'quote_sent' | 'quote_opened' | 'quote_question' | 'quote_approved' | 'quote_rejected' | 'general_inquiry';
+  customerName?: string;
+  quoteTitle?: string;
+}
+
 export interface Tilbud {
   id: string;
   kundenavn: string;
@@ -29,6 +43,8 @@ export interface Tilbud {
   status: 'venter' | 'vunnet' | 'tapt';
   dato: string;
   svarfrist: string;
+  prisgrunnlag?: PriceComponent[];
+  template?: string;
 }
 
 export interface Kunde {
@@ -48,6 +64,32 @@ export interface JobbtypeAnalyse {
   treffprosent: number;
   antallTilbud: number;
   antallVunnet: number;
+}
+
+export interface PriceComponent {
+  id: string;
+  category: 'materialer' | 'arbeid' | 'transport' | 'utstyr' | 'margin' | 'annet';
+  name: string;
+  description: string;
+  amount: number;
+  quantity?: number;
+  unit?: string;
+  unitPrice?: number;
+  priceMarkup?: number; // Percentage markup on base price
+  materialMarkup?: number; // Additional markup for materials
+  isEditable: boolean;
+  confidence: number; // 0-100, how confident AI is in this estimate
+}
+
+export interface AIPriceSuggestion {
+  totalPrice: number;
+  confidence: number; // Overall confidence 0-100
+  components: PriceComponent[];
+  reasoning: string;
+  alternatives?: {
+    conservative: number;
+    aggressive: number;
+  };
 }
 
 export interface InntektFordeling {

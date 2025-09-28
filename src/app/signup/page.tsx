@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/shared/Card';
 import { signupWithEmail, getAuthErrorMessage } from '@/lib/auth';
+import { updateProfile } from 'firebase/auth';
 import { UserPlus, Eye, EyeOff, Mail, Lock, User } from 'lucide-react';
 import * as Icons from 'lucide-react';
 

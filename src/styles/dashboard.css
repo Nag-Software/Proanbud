@@ -1,0 +1,231 @@
+/* Dashboard responsive utilities */
+
+/* Grid Layout Utilities */
+.dashboard-grid {
+  display: grid;
+  gap: 1rem;
+  width: 100%;
+}
+
+.dashboard-grid-1 {
+  grid-template-columns: 1fr;
+}
+
+.dashboard-grid-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.dashboard-grid-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.dashboard-grid-4 {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+/* Responsive Grid Breakpoints */
+@media (max-width: 640px) {
+  .dashboard-grid-responsive {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 768px) {
+  .dashboard-grid-responsive {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .dashboard-grid-responsive {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+@media (min-width: 1025px) {
+  .dashboard-grid-responsive {
+    grid-template-columns: repeat(4, 1fr) !important;
+  }
+}
+
+/* Flexbox Utilities */
+.flex-container-responsive {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  width: 100%;
+}
+
+.flex-item-responsive {
+  flex: 1 1 250px;
+  min-width: 250px;
+}
+
+@media (max-width: 640px) {
+  .flex-item-responsive {
+    flex: 1 1 100%;
+    min-width: 100%;
+  }
+}
+
+/* Chart and Graph Responsiveness */
+.chart-container {
+  width: 100%;
+  height: 100%;
+  min-height: 200px;
+}
+
+@media (max-width: 640px) {
+  .chart-container {
+    min-height: 180px;
+  }
+}
+
+@media (max-width: 480px) {
+  .chart-container {
+    min-height: 160px;
+  }
+}
+
+/* KPI Cards specific utilities */
+.kpi-grid-auto {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  width: 100%;
+}
+
+@media (max-width: 640px) {
+  .kpi-grid-auto {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Table responsiveness enhancements */
+.table-responsive-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table-mobile-optimized {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .table-desktop {
+    display: none;
+  }
+  
+  .table-mobile-optimized {
+    display: block;
+  }
+}
+
+/* Text truncation utilities */
+.text-truncate-1 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  -webkit-box-orient: vertical;
+}
+
+.text-truncate-2 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.text-truncate-3 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+/* Dashboard layout specific styles */
+.dashboard-widget {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.dashboard-widget-header {
+  padding: 1rem;
+  border-bottom: 1px solid #e2e8f0;
+  flex-shrink: 0;
+}
+
+.dashboard-widget-content {
+  padding: 1rem;
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Hover and interaction states */
+.dashboard-widget:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  transform: translateY(-1px);
+  transition: all 0.2s ease;
+}
+
+/* Loading states */
+.loading-shimmer {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Accessibility improvements */
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-widget:hover {
+    transform: none;
+  }
+  
+  .loading-shimmer {
+    animation: none;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .dashboard-widget {
+    background: #1f2937;
+    border-color: #374151;
+  }
+  
+  .dashboard-widget-header {
+    border-color: #374151;
+  }
+}
+
+/* Print styles */
+@media print {
+  .dashboard-grid {
+    display: block !important;
+  }
+  
+  .dashboard-widget {
+    page-break-inside: avoid;
+    margin-bottom: 1rem;
+  }
+}

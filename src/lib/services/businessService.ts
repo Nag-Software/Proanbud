@@ -200,8 +200,8 @@ Bedrift: ${settings.companyName}
 Bransje: ${settings.industry}
 Ansatte: ${settings.employeeCount}
 Etablert: ${settings.foundedYear}
-Spesialiseringer: ${settings.specializations.join(', ')}
-Serviceareer: ${settings.serviceAreas.join(', ')}
+Spesialiseringer: ${(settings.specializations || []).join(', ')}
+Serviceareer: ${(settings.serviceAreas || []).join(', ')}
 Prising strategi: ${settings.pricingStrategy}
 Markeds segment: ${settings.marketSegment}
     `.trim();

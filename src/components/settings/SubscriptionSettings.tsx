@@ -3,20 +3,32 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/shared/Card';
 import * as Icons from 'lucide-react';
+import { BusinessSettings } from '@/lib/types';
 
-export const SubscriptionSettings = () => {
+export const SubscriptionSettings = ({ businessSettings }: { businessSettings: BusinessSettings | null }) => {
   const [currentPlan, setCurrentPlan] = useState('basic');
   const [loading, setLoading] = useState(false);
 
   const plans = [
     {
-      id: 'basic',
-      name: 'Basic',
-      price: 199,
+      id: 'free',
+      name: 'Gratis',
+      price: 0,
       period: 'måned',
       features: [
-        'Inntil 50 tilbud per måned',
-        'Inntil 100 kunder',
+        'Inntil 5 tilbud per måned',
+        'Inntil 3 kunder',
+      ],
+      color: 'gray'
+    },
+    {
+      id: 'basic',
+      name: 'Basic',
+      price: 299,
+      period: 'måned',
+      features: [
+        'Inntil 15 tilbud per måned',
+        'Inntil 10 kunder',
         'Grunnleggende rapporter',
         'E-post support',
         '1GB lagring'
@@ -26,7 +38,7 @@ export const SubscriptionSettings = () => {
     {
       id: 'pro',
       name: 'Pro',
-      price: 499,
+      price: 799,
       period: 'måned',
       features: [
         'Ubegrenset tilbud',
@@ -39,22 +51,6 @@ export const SubscriptionSettings = () => {
       ],
       color: 'blue',
       popular: true
-    },
-    {
-      id: 'enterprise',
-      name: 'Enterprise',
-      price: 999,
-      period: 'måned',
-      features: [
-        'Alt i Pro',
-        'Ubegrenset lagring',
-        'Dedikert kundeansvarlig',
-        'SLA-garanti',
-        'Tilpassede integrasjoner',
-        'Brukerhåndtering (teams)',
-        'Backup og disaster recovery'
-      ],
-      color: 'purple'
     }
   ];
 

@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="no">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Proanbud Tilbud - Klassisk</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        margin: 0;
+        padding: 40px;
+        background: #f8f9fa;
+        color: #333;
+        line-height: 1.6;
+      }
+      .container {
+        max-width: 700px;
+        margin: 0 auto;
+        background: white;
+        padding: 60px;
+        border: 2px solid #2c3e50;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      }
+      .business-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; padding-bottom: 20px; border-bottom: 2px solid #2c3e50; }
+      .business-info { text-align: right; }
+      .business-name { font-size: 1.8rem; font-weight: bold; color: #2c3e50; margin: 0; text-transform: uppercase; letter-spacing: 1px; }
+      .business-details { font-size: 0.9rem; color: #7f8c8d; margin: 4px 0 0 0; }
+      .business-logo { max-width: 150px; max-height: 75px; }
+      .header {
+        text-align: center;
+        border-bottom: 3px solid #2c3e50;
+        padding-bottom: 30px;
+        margin-bottom: 40px;
+      }
+      .header h1 {
+        color: #2c3e50;
+        margin: 0 0 10px 0;
+        font-size: 2.5rem;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+      }
+      .header p {
+        color: #7f8c8d;
+        font-size: 1.2rem;
+        margin: 0;
+        font-style: italic;
+      }
+      .section {
+        margin-bottom: 35px;
+      }
+      .section h2 {
+        color: #2c3e50;
+        font-size: 1.4rem;
+        font-weight: bold;
+        margin: 0 0 15px 0;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        border-bottom: 1px solid #bdc3c7;
+        padding-bottom: 5px;
+      }
+      .info-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 30px;
+        background: #ecf0f1;
+      }
+      .info-table td {
+        padding: 12px 15px;
+        border: 1px solid #bdc3c7;
+      }
+      .info-table .label {
+        font-weight: bold;
+        background: #34495e;
+        color: white;
+        width: 35%;
+      }
+      .info-table .value {
+        background: white;
+      }
+      .customer-section, .project-section {
+        background: #f8f9fa;
+        padding: 20px;
+        border: 1px solid #dee2e6;
+        margin-bottom: 25px;
+      }
+      .customer-section h3, .project-section h3 {
+        color: #2c3e50;
+        margin: 0 0 10px 0;
+        font-size: 1.2rem;
+        font-weight: bold;
+      }
+      .customer-section p, .project-section p {
+        margin: 0 0 5px 0;
+        color: #555;
+      }
+      .price-section {
+        background: #2c3e50;
+        color: white;
+        padding: 30px;
+        text-align: center;
+        border: 3px solid #34495e;
+      }
+      .price-section .label {
+        font-size: 1rem;
+        margin-bottom: 10px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+      .price-section .amount {
+        font-size: 3rem;
+        font-weight: bold;
+        margin: 0;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+      }
+      .price-section .vat {
+        font-size: 0.9rem;
+        margin-top: 10px;
+        opacity: 0.9;
+      }
+      .terms {
+        background: #ecf0f1;
+        padding: 20px;
+        border-left: 4px solid #2c3e50;
+        font-style: italic;
+      }
+      .terms p {
+        margin: 0 0 10px 0;
+        color: #555;
+      }
+      .footer {
+        text-align: center;
+        color: #7f8c8d;
+        font-size: 0.9rem;
+        border-top: 2px solid #2c3e50;
+        padding-top: 30px;
+        margin-top: 40px;
+        font-style: italic;
+      }
+      .footer p {
+        margin: 0 0 5px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="business-header">
+        <div class="business-logo">
+          <img src="{{business.logoUrl}}" alt="{{business.name}} logo" style="max-width: 150px; max-height: 75px;" onerror="this.style.display='none'" />
+        </div>
+        <div class="business-info">
+          <h2 class="business-name">{{business.name}}</h2>
+          <p class="business-details">Org.nr: {{business.orgnr}}</p>
+          <p class="business-details">{{business.address}}, {{business.postalCode}} {{business.city}}</p>
+          <p class="business-details">Tlf: {{business.phone}}</p>
+          <p class="business-details">{{business.email}}</p>
+        </div>
+      </div>
+
+      <div class="header">
+        <h1>Tilbud</h1>
+        <p>{{quote.prosjekt}}</p>
+      </div>
+
+      <div class="section">
+        <h2>Tilbudsinformasjon</h2>
+        <table class="info-table">
+          <tr>
+            <td class="label">Tilbudsnummer:</td>
+            <td class="value">TB-{{quote.id}}</td>
+          </tr>
+          <tr>
+            <td class="label">Dato:</td>
+            <td class="value">{{quote.dato}}</td>
+          </tr>
+          <tr>
+            <td class="label">Svarfrist:</td>
+            <td class="value">{{quote.svarfrist}}</td>
+          </tr>
+          <tr>
+            <td class="label">Status:</td>
+            <td class="value">{{quote.status}}</td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="section">
+        <h2>Kundeinformasjon</h2>
+        <div class="customer-section">
+          <h3>{{quote.kundenavn}}</h3>
+          <p><strong>E-post:</strong> {{customer.epost}}</p>
+          <p><strong>Telefon:</strong> {{customer.telefon}}</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Prosjektinformasjon</h2>
+        <div class="project-section">
+          <h3>{{quote.prosjekt}}</h3>
+          <p><strong>Type jobb:</strong> {{quote.jobbtype}}</p>
+          {{#quote.beskrivelse}}
+          <div style="margin-top: 16px; padding: 16px; background: #f9fafb; border-radius: 8px; border-left: 4px solid #2c3e50;">
+            <h4 style="margin: 0 0 8px 0; color: #2c3e50; font-size: 0.9rem; font-weight: 600;">Melding fra oss:</h4>
+            <p style="margin: 0; color: #555; line-height: 1.5;">{{quote.beskrivelse}}</p>
+          </div>
+          {{/quote.beskrivelse}}
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Prisoverslag</h2>
+        <div class="price-breakdown">
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; border: 1px solid #2c3e50;">
+            <thead>
+              <tr style="background: #2c3e50; color: white;">
+                <th style="padding: 15px; text-align: left; font-weight: bold; border-right: 1px solid #34495e;">Beskrivelse</th>
+                <th style="padding: 15px; text-align: center; font-weight: bold; border-right: 1px solid #34495e;">Antall</th>
+                <th style="padding: 15px; text-align: center; font-weight: bold; border-right: 1px solid #34495e;">Enhetspris</th>
+                <th style="padding: 15px; text-align: right; font-weight: bold;">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{quote.prisgrunnlag}}
+            </tbody>
+            <tfoot>
+              <tr style="border-top: 2px solid #2c3e50; background: #ecf0f1;">
+                <td colspan="3" style="padding: 20px; text-align: right; font-weight: bold; color: #2c3e50;">Totalbeløp:</td>
+                <td style="padding: 20px; text-align: right; font-weight: bold; font-size: 1.2rem; color: #2c3e50;">{{quote.belop}}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        <div class="price-section">
+          <p class="vat">Alle priser er inkl. mva</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Vilkår og betingelser</h2>
+        <div class="terms">
+          <p>• Tilbudet er gyldig til {{quote.svarfrist}}</p>
+          <p>• Prisen inkluderer alle nødvendige materialer og arbeid</p>
+          <p>• Betaling skjer etter fullført arbeid</p>
+          <p>• Eventuelle endringer kan påvirke totalprisen</p>
+        </div>
+      </div>
+
+      <div class="footer">
+        <p><strong>{{business.name}}</strong></p>
+        <p>{{business.address}}, {{business.postalCode}} {{business.city}}</p>
+        <p>Telefon: {{business.phone}} | E-post: {{business.email}}</p>
+        <p>Organisasjonsnummer: {{business.orgnr}}</p>
+        <p>Nettside: {{business.website}}</p>
+        <p>Takk for at du vurderer vårt tilbud!</p>
+        <p>Kontakt oss gjerne ved spørsmål.</p>
+      </div>
+    </div>
+  </body>
+</html>

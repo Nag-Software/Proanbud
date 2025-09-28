@@ -2,10 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/shared/Card';
-import { getUserSettings, saveUserSettings, UserSettingsData } from '@/lib/services/userSettingsService';
+import { saveUserSettings, UserSettingsData } from '@/lib/services/userSettingsService';
 import * as Icons from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
-export const UserSettings = () => {
+export const UserSettings = ({ userSettings: initialUserSettings }: { userSettings: UserSettingsData | null}) => {
+  const { user } = useAuth();
   const [userSettings, setUserSettings] = useState<UserSettingsData>({
     name: '',
     email: '',
@@ -15,25 +17,19 @@ export const UserSettings = () => {
     language: 'no',
     timezone: 'Europe/Oslo'
   });
+  
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    const loadUserSettings = async () => {
-      try {
-        const settings = await getUserSettings();
-        if (settings) {
-          setUserSettings(settings);
-        }
-      } catch (error) {
-        console.error('Failed to load user settings:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadUserSettings();
-  }, []);
+    if (initialUserSettings) {
+      setUserSettings(initialUserSettings);
+      setLoading(false);
+    } else {
+      // If no settings provided, try to load defaults or keep current state
+      setLoading(false);
+    }
+  }, [initialUserSettings]);
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setUserSettings(prev => ({
@@ -43,11 +39,25 @@ export const UserSettings = () => {
   };
 
   const handleSave = async () => {
+    if (!user) return;
+
     setSaving(true);
     try {
-      await saveUserSettings(userSettings);
-      // Show success message (you could add a toast notification here)
-      console.log('User settings saved successfully');
+      // Save all user settings to the realtime database
+      // This includes auth information (name, email, telefon) plus additional preferences
+      const allSettingsData = {
+        name: userSettings.name,
+        email: userSettings.email,
+        telefon: userSettings.telefon,
+        notifications: userSettings.notifications,
+        emailNotifications: userSettings.emailNotifications,
+        language: userSettings.language,
+        timezone: userSettings.timezone
+      };
+
+      await saveUserSettings(allSettingsData);
+
+      console.log('All user settings saved to database successfully');
     } catch (error) {
       console.error('Failed to save user settings:', error);
       // Show error message (you could add a toast notification here)
@@ -89,7 +99,7 @@ export const UserSettings = () => {
         <div className="space-y-4">
           <h4 className="font-medium text-gray-900">Personlig informasjon</h4>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Navn
@@ -141,8 +151,25 @@ export const UserSettings = () => {
                 <option value="sv">Svenska</option>
               </select>
             </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Tidssone
+              </label>
+              <select
+                value={userSettings.timezone}
+                onChange={(e) => handleInputChange('timezone', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+              >
+                <option value="Europe/Oslo">Europe/Oslo (CET/CEST)</option>
+                <option value="Europe/Stockholm">Europe/Stockholm (CET/CEST)</option>
+                <option value="Europe/Copenhagen">Europe/Copenhagen (CET/CEST)</option>
+                <option value="UTC">UTC</option>
+              </select>
+            </div>
           </div>
         </div>
+
 
         {/* Notifications */}
         <div className="space-y-4">
