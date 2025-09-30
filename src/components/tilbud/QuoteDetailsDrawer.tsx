@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, User, FileText, Calendar, DollarSign, Briefcase, Clock, Edit3, Save, XCircle, ExternalLink, Eye, Download } from 'lucide-react';
+import { X, User, FileText, Calendar, DollarSign, Briefcase, Clock, Edit3, Save, XCircle, ExternalLink, Eye, Download, Trash2 } from 'lucide-react';
 import { Tilbud, Kunde, BusinessSettings, PriceComponent } from '@/lib/types';
 import { Card } from '@/components/shared/Card';
-import { updateTilbud, TilbudFormData } from '@/lib/services/tilbudService';
+import { updateTilbud, deleteTilbud, TilbudFormData } from '@/lib/services/tilbudService';
 import { getBusinessSettings } from '@/lib/services/businessService';
 import {
   Dialog,
@@ -67,6 +67,8 @@ export function QuoteDetailsDrawer({
   const [isLoadingTemplate, setIsLoadingTemplate] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<string>('modern');
   const [businessSettings, setBusinessSettings] = useState<BusinessSettings | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
 
   // Reset editing state when drawer closes
   useEffect(() => {
@@ -202,6 +204,12 @@ export function QuoteDetailsDrawer({
 
   const daysUntilDeadline = getDaysUntilDeadline(quote.svarfrist);
 
+  // Pricing calculations for reconciliation and profit
+  const totalComponentCost = (quote.prisgrunnlag || []).reduce((sum, c) => sum + (c.amount || 0), 0);
+  const customerPrice = quote.belop || 0;
+  const profit = customerPrice - totalComponentCost;
+  const profitMargin = customerPrice > 0 ? (profit / customerPrice) * 100 : 0;
+
   const truncateFilename = (filename: string, maxLength: number = 30) => {
     if (filename.length <= maxLength) return filename;
     return filename.substring(0, maxLength - 3) + '...';
@@ -249,6 +257,53 @@ export function QuoteDetailsDrawer({
     html = html.replace(/\{\{quote\.kundenavn\}\}/g, quote.kundenavn);
     html = html.replace(/\{\{quote\.jobbtype\}\}/g, quote.jobbtype);
     html = html.replace(/\{\{quote\.belop\}\}/g, formatCurrency(quote.belop));
+
+    // Handle quote.beskrivelse (description) - support both simple placeholder and block form
+    const escapeHtml = (str: string) =>
+      str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+
+    const nl2br = (text: string) => {
+      if (!text) return '';
+      // First escape to avoid injecting unsafe HTML, then replace newlines with <br/>
+      return escapeHtml(text).replace(/\r?\n/g, '<br/>');
+    };
+
+    // Replace block form: {{#quote.beskrivelse}}...{{/quote.beskrivelse}} with the description (converted)
+    html = html.replace(/\{\{#quote\.beskrivelse\}\}[\s\S]*?\{\{\/quote\.beskrivelse\}\}/g, nl2br(quote.beskrivelse || ''));
+
+    // Replace simple placeholder if present
+    html = html.replace(/\{\{quote\.beskrivelse\}\}/g, nl2br(quote.beskrivelse || ''));
+
+    // Render price components into table rows for {{quote.prisgrunnlag}}
+    const renderPrisgrunnlag = (components?: PriceComponent[]) => {
+      if (!components || components.length === 0) return '';
+      return components.map((c) => {
+        const name = escapeHtml(c.name || '');
+        const desc = escapeHtml(c.description || '');
+        const qty = c.quantity != null ? `${c.quantity}${c.unit ? ' ' + escapeHtml(c.unit) : ''}` : '';
+        const unitPrice = c.unitPrice != null ? formatCurrency(c.unitPrice) : '';
+        const amount = formatCurrency(c.amount || 0);
+
+        return `
+          <tr>
+            <td style="padding:12px;border-right:1px solid #e5e7eb;vertical-align:top;">
+              <div style="font-weight:600;color:#374151;">${name}</div>
+              ${desc ? `<div style="color:#6b7280;font-size:0.9rem;margin-top:6px;">${desc}</div>` : ''}
+            </td>
+            <td style="padding:12px;text-align:center;border-right:1px solid #e5e7eb;vertical-align:top;">${qty}</td>
+            <td style="padding:12px;text-align:center;border-right:1px solid #e5e7eb;vertical-align:top;">${unitPrice}</td>
+            <td style="padding:12px;text-align:right;vertical-align:top;">${amount}</td>
+          </tr>
+        `;
+      }).join('');
+    };
+
+    html = html.replace(/\{\{quote\.prisgrunnlag\}\}/g, renderPrisgrunnlag(quote.prisgrunnlag));
 
     // Replace customer placeholders
     if (relatedCustomer) {
@@ -334,6 +389,15 @@ export function QuoteDetailsDrawer({
                   <Edit3 className="h-5 w-5 text-blue-600" />
                 </button>
               )}
+              {/* Delete button */}
+              <button
+                onClick={() => setIsDeleteConfirmOpen(true)}
+                className="p-2 hover:bg-red-100 rounded-lg transition-colors"
+                title="Slett tilbud"
+                disabled={isDeleting}
+              >
+                <Trash2 className="h-5 w-5 text-red-600" />
+              </button>
               <button
                 onClick={() => onOpenChange(false)}
                 className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
@@ -500,12 +564,25 @@ export function QuoteDetailsDrawer({
                         </div>
                       </div>
                     ))}
-                    <div className="border-t pt-3 mt-4">
+                    <div className="border-t pt-3 mt-4 space-y-3">
                       <div className="flex justify-between items-center">
-                        <span className="font-semibold text-gray-900">Total</span>
-                        <span className="font-bold text-lg text-gray-900">
-                          kr {quote.belop.toLocaleString('nb-NO')}
-                        </span>
+                        <span className="font-semibold text-gray-900">Kundepris (Total)</span>
+                        <span className="font-bold text-lg text-gray-900">{formatCurrency(customerPrice)}</span>
+                      </div>
+
+                      <div className="bg-gray-50 p-3 rounded-lg">
+                        <div className="flex justify-between text-sm text-gray-600">
+                          <span>Totale kostnader (sum priskomponenter)</span>
+                          <span className="font-medium text-gray-900">{formatCurrency(totalComponentCost)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm text-gray-600 mt-2">
+                          <span>Profitt</span>
+                          <span className={`font-medium ${profit >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                            {formatCurrency(profit)} {customerPrice > 0 && (
+                              <span className="text-xs text-gray-500">({profitMargin.toFixed(1)}%)</span>
+                            )}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -713,6 +790,47 @@ export function QuoteDetailsDrawer({
               className="bg-white border rounded-lg shadow-sm"
               dangerouslySetInnerHTML={{ __html: generatePreviewHtml() }}
             />
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirmation dialog */}
+      <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Slett tilbud</DialogTitle>
+          </DialogHeader>
+          <div className="p-4">
+            <p className="text-sm text-gray-700 mb-4">Er du sikker på at du vil slette tilbudet <strong>{quote.prosjekt}</strong>? Denne handlingen kan ikke reverseres.</p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setIsDeleteConfirmOpen(false)}
+                className="px-4 py-2 bg-gray-100 rounded-lg text-sm hover:bg-gray-200"
+                disabled={isDeleting}
+              >
+                Avbryt
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    setIsDeleting(true);
+                    await deleteTilbud(quote.id);
+                    setIsDeleteConfirmOpen(false);
+                    setIsDeleting(false);
+                    onOpenChange(false);
+                    onQuoteUpdated?.();
+                  } catch (error) {
+                    console.error('Feil ved sletting av tilbud:', error);
+                    setIsDeleting(false);
+                    // Optionally show a toast here
+                  }
+                }}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 disabled:opacity-50"
+                disabled={isDeleting}
+              >
+                {isDeleting ? 'Sletter...' : 'Slett'}
+              </button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

@@ -38,8 +38,8 @@ import {
 } from 'lucide-react';
 import { createTilbud, TilbudFormData, getUniqueCategoriesFromQuotes } from '@/lib/services/tilbudService';
 import { getCustomers } from '@/lib/services/customerService';
-import { getBusinessContextForAI } from '@/lib/services/businessService';
-import { Kunde, PriceComponent, AIPriceSuggestion } from '@/lib/types';
+import { getBusinessContextForAI, getBusinessSettings } from '@/lib/services/businessService';
+import { Kunde, PriceComponent, AIPriceSuggestion, BusinessSettings } from '@/lib/types';
 
 import {
   Select,
@@ -50,6 +50,34 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+
+async function downloadTemplate(templateName: string): Promise<string> {
+  let url = "";
+  switch (templateName) {
+    case 'modern':
+      url = "/templates/template-modern.html";
+      break;
+    case 'classic':
+      url = "/templates/template-classic.html";
+      break;
+    case 'minimal':
+      url = "/templates/template-minimal.html";
+      break;
+    default:
+      url = "/templates/template-modern.html";
+  }
+
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch template: ${response.statusText}`);
+    }
+    return await response.text();
+  } catch (error) {
+    console.error('Error loading template:', error);
+    return '<div>Error loading template</div>';
+  }
+}
 
 interface NewQuoteDrawerProps {
   open: boolean;
@@ -84,6 +112,7 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
   const [dragActive, setDragActive] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [skipAI, setSkipAI] = useState(false);
   const [customers, setCustomers] = useState<Kunde[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -102,36 +131,7 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [templateHtml, setTemplateHtml] = useState('');
   const [isLoadingTemplate, setIsLoadingTemplate] = useState(false);
-
-  // Template download function
-  const downloadTemplate = async (templateName: string): Promise<string> => {
-    let url = "";
-    switch (templateName) {
-      case 'modern':
-        url = "/templates/template-modern.html";
-        break;
-      case 'classic':
-        url = "/templates/template-classic.html";
-        break;
-      case 'minimal':
-        url = "/templates/template-minimal.html";
-        break;
-      default:
-        url = "/templates/template-modern.html";
-    }
-
-    try {
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch template: ${response.statusText}`);
-      }
-      return await response.text();
-    } catch (error) {
-      console.error('Error loading template:', error);
-      return '<div>Error loading template</div>';
-    }
-  };
-
+  
   // Preview functions
   const handlePreview = async () => {
     setIsLoadingTemplate(true);
@@ -180,7 +180,7 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
         priceComponentsHtml += `
           <tr style="${rowStyle}">
             <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">${component.name}<br/><small style="color: #6b7280;">${component.description}</small></td>
-            <td style="padding: 12px; text-align: center; border-bottom: 1px solid #e5e7eb;">${component.quantity} ${component.unit}</td>
+            <td style="padding: 12px; text-align: center; border-bottom: 1px solid #e5e7eb;">${component.quantity || 1}</td>
             <td style="padding: 12px; text-align: center; border-bottom: 1px solid #e5e7eb;">${(component.unitPrice || 0).toLocaleString('nb-NO')} kr</td>
             <td style="padding: 12px; text-align: right; border-bottom: 1px solid #e5e7eb; font-weight: 500;">${component.amount.toLocaleString('nb-NO')} kr</td>
           </tr>
@@ -233,7 +233,6 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
         name: 'Materialkostnader',
         description: 'Byggematerialer, verktøy og forbruksvarer',
         amount: Math.round(basePrice * 0.25),
-        quantity: 1,
         unit: 'pakke',
         unitPrice: Math.round(basePrice * 0.25),
         priceMarkup: priceMarkup,
@@ -247,7 +246,6 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
         name: 'Arbeidskraft',
         description: 'Timelønn for håndverkere og spesialister',
         amount: Math.round(basePrice * 0.5),
-        quantity: Math.round((basePrice * 0.5) / 800), // Calculate quantity based on amount and unit price
         unit: 'timer',
         unitPrice: 800,
         priceMarkup: priceMarkup,
@@ -261,7 +259,6 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
         name: 'Transport og opprydding',
         description: 'Transport av materialer og arbeidsplassopprydding',
         amount: Math.round(basePrice * 0.1),
-        quantity: 1,
         unit: 'oppdrag',
         unitPrice: Math.round(basePrice * 0.1),
         priceMarkup: priceMarkup,
@@ -275,7 +272,6 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
         name: 'Utstyr og verktøy',
         description: 'Leie av spesialverktøy og utstyr',
         amount: Math.round(basePrice * 0.05),
-        quantity: 1,
         unit: 'dag',
         unitPrice: Math.round(basePrice * 0.05),
         priceMarkup: priceMarkup,
@@ -289,7 +285,6 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
         name: 'Margin og fortjeneste',
         description: 'Bedriftens fortjeneste og risikoavdekning',
         amount: Math.round(basePrice * 0.1),
-        quantity: 10,
         unit: '%',
         unitPrice: Math.round(basePrice * 0.01),
         priceMarkup: priceMarkup,
@@ -331,7 +326,7 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
           ...comp,
           priceMarkup: comp.category === 'materialer' ? priceMarkup : priceMarkup,
           materialMarkup: materialMarkup,
-          amount: Math.round((comp.unitPrice || 0) * (comp.quantity || 0) * markupMultiplier),
+          amount: Math.round((comp.quantity || 1) * (comp.unitPrice || 0) * markupMultiplier),
         };
       });
       const newTotal = updatedComponents.reduce((sum, comp) => sum + comp.amount, 0);
@@ -395,24 +390,67 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
         // Håndter respons som streng med ''' eller ``` rundt, også med linjeskift og ekstra tekst
         const responseText = await response.json()
         // Clean response: remove code block markers and trim whitespace
-        console.log("RESPONSE", responseText)
+        console.log("RAW API RESPONSE:", responseText)
+        console.log("RESPONSE components:", responseText.components)
+        if (responseText.components && responseText.components.length > 0) {
+          console.log("First component:", responseText.components[0])
+        }
 
         const aiSuggestion: AIPriceSuggestion = responseText;
 
         if (aiSuggestion) {
-          const adjustedComponents = aiSuggestion.components.map((comp: any) => ({
-            ...comp,
-            priceMarkup: priceMarkup,
-            materialMarkup: materialMarkup,
-            amount: calculateAmountWithMarkup({
+          // Convert confidence from 0-1 to 0-100 scale for display, but only if needed
+          const convertConfidence = (conf: number) => {
+            if (conf > 1) return conf; // Already in 0-100 range
+            return Math.round(conf * 100); // Convert from 0-1 to 0-100
+          };
+
+          const convertedSuggestion = {
+            ...aiSuggestion,
+            confidence: convertConfidence(aiSuggestion.confidence),
+            components: aiSuggestion.components.map(comp => ({
               ...comp,
-              priceMarkup: priceMarkup,
-              materialMarkup: materialMarkup,
-            }),
-          }));
+              confidence: convertConfidence(comp.confidence)
+            }))
+          };
+
+          const adjustedComponents = convertedSuggestion.components.map((comp: any) => {
+            // Ensure numeric fields are numbers
+            const numericComp = {
+              ...comp,
+              amount: Number(comp.amount) || 0,
+              unitPrice: Number(comp.unitPrice) || 0,
+              priceMarkup: Number(comp.priceMarkup) || 0,
+              materialMarkup: Number(comp.materialMarkup) || 0,
+            };
+
+            console.log('Processing component:', numericComp);
+
+            // Map API fields correctly: API amount -> quantity
+            const componentWithCorrectMapping = {
+              ...numericComp,
+              quantity: numericComp.amount, // API amount is actually the quantity
+              priceMarkup: priceMarkup, // Override with user settings
+              materialMarkup: materialMarkup, // Override with user settings
+              isEditable: true, // Ensure all components are always editable
+            };
+
+            console.log('Component with mapping:', componentWithCorrectMapping);
+
+            // Calculate the correct amount based on quantity, unitPrice, and markups
+            const calculatedAmount = calculateAmountWithMarkup(componentWithCorrectMapping);
+
+            console.log('Calculated amount:', calculatedAmount);
+
+            return {
+              ...componentWithCorrectMapping,
+              amount: calculatedAmount,
+            };
+          });
+          console.log("ADJUSTED COMPONENTS:", adjustedComponents)
           setQuoteData(prev => ({
             ...prev,
-            aiSuggestion,
+            aiSuggestion: convertedSuggestion,
             adjustedComponents,
             finalPrice: adjustedComponents.reduce((sum: number, comp: any) => sum + comp.amount, 0),
           }));
@@ -441,49 +479,6 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
     }
   };
 
-  const pollForResults = (responseId: string) => {
-    const sseUrl = `/api/ai-pricing?correlationId=${responseId}`;
-    const eventSource = new window.EventSource(sseUrl);
-    eventSource.onmessage = (event) => {
-      try {
-        const result = JSON.parse(event.data);
-        // Success! Process the AI results
-        if (result && result.payload) {
-          const adjustedComponents = result.payload.components?.map((comp: any) => ({
-            ...comp,
-            priceMarkup: priceMarkup,
-            materialMarkup: materialMarkup,
-            amount: calculateAmountWithMarkup({
-              ...comp,
-              priceMarkup: priceMarkup,
-              materialMarkup: materialMarkup,
-            }),
-          })) || [];
-          setQuoteData(prev => ({
-            ...prev,
-            aiSuggestion: result.payload,
-            adjustedComponents,
-            finalPrice: adjustedComponents.reduce((sum: number, comp: any) => sum + comp.amount, 0),
-          }));
-          setIsAnalyzing(false);
-          eventSource.close();
-        }
-      } catch (error) {
-        console.error('Error parsing SSE result:', error);
-        setAiError('Kunne ikke hente AI-resultater');
-        setIsAnalyzing(false);
-        eventSource.close();
-      }
-    };
-    eventSource.onerror = (err) => {
-      console.error('SSE connection error:', err);
-      setAiError('AI-analyse feilet (SSE)');
-      setIsAnalyzing(false);
-      eventSource.close();
-    };
-    // No polling timeout needed for SSE
-  };
-
   const handleSubmit = async () => {
     if (!selectedCustomerId || !projectName) {
       alert('Vennligst velg kunde og skriv prosjektnavn');
@@ -508,7 +503,42 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
         template: selectedTemplate,
       };
 
-      await createTilbud(tilbudData);
+      // Create the quote
+      const quoteId = await createTilbud(tilbudData);
+
+      // Send email to customer
+      try {
+        const businessSettings = await getBusinessSettings();
+        
+        const quoteForEmail = {
+          id: quoteId,
+          ...tilbudData
+        };
+
+        const emailHtml = await generateQuoteHtml(quoteForEmail, selectedCustomer!, businessSettings);
+
+        const emailResponse = await fetch('/api/send-email', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            to: selectedCustomer!.epost,
+            subject: `Tilbud: ${projectName}`,
+            message: `Vedlagt finner du vårt tilbud for prosjektet "${projectName}".<br><br>${emailHtml}`,
+            customerId: selectedCustomer!.id,
+            quoteId: quoteId,
+          }),
+        });
+
+        if (!emailResponse.ok) {
+          console.warn('Failed to send email, but quote was created successfully');
+        }
+      } catch (emailError) {
+        console.warn('Error sending email:', emailError);
+        // Don't fail the whole operation if email fails
+      }
+
       onTilbudCreated?.();
       handleClose();
       onOpenChange(false);
@@ -518,6 +548,54 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Helper to generate full quote HTML for emails using selected template
+  const generateQuoteHtml = async (quote: any, customer: Kunde, businessSettings: BusinessSettings | null) => {
+    const template = await downloadTemplate(quote.template || selectedTemplate);
+    let html = template;
+
+    // Basic replacements used in preview generation
+    html = html.replace(/\{\{quote\.prosjekt\}\}/g, quote.prosjekt || '');
+    html = html.replace(/\{\{quote\.id\}\}/g, quote.id ? quote.id.slice(-6).toUpperCase() : '');
+    html = html.replace(/\{\{quote\.dato\}\}/g, quote.dato || new Date().toLocaleDateString('nb-NO'));
+    html = html.replace(/\{\{quote\.svarfrist\}\}/g, quote.svarfrist || new Date(Date.now() + 14*24*60*60*1000).toLocaleDateString('nb-NO'));
+    html = html.replace(/\{\{quote\.status\}\}/g, 'Venter på svar');
+    html = html.replace(/\{\{quote\.kundenavn\}\}/g, quote.kundenavn || customer.navn || '');
+    html = html.replace(/\{\{quote\.jobbtype\}\}/g, quote.jobbtype || '');
+    html = html.replace(/\{\{quote\.belop\}\}/g, `${quote.belop?.toLocaleString('nb-NO') || 0} kr`);
+
+    // Customer placeholders
+    html = html.replace(/\{\{customer\.epost\}\}/g, customer.epost || '');
+    html = html.replace(/\{\{customer\.telefon\}\}/g, customer.telefon || '');
+
+    // Business placeholders
+    if (businessSettings) {
+      html = html.replace(/\{\{business\.name\}\}/g, businessSettings.companyName || '');
+      html = html.replace(/\{\{business\.orgnr\}\}/g, businessSettings.organizationNumber || '');
+      html = html.replace(/\{\{business\.address\}\}/g, businessSettings.address || '');
+    }
+
+    // Price components table
+    let priceComponentsHtml = '';
+    if (quote.prisgrunnlag && quote.prisgrunnlag.length > 0) {
+      quote.prisgrunnlag.forEach((component: any, index: number) => {
+        const rowStyle = index % 2 === 0 ? 'background: #f9fafb;' : '';
+        priceComponentsHtml += `
+          <tr style="${rowStyle}">
+            <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">${component.name}</td>
+            <td style="padding: 12px; text-align: center; border-bottom: 1px solid #e5e7eb;">${component.quantity || 1}</td>
+            <td style="padding: 12px; text-align: center; border-bottom: 1px solid #e5e7eb;">${(component.unitPrice || 0).toLocaleString('nb-NO')} kr</td>
+            <td style="padding: 12px; text-align: right; border-bottom: 1px solid #e5e7eb; font-weight: 500;">${component.amount.toLocaleString('nb-NO')} kr</td>
+          </tr>
+        `;
+      });
+    } else {
+      priceComponentsHtml = `<tr><td colspan="4" style="padding:20px;text-align:center;color:#6b7280;">Ingen prisgrunnlag definert</td></tr>`;
+    }
+    html = html.replace(/\{\{quote\.prisgrunnlag\}\}/g, priceComponentsHtml);
+
+    return html;
   };
 
   const handlePrevious = () => {
@@ -675,6 +753,17 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
         </div>
       )}
 
+      <div className="mt-4 flex items-center gap-3">
+        <input
+          id="skip-ai"
+          type="checkbox"
+          checked={skipAI}
+          onChange={(e) => setSkipAI(e.target.checked)}
+          className="w-4 h-4"
+        />
+        <label htmlFor="skip-ai" className="text-sm text-gray-700">Hopp over AI-analyse (manuell utfylling)</label>
+      </div>
+
       <div className="flex gap-3 mt-6">
         <Button onClick={handlePrevious} variant="outline" className="flex-1">
           Tilbake
@@ -710,7 +799,9 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
     const price = unitPrice !== undefined ? unitPrice : component.unitPrice || 0;
     const markup = component.category === 'materialer' ? (materialMarkup > 0 ? materialMarkup : priceMarkup) : priceMarkup;
     const markupMultiplier = 1 + (markup / 100);
-    return Math.round(qty * price * markupMultiplier);
+    const result = Math.round(qty * price * markupMultiplier);
+    console.log(`calculateAmountWithMarkup: qty=${qty}, price=${price}, markup=${markup}, result=${result}`);
+    return result;
   };
 
   const updateComponent = (id: string, updates: Partial<PriceComponent>) => {
@@ -735,39 +826,6 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
     });
   };
 
-  const addComponent = () => {
-    const newComponent: PriceComponent = {
-      id: `custom-${Date.now()}`,
-      category: 'annet',
-      name: 'Ny komponent',
-      description: 'Beskrivelse av komponenten',
-      amount: 0,
-      quantity: 1,
-      unit: 'stk',
-      unitPrice: 0,
-      priceMarkup: priceMarkup,
-      materialMarkup: materialMarkup,
-      isEditable: true,
-      confidence: 0, // 0 indicates user-added component, not AI-generated
-    };
-    setQuoteData(prev => ({
-      ...prev,
-      adjustedComponents: [...prev.adjustedComponents, newComponent],
-    }));
-  };
-
-  const removeComponent = (id: string) => {
-    setQuoteData(prev => {
-      const updatedComponents = prev.adjustedComponents.filter(comp => comp.id !== id);
-      const newTotal = updatedComponents.reduce((sum, comp) => sum + comp.amount, 0);
-      return {
-        ...prev,
-        adjustedComponents: updatedComponents,
-        finalPrice: newTotal,
-      };
-    });
-  };
-
   const renderStep2 = () => {
     const addComponent = () => {
       const newComponent: PriceComponent = {
@@ -775,7 +833,7 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
         category: 'annet',
         name: 'Ny komponent',
         description: 'Beskrivelse av komponenten',
-        amount: 0,
+        amount: 0, // Will be calculated below
         quantity: 1,
         unit: 'stk',
         unitPrice: 0,
@@ -784,6 +842,9 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
         isEditable: true,
         confidence: 0, // 0 indicates user-added component, not AI-generated
       };
+      
+      // Calculate amount based on quantity and unitPrice
+      newComponent.amount = calculateAmountWithMarkup(newComponent);
       setQuoteData(prev => ({
         ...prev,
         adjustedComponents: [...prev.adjustedComponents, newComponent],
@@ -982,9 +1043,10 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
                     </label>
                     <input
                       type="number"
-                      value={priceMarkup}
+                      value={priceMarkup || ''}
                       onChange={(e) => {
-                        setPriceMarkup(Number(e.target.value));
+                        const value = e.target.value;
+                        setPriceMarkup(value === '' ? 0 : Number(value));
                       }}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                       min="0"
@@ -998,9 +1060,10 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
                     </label>
                     <input
                       type="number"
-                      value={materialMarkup}
+                      value={materialMarkup || ''}
                       onChange={(e) => {
-                        setMaterialMarkup(Number(e.target.value));
+                        const value = e.target.value;
+                        setMaterialMarkup(value === '' ? 0 : Number(value));
                       }}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                       min="0"
@@ -1093,7 +1156,7 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
                                 step="0.1"
                               />
                             ) : (
-                              <span className="text-sm">{component.quantity} {component.unit}</span>
+                              <span className="text-sm">{component.quantity || 1}</span>
                             )}
                           </td>
                           <td className="py-2 px-2 text-right">
@@ -1130,7 +1193,7 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
                           </td>
                           <td className="py-2 px-2 text-right">
                             <span className="text-sm font-medium">
-                              kr {component.amount.toLocaleString('nb-NO')}
+                              kr {((component.quantity || 1) * (component.unitPrice || 0)).toLocaleString('nb-NO')}
                             </span>
                           </td>
                           <td className="py-2 px-2 text-center">
@@ -1308,8 +1371,8 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
                       <p className="text-sm text-gray-600">{component.description}</p>
                       <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
                         <span>Kategori: {component.category.charAt(0).toUpperCase() + component.category.slice(1)}</span>
-                        {component.quantity && component.unit && (
-                          <span>Antall: {component.quantity} {component.unit}</span>
+                        {component.amount && component.unit && (
+                          <span>Antall: {component.amount} {component.unit}</span>
                         )}
                         {component.unitPrice && (
                           <span>Enhetspris: kr {component.unitPrice.toLocaleString('nb-NO')}</span>

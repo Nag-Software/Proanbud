@@ -58,6 +58,8 @@ const convertRealtimeInboxMessage = (key: string, data: RealtimeInboxMessage): I
     type: data.type,
     customerName: data.customerName,
     quoteTitle: data.quoteTitle,
+    isFlagged: data.isFlagged || false,
+    folder: data.folder || 'innboks',
   };
 };
 
@@ -81,6 +83,8 @@ const convertSingleRealtimeInboxMessage = (snapshot: DataSnapshot): InboxMessage
     type: data.type,
     customerName: data.customerName,
     quoteTitle: data.quoteTitle,
+    isFlagged: data.isFlagged || false,
+    folder: data.folder || 'innboks',
   };
 };
 
@@ -161,6 +165,8 @@ export const createInboxMessage = async (messageData: Omit<InboxMessage, 'id'>):
       type: messageData.type,
       customerName: messageData.customerName,
       quoteTitle: messageData.quoteTitle,
+      isFlagged: messageData.isFlagged || false,
+      folder: messageData.folder || 'innboks',
       opprettet: now,
       oppdatert: now,
     };
@@ -259,6 +265,8 @@ export const updateInboxMessage = async (messageId: string, updates: Partial<Omi
     if (updates.type !== undefined) updateData.type = updates.type;
     if (updates.customerName !== undefined) updateData.customerName = updates.customerName;
     if (updates.quoteTitle !== undefined) updateData.quoteTitle = updates.quoteTitle;
+    if (updates.isFlagged !== undefined) updateData.isFlagged = updates.isFlagged;
+    if (updates.folder !== undefined) updateData.folder = updates.folder;
 
     const messageRef = ref(db, `${getUserPath(userId, 'inbox')}/${messageId}`);
     await update(messageRef, updateData);
@@ -301,5 +309,45 @@ export const getUnreadMessageCount = async (): Promise<number> => {
   } catch (error) {
     console.error('Error getting unread message count:', error);
     return 0;
+  }
+};
+
+// Flag/unflag messages
+export const flagMessage = async (messageId: string): Promise<void> => {
+  await updateInboxMessage(messageId, { isFlagged: true });
+};
+
+export const unflagMessage = async (messageId: string): Promise<void> => {
+  await updateInboxMessage(messageId, { isFlagged: false });
+};
+
+// Move message to folder
+export const moveMessageToFolder = async (messageId: string, folder: string): Promise<void> => {
+  await updateInboxMessage(messageId, { folder });
+};
+
+// Get messages by folder
+export const getMessagesByFolder = async (folder: string): Promise<InboxMessage[]> => {
+  try {
+    const messages = await getInboxMessages();
+    return messages.filter(message => (message.folder || 'innboks') === folder);
+  } catch (error) {
+    throw handleDatabaseError(error, 'hente meldinger fra mappe');
+  }
+};
+
+// Get all folders
+export const getFolders = async (): Promise<string[]> => {
+  try {
+    const messages = await getInboxMessages();
+    const folders = new Set<string>(['innboks']);
+    messages.forEach(message => {
+      if (message.folder) {
+        folders.add(message.folder);
+      }
+    });
+    return Array.from(folders).sort();
+  } catch (error) {
+    throw handleDatabaseError(error, 'hente mapper');
   }
 };

@@ -376,8 +376,8 @@ export default function DashboardPage() {
 
       {/* Main Content - Always full width */}
       <div className="w-full transition-all duration-300 ease-in-out">
-        <div className="p-6">
-          <div className="flex justify-between items-center mb-8">
+        <div className="">
+          <div className="flex justify-between items-center">
             <PageHeader title="Dashboard" />
             <Button
               onClick={toggleEditMode}

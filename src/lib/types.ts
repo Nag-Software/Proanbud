@@ -32,6 +32,8 @@ export interface InboxMessage {
   type: 'quote_sent' | 'quote_opened' | 'quote_question' | 'quote_approved' | 'quote_rejected' | 'general_inquiry';
   customerName?: string;
   quoteTitle?: string;
+  isFlagged?: boolean;
+  folder?: string;
 }
 
 export interface Tilbud {
@@ -40,6 +42,7 @@ export interface Tilbud {
   prosjekt: string;
   jobbtype: string;
   belop: number;
+  beskrivelse?: string;
   status: 'venter' | 'vunnet' | 'tapt';
   dato: string;
   svarfrist: string;

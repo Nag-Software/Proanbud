@@ -18,6 +18,7 @@ import { auth } from '@/lib/firebase';
 import { Tilbud, PriceComponent } from '@/lib/types';
 import { updateCustomerQuoteStats, getCustomers } from './customerService';
 import { updateUserAnalytics } from './analyticsService';
+import { createInboxMessage } from './inboxService';
 
 // Get unique categories from all user's quotes
 export const getUniqueCategoriesFromQuotes = async (): Promise<string[]> => {
@@ -259,6 +260,25 @@ export const createTilbud = async (tilbudData: TilbudFormData): Promise<string> 
       await updateUserAnalytics();
     } catch (error) {
       console.warn('Could not update user analytics:', error);
+    }
+
+    // Create inbox message for quote sent
+    try {
+      const customerId = await findCustomerIdByName(tilbudData.kundenavn);
+      await createInboxMessage({
+        from: tilbudData.kundenavn,
+        subject: `Tilbud sendt: ${tilbudData.prosjekt}`,
+        message: `Et nytt tilbud på ${tilbudData.belop.toLocaleString('nb-NO')} kr for prosjektet "${tilbudData.prosjekt}" har blitt sendt til ${tilbudData.kundenavn}.`,
+        timestamp: new Date().toISOString(),
+        isRead: false,
+        quoteId: newTilbudRef.key!,
+        customerId: customerId || undefined,
+        type: 'quote_sent',
+        customerName: tilbudData.kundenavn,
+        quoteTitle: tilbudData.prosjekt,
+      });
+    } catch (error) {
+      console.warn('Could not create inbox message:', error);
     }
 
     return newTilbudRef.key!;

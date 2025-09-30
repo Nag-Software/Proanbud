@@ -15,7 +15,11 @@ export async function POST(request: NextRequest) {
     });
 
     const data = await n8nResponse.json();
-    return NextResponse.json(data.output, { status: n8nResponse.status });
+    console.log('N8N Response:', data);
+    // Check if data has output field, if so return it, otherwise return data
+    const aiResponse = data.output || data;
+    console.log('AI Response:', aiResponse);
+    return NextResponse.json(aiResponse, { status: n8nResponse.status });
   } catch (error) {
     return NextResponse.json({ error: 'Failed to fetch from n8n', details: String(error) }, { status: 500 });
   }

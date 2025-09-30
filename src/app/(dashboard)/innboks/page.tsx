@@ -4,11 +4,12 @@ import { useState, useEffect } from 'react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { Card } from '@/components/shared/Card';
 import { InboxMessage, Kunde, Tilbud } from '@/lib/types';
-import { Mail, MailOpen, Clock, User, Send, Eye, MessageSquare, CheckCircle, XCircle, FileText } from 'lucide-react';
+import { Mail, MailOpen, Clock, User, Send, Eye, MessageSquare, CheckCircle, XCircle, FileText, Trash2, Flag, FlagOff } from 'lucide-react';
 import { CustomerDetailsDrawer } from '@/components/kunder/CustomerDetailsDrawer';
 import { QuoteDetailsDrawer } from '@/components/tilbud/QuoteDetailsDrawer';
 import { Button } from '@/components/ui/button';
-import { getInboxMessages, markMessageAsRead } from '@/lib/services/inboxService';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { getInboxMessages, markMessageAsRead, deleteInboxMessage, flagMessage, unflagMessage, moveMessageToFolder, getFolders } from '@/lib/services/inboxService';
 import { getCustomer } from '@/lib/services/customerService';
 import { getTilbudById } from '@/lib/services/tilbudService';
 import { ref, onValue, off } from 'firebase/database';
@@ -83,6 +84,13 @@ export default function InnboksPage() {
   const [replySubject, setReplySubject] = useState('');
   const [replyMessage, setReplyMessage] = useState('');
   const [isSendingReply, setIsSendingReply] = useState(false);
+  const [folders, setFolders] = useState<string[]>(['innboks']);
+  const [selectedFolder, setSelectedFolder] = useState('innboks');
+  const [isCreatingMessage, setIsCreatingMessage] = useState(false);
+  const [newMessageSubject, setNewMessageSubject] = useState('');
+  const [newMessageTo, setNewMessageTo] = useState('');
+  const [newMessageContent, setNewMessageContent] = useState('');
+  const [isSendingNewMessage, setIsSendingNewMessage] = useState(false);
 
   const [error, setError] = useState<string | null>(null);
 
@@ -115,6 +123,7 @@ export default function InnboksPage() {
 
             const messageData = snapshot.val() as Record<string, any>;
             const messages: InboxMessage[] = [];
+            const folderSet = new Set<string>(['innboks']);
 
             // Convert to array and sort by timestamp (newest first)
             Object.entries(messageData)
@@ -134,14 +143,18 @@ export default function InnboksPage() {
                     type: data.type,
                     customerName: data.customerName,
                     quoteTitle: data.quoteTitle,
+                    isFlagged: data.isFlagged || false,
+                    folder: data.folder || 'innboks',
                   };
                   messages.push(message);
+                  folderSet.add(message.folder || 'innboks');
                 } catch (error) {
                   console.warn('Skipping invalid inbox message data:', key, error);
                 }
               });
 
             setMessages(messages);
+            setFolders(Array.from(folderSet).sort());
             setIsLoading(false);
           } catch (error) {
             console.error('Error processing inbox messages:', error);
@@ -271,7 +284,115 @@ export default function InnboksPage() {
     setReplyMessage('');
   };
 
-  const unreadCount = messages.filter(m => !m.isRead).length;
+  const handleDeleteMessage = async (messageId: string) => {
+    if (!confirm('Er du sikker på at du vil slette denne meldingen?')) return;
+
+    try {
+      await deleteInboxMessage(messageId);
+      // Remove from local state
+      setMessages(prev => prev.filter(m => m.id !== messageId));
+      if (selectedMessage?.id === messageId) {
+        setSelectedMessage(null);
+      }
+    } catch (error) {
+      console.error('Error deleting message:', error);
+      alert('Kunne ikke slette meldingen. Prøv igjen.');
+    }
+  };
+
+  const handleToggleFlag = async (messageId: string, isCurrentlyFlagged: boolean) => {
+    try {
+      if (isCurrentlyFlagged) {
+        await unflagMessage(messageId);
+      } else {
+        await flagMessage(messageId);
+      }
+      // Update local state
+      setMessages(prev =>
+        prev.map(m =>
+          m.id === messageId ? { ...m, isFlagged: !isCurrentlyFlagged } : m
+        )
+      );
+      if (selectedMessage?.id === messageId) {
+        setSelectedMessage(prev => prev ? { ...prev, isFlagged: !isCurrentlyFlagged } : null);
+      }
+    } catch (error) {
+      console.error('Error toggling flag:', error);
+      alert('Kunne ikke endre flagg-status. Prøv igjen.');
+    }
+  };
+
+  const handleMoveToFolder = async (messageId: string, folder: string) => {
+    try {
+      await moveMessageToFolder(messageId, folder);
+      // Update local state
+      setMessages(prev =>
+        prev.map(m =>
+          m.id === messageId ? { ...m, folder } : m
+        )
+      );
+      if (selectedMessage?.id === messageId) {
+        setSelectedMessage(prev => prev ? { ...prev, folder } : null);
+      }
+    } catch (error) {
+      console.error('Error moving message:', error);
+      alert('Kunne ikke flytte meldingen. Prøv igjen.');
+    }
+  };
+
+  const handleCreateNewMessage = () => {
+    setIsCreatingMessage(true);
+    setNewMessageSubject('');
+    setNewMessageTo('');
+    setNewMessageContent('');
+  };
+
+  const handleSendNewMessage = async () => {
+    if (!newMessageSubject.trim() || !newMessageTo.trim() || !newMessageContent.trim()) return;
+
+    setIsSendingNewMessage(true);
+    try {
+      // For now, we'll create a general inquiry message
+      // In a real app, you'd want to send an actual email
+      const response = await fetch('/api/send-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          to: newMessageTo,
+          subject: newMessageSubject,
+          message: newMessageContent,
+        }),
+      });
+
+      if (response.ok) {
+        alert('Melding sendt!');
+        setIsCreatingMessage(false);
+        setNewMessageSubject('');
+        setNewMessageTo('');
+        setNewMessageContent('');
+      } else {
+        throw new Error('Failed to send message');
+      }
+    } catch (error) {
+      console.error('Error sending new message:', error);
+      alert('Kunne ikke sende meldingen. Prøv igjen.');
+    } finally {
+      setIsSendingNewMessage(false);
+    }
+  };
+
+  const handleCancelNewMessage = () => {
+    setIsCreatingMessage(false);
+    setNewMessageSubject('');
+    setNewMessageTo('');
+    setNewMessageContent('');
+  };
+
+  const filteredMessages = messages.filter(message => (message.folder || 'innboks') === selectedFolder);
+
+  const unreadCount = filteredMessages.filter(m => !m.isRead).length;
 
   if (isLoading) {
     return (
@@ -299,9 +420,51 @@ export default function InnboksPage() {
       <div className="h-full flex flex-col lg:flex-row">
         {/* Message List */}
         <div className="w-full lg:w-1/2 border-r border-gray-200 lg:flex flex-col">
-          <div className="p-4 lg:p-6 border-b border-gray-200">
+          {/* Folders Sidebar */}
+          <div className="border-b border-gray-200 p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-medium text-gray-700">Mapper</h3>
+              <Button onClick={handleCreateNewMessage} size="sm" className="flex items-center gap-2">
+                <Send className="h-4 w-4" />
+                Ny melding
+              </Button>
+            </div>
+            <div className="space-y-1">
+              {folders.map((folder) => {
+                const folderMessages = messages.filter(m => (m.folder || 'innboks') === folder);
+                const folderUnreadCount = folderMessages.filter(m => !m.isRead).length;
+                return (
+                  <button
+                    key={folder}
+                    onClick={() => setSelectedFolder(folder)}
+                    className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
+                      selectedFolder === folder
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'hover:bg-gray-100 text-gray-700'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="capitalize">{folder}</span>
+                      <div className="flex items-center gap-2">
+                        {folderUnreadCount > 0 && (
+                          <span className="bg-blue-500 text-white text-xs px-2 py-0.5 rounded-full">
+                            {folderUnreadCount}
+                          </span>
+                        )}
+                        <span className="text-gray-500 text-xs">
+                          {folderMessages.length}
+                        </span>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="p-4 border-b border-gray-200">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg lg:text-xl font-semibold">Innboks</h2>
+              <h2 className="text-lg lg:text-xl font-semibold capitalize">{selectedFolder}</h2>
               {unreadCount > 0 && (
                 <span className="bg-primary text-primary-foreground text-xs px-2 py-1 rounded-full">
                   {unreadCount} ulest
@@ -311,13 +474,13 @@ export default function InnboksPage() {
           </div>
 
           <div className="flex-1 overflow-y-auto">
-            {messages.length === 0 ? (
+            {filteredMessages.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-gray-500 p-8">
                 <Mail className="h-12 w-12 mb-4" />
                 <p>Ingen meldinger enda</p>
               </div>
             ) : (
-              messages.map((message) => (
+              filteredMessages.map((message) => (
                 <div
                   key={message.id}
                   onClick={() => handleMessageClick(message)}
@@ -326,8 +489,9 @@ export default function InnboksPage() {
                   } ${!message.isRead ? 'bg-gray-50' : ''}`}
                 >
                   <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 mt-1">
+                    <div className="flex-shrink-0 mt-1 flex items-center gap-1">
                       {getMessageTypeIcon(message.type)}
+                      {message.isFlagged && <Flag className="h-3 w-3 text-yellow-500" />}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1">
@@ -379,6 +543,30 @@ export default function InnboksPage() {
                         </div>
                       )}
                     </div>
+                    <div className="flex items-center gap-1 mt-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleFlag(message.id, message.isFlagged || false);
+                        }}
+                        className={`p-1 rounded hover:bg-gray-200 transition-colors ${
+                          message.isFlagged ? 'text-yellow-500' : 'text-gray-400'
+                        }`}
+                        title={message.isFlagged ? 'Fjern flagg' : 'Flagg melding'}
+                      >
+                        {message.isFlagged ? <Flag className="h-4 w-4" /> : <FlagOff className="h-4 w-4" />}
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteMessage(message.id);
+                        }}
+                        className="p-1 rounded hover:bg-gray-200 text-gray-400 hover:text-red-500 transition-colors"
+                        title="Slett melding"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))
@@ -395,6 +583,7 @@ export default function InnboksPage() {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
                       {getMessageTypeIcon(selectedMessage.type)}
+                      {selectedMessage.isFlagged && <Flag className="h-4 w-4 text-yellow-500" />}
                       <span className="text-sm px-2 py-1 rounded-full bg-gray-100 text-gray-600">
                         {getMessageTypeLabel(selectedMessage.type)}
                       </span>
@@ -432,16 +621,114 @@ export default function InnboksPage() {
                   </button>
                 </div>
                 {!isReplying && (
-                  <div className="mt-4">
+                  <div className="mt-4 flex items-center gap-2 flex-wrap">
                     <Button onClick={handleReply} className="flex items-center gap-2">
                       <Send className="h-4 w-4" />
                       Svar
                     </Button>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-600">Mappe:</span>
+                      <Select
+                        value={selectedMessage.folder || 'innboks'}
+                        onValueChange={(value) => handleMoveToFolder(selectedMessage.id, value)}
+                      >
+                        <SelectTrigger className="w-32">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {folders.map((folder) => (
+                            <SelectItem key={folder} value={folder}>
+                              {folder}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <button
+                      onClick={() => handleToggleFlag(selectedMessage.id, selectedMessage.isFlagged || false)}
+                      className={`p-2 rounded hover:bg-gray-200 transition-colors ${
+                        selectedMessage.isFlagged ? 'text-yellow-500' : 'text-gray-400'
+                      }`}
+                      title={selectedMessage.isFlagged ? 'Fjern flagg' : 'Flagg melding'}
+                    >
+                      {selectedMessage.isFlagged ? <Flag className="h-4 w-4" /> : <FlagOff className="h-4 w-4" />}
+                    </button>
+                    <button
+                      onClick={() => handleDeleteMessage(selectedMessage.id)}
+                      className="p-2 rounded hover:bg-gray-200 text-gray-400 hover:text-red-500 transition-colors"
+                      title="Slett melding"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                   </div>
                 )}
               </div>
               <div className="flex-1 p-4 lg:p-6 overflow-y-auto">
-                {isReplying ? (
+                {isCreatingMessage ? (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Til
+                      </label>
+                      <input
+                        type="email"
+                        value={newMessageTo}
+                        onChange={(e) => setNewMessageTo(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="mottaker@example.com"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Emne
+                      </label>
+                      <input
+                        type="text"
+                        value={newMessageSubject}
+                        onChange={(e) => setNewMessageSubject(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Melding
+                      </label>
+                      <textarea
+                        value={newMessageContent}
+                        onChange={(e) => setNewMessageContent(e.target.value)}
+                        rows={10}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Skriv din melding her..."
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={handleSendNewMessage}
+                        disabled={isSendingNewMessage || !newMessageSubject.trim() || !newMessageTo.trim() || !newMessageContent.trim()}
+                        className="flex items-center gap-2"
+                      >
+                        {isSendingNewMessage ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                            Sender...
+                          </>
+                        ) : (
+                          <>
+                            <Send className="h-4 w-4" />
+                            Send melding
+                          </>
+                        )}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={handleCancelNewMessage}
+                        disabled={isSendingNewMessage}
+                      >
+                        Avbryt
+                      </Button>
+                    </div>
+                  </div>
+                ) : isReplying ? (
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
