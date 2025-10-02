@@ -28,6 +28,25 @@ const quotesColumns: ColumnDef<Tilbud>[] = [
     cell: (info) => `${(info.getValue() as number).toLocaleString('nb-NO')} kr`,
   },
   {
+    accessorKey: 'profit',
+    header: 'Profitt',
+    cell: (info) => {
+      const row = info.row.original as Tilbud;
+      const totalCost = (row.prisgrunnlag || []).reduce((sum, c) => sum + (c.amount || 0), 0);
+      const customerPrice = row.belop || 0;
+      const profit = customerPrice - totalCost;
+      const profitMargin = customerPrice > 0 ? (profit / customerPrice) * 100 : 0;
+
+      return (
+        <span className={`font-medium ${profit >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+          {profit.toLocaleString('nb-NO')} kr {customerPrice > 0 && (
+            <span className="text-xs text-gray-500">({profitMargin.toFixed(1)}%)</span>
+          )}
+        </span>
+      );
+    },
+  },
+  {
     accessorKey: 'status',
     header: 'Status',
     cell: (info) => {

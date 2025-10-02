@@ -170,3 +170,57 @@ export interface BusinessSettings {
   lastUpdated?: any;
   createdAt?: any;
 }
+
+// Catalog Types
+export interface Product {
+  id: string;
+  produktnavn: string;
+  produsent: string;
+  enhet: string; // e.g., 'stk', 'meter', 'liter', 'kg'
+  enhetspris: number;
+  påslag: number; // Markup percentage
+  kategoriId: string;
+  underkategoriId: string;
+  beskrivelse?: string;
+  opprettet: number;
+  oppdatert: number;
+}
+
+export interface Subcategory {
+  id: string;
+  navn: string;
+  kategoriId: string;
+  beskrivelse?: string;
+  opprettet: number;
+  oppdatert: number;
+}
+
+export interface Category {
+  id: string;
+  navn: string;
+  beskrivelse?: string;
+  opprettet: number;
+  oppdatert: number;
+}
+
+export interface ProductFormData {
+  produktnavn: string;
+  produsent: string;
+  enhet: string;
+  enhetspris: number;
+  påslag: number;
+  kategoriId: string;
+  underkategoriId: string;
+  beskrivelse?: string;
+}
+
+export interface CategoryFormData {
+  navn: string;
+  beskrivelse?: string;
+}
+
+export interface SubcategoryFormData {
+  navn: string;
+  kategoriId: string;
+  beskrivelse?: string;
+}

@@ -421,6 +421,11 @@ export const navLinks: NavLink[] = [
     icon: 'Inbox'
   },
   {
+    href: "/katalog",
+    label: "Katalog",
+    icon: "BookOpen"
+  },
+  {
     href: '/bedrift',
     label: 'Min Bedrift',
     icon: 'Store'

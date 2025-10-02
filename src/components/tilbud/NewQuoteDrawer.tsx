@@ -39,7 +39,9 @@ import {
 import { createTilbud, TilbudFormData, getUniqueCategoriesFromQuotes } from '@/lib/services/tilbudService';
 import { getCustomers } from '@/lib/services/customerService';
 import { getBusinessContextForAI, getBusinessSettings } from '@/lib/services/businessService';
-import { Kunde, PriceComponent, AIPriceSuggestion, BusinessSettings } from '@/lib/types';
+import { getProducts, getCategories, getSubcategories } from '@/lib/services/catalogService';
+import { Kunde, PriceComponent, AIPriceSuggestion, BusinessSettings, Product, Category, Subcategory } from '@/lib/types';
+import { useBreakpoint } from '@/hooks/useResponsive';
 
 import {
   Select,
@@ -95,12 +97,14 @@ interface QuoteData {
 
 const STEPS = [
   { id: 1, title: 'AI-Analyse', description: 'Beskriv jobben og last opp bilder', icon: Sparkles },
-  { id: 2, title: 'AI-Prisforslag', description: 'Juster pris basert på AI-analyse', icon: Zap },
+  { id: 2, title: 'Rediger prisforslag', description: 'Juster pris basert på AI-analyse', icon: Zap },
   { id: 3, title: 'Prissammendrag', description: 'Gjennomgå og bekreft prising', icon: Calculator },
   { id: 4, title: 'Design', description: 'Velg mal og send tilbud', icon: Palette },
 ];
 
 export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChange, onTilbudCreated }) => {
+  const breakpoints = useBreakpoint();
+  const isMobile = !breakpoints.md;
   const [currentStep, setCurrentStep] = useState(1);
   const [quoteData, setQuoteData] = useState<QuoteData>({
     jobDescription: '',
@@ -131,6 +135,17 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [templateHtml, setTemplateHtml] = useState('');
   const [isLoadingTemplate, setIsLoadingTemplate] = useState(false);
+  const [isCatalogDialogOpen, setIsCatalogDialogOpen] = useState(false);
+  const [catalogProducts, setCatalogProducts] = useState<Product[]>([]);
+  const [catalogCategories, setCatalogCategories] = useState<Category[]>([]);
+  const [catalogSubcategories, setCatalogSubcategories] = useState<Subcategory[]>([]);
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('all');
+  const [selectedSubcategoryFilter, setSelectedSubcategoryFilter] = useState<string>('all');
+  const [catalogSearchTerm, setCatalogSearchTerm] = useState('');
+  const [isLoadingCatalog, setIsLoadingCatalog] = useState(false);
+  const [catalogViewMode, setCatalogViewMode] = useState<'grid' | 'list'>('list');
+  const [catalogSortBy, setCatalogSortBy] = useState<'name' | 'price'>('name');
+  const [selectedProducts, setSelectedProducts] = useState<Map<string, { product: Product; quantity: number }>>(new Map());
   
   // Preview functions
   const handlePreview = async () => {
@@ -221,94 +236,6 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
     return html;
   };
 
-  // Generate AI price suggestion based on job description and images
-  const generateAIPriceSuggestion = (jobDescription: string, imageCount: number): AIPriceSuggestion => {
-    // Mock AI analysis - in real implementation this would call an AI service
-    const basePrice = Math.round((Math.random() * 50000 + 10000) / 100) * 100;
-    
-    const components: PriceComponent[] = [
-      {
-        id: 'materials',
-        category: 'materialer',
-        name: 'Materialkostnader',
-        description: 'Byggematerialer, verktøy og forbruksvarer',
-        amount: Math.round(basePrice * 0.25),
-        unit: 'pakke',
-        unitPrice: Math.round(basePrice * 0.25),
-        priceMarkup: priceMarkup,
-        materialMarkup: materialMarkup,
-        isEditable: true,
-        confidence: 85,
-      },
-      {
-        id: 'labor',
-        category: 'arbeid',
-        name: 'Arbeidskraft',
-        description: 'Timelønn for håndverkere og spesialister',
-        amount: Math.round(basePrice * 0.5),
-        unit: 'timer',
-        unitPrice: 800,
-        priceMarkup: priceMarkup,
-        materialMarkup: materialMarkup,
-        isEditable: true,
-        confidence: 78,
-      },
-      {
-        id: 'transport',
-        category: 'transport',
-        name: 'Transport og opprydding',
-        description: 'Transport av materialer og arbeidsplassopprydding',
-        amount: Math.round(basePrice * 0.1),
-        unit: 'oppdrag',
-        unitPrice: Math.round(basePrice * 0.1),
-        priceMarkup: priceMarkup,
-        materialMarkup: materialMarkup,
-        isEditable: true,
-        confidence: 92,
-      },
-      {
-        id: 'equipment',
-        category: 'utstyr',
-        name: 'Utstyr og verktøy',
-        description: 'Leie av spesialverktøy og utstyr',
-        amount: Math.round(basePrice * 0.05),
-        unit: 'dag',
-        unitPrice: Math.round(basePrice * 0.05),
-        priceMarkup: priceMarkup,
-        materialMarkup: materialMarkup,
-        isEditable: true,
-        confidence: 70,
-      },
-      {
-        id: 'margin',
-        category: 'margin',
-        name: 'Margin og fortjeneste',
-        description: 'Bedriftens fortjeneste og risikoavdekning',
-        amount: Math.round(basePrice * 0.1),
-        unit: '%',
-        unitPrice: Math.round(basePrice * 0.01),
-        priceMarkup: priceMarkup,
-        materialMarkup: materialMarkup,
-        isEditable: true,
-        confidence: 95,
-      },
-    ];
-
-    const totalPrice = components.reduce((sum, comp) => sum + comp.amount, 0);
-    const overallConfidence = Math.round(components.reduce((sum, comp) => sum + comp.confidence, 0) / components.length);
-
-    return {
-      totalPrice,
-      confidence: overallConfidence,
-      components,
-      reasoning: ``,
-      alternatives: {
-        conservative: Math.round(totalPrice * 0.85),
-        aggressive: Math.round(totalPrice * 1.15),
-      },
-    };
-  };
-
   // Load customers when drawer opens
   useEffect(() => {
     if (open) {
@@ -350,6 +277,93 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
     } catch (error) {
       console.error('Error loading customers:', error);
     }
+  };
+
+  const loadCatalogData = async () => {
+    setIsLoadingCatalog(true);
+    try {
+      const [products, categories, subcategories] = await Promise.all([
+        getProducts(),
+        getCategories(),
+        getSubcategories()
+      ]);
+      setCatalogProducts(products);
+      setCatalogCategories(categories);
+      setCatalogSubcategories(subcategories);
+    } catch (error) {
+      console.error('Error loading catalog:', error);
+    } finally {
+      setIsLoadingCatalog(false);
+    }
+  };
+
+  const openCatalogDialog = async () => {
+    await loadCatalogData();
+    setSelectedProducts(new Map());
+    setIsCatalogDialogOpen(true);
+  };
+
+  const toggleProductSelection = (product: Product) => {
+    setSelectedProducts(prev => {
+      const newMap = new Map(prev);
+      if (newMap.has(product.id)) {
+        newMap.delete(product.id);
+      } else {
+        newMap.set(product.id, { product, quantity: 1 });
+      }
+      return newMap;
+    });
+  };
+
+  const updateSelectedProductQuantity = (productId: string, quantity: number) => {
+    setSelectedProducts(prev => {
+      const newMap = new Map(prev);
+      const item = newMap.get(productId);
+      if (item && quantity > 0) {
+        newMap.set(productId, { ...item, quantity });
+      }
+      return newMap;
+    });
+  };
+
+  const addSelectedProductsToQuote = () => {
+    const newComponents: PriceComponent[] = [];
+    
+    selectedProducts.forEach(({ product, quantity }) => {
+      const newComponent: PriceComponent = {
+        id: `product-${product.id}-${Date.now()}`,
+        category: 'materialer',
+        name: product.produktnavn,
+        description: product.beskrivelse || `${product.produsent ? product.produsent + ' - ' : ''}${product.produktnavn}`,
+        amount: 0,
+        quantity: quantity,
+        unit: product.enhet,
+        unitPrice: product.enhetspris,
+        priceMarkup: product.påslag,
+        materialMarkup: materialMarkup,
+        isEditable: true,
+        confidence: 0,
+      };
+      
+      newComponent.amount = calculateAmountWithMarkup(newComponent);
+      newComponents.push(newComponent);
+    });
+    
+    setQuoteData(prev => {
+      const updatedComponents = [...prev.adjustedComponents, ...newComponents];
+      const newTotal = updatedComponents.reduce((sum, comp) => sum + comp.amount, 0);
+      return {
+        ...prev,
+        adjustedComponents: updatedComponents,
+        finalPrice: newTotal,
+      };
+    });
+    
+    setIsCatalogDialogOpen(false);
+    setSelectedProducts(new Map());
+    setCatalogSearchTerm('');
+    setSelectedCategoryFilter('all');
+    setSelectedSubcategoryFilter('all');
   };
 
   const handleClose = () => {
@@ -753,20 +767,28 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
         </div>
       )}
 
-      <div className="mt-4 flex items-center gap-3">
-        <input
-          id="skip-ai"
-          type="checkbox"
-          checked={skipAI}
-          onChange={(e) => setSkipAI(e.target.checked)}
-          className="w-4 h-4"
-        />
-        <label htmlFor="skip-ai" className="text-sm text-gray-700">Hopp over AI-analyse (manuell utfylling)</label>
-      </div>
-
       <div className="flex gap-3 mt-6">
         <Button onClick={handlePrevious} variant="outline" className="flex-1">
           Tilbake
+        </Button>
+        <Button 
+          onClick={() => {
+            // Skip directly to step 2 without AI analysis
+            setSkipAI(true);
+            setCurrentStep(2);
+            // Initialize with empty components if none exist
+            if (quoteData.adjustedComponents.length === 0) {
+              setQuoteData(prev => ({
+                ...prev,
+                adjustedComponents: [],
+                finalPrice: 0,
+              }));
+            }
+          }} 
+          variant="outline" 
+          className="flex-1"
+        >
+          Fortsett uten AI
         </Button>
         {canProceed && (
           <Button onClick={handleNext} className="flex-1" disabled={isAnalyzing}>
@@ -794,13 +816,13 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
     setEditValue('');
   };
 
-  const calculateAmountWithMarkup = (component: PriceComponent, quantity?: number, unitPrice?: number) => {
+  const calculateAmountWithMarkup = (component: PriceComponent, quantity?: number, unitPrice?: number, priceMarkup?: number) => {
     const qty = quantity !== undefined ? quantity : component.quantity || 1;
     const price = unitPrice !== undefined ? unitPrice : component.unitPrice || 0;
-    const markup = component.category === 'materialer' ? (materialMarkup > 0 ? materialMarkup : priceMarkup) : priceMarkup;
+    const markup = priceMarkup !== undefined ? priceMarkup : (component.priceMarkup || 0);
     const markupMultiplier = 1 + (markup / 100);
     const result = Math.round(qty * price * markupMultiplier);
-    console.log(`calculateAmountWithMarkup: qty=${qty}, price=${price}, markup=${markup}, result=${result}`);
+    console.log(`calculateAmountWithMarkup: qty=${qty}, price=${price}, markup=${markup}%, multiplier=${markupMultiplier}, result=${result}`);
     return result;
   };
 
@@ -809,15 +831,19 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
       const updatedComponents = prev.adjustedComponents.map(comp => {
         if (comp.id === id) {
           const updatedComp = { ...comp, ...updates };
-          // Recalculate amount if quantity or unitPrice changed
-          if (updates.quantity !== undefined || updates.unitPrice !== undefined) {
-            updatedComp.amount = calculateAmountWithMarkup(updatedComp);
-          }
+          // Always recalculate amount when component is updated
+          updatedComp.amount = calculateAmountWithMarkup(
+            updatedComp,
+            updatedComp.quantity,
+            updatedComp.unitPrice,
+            updatedComp.priceMarkup
+          );
           return updatedComp;
         }
         return comp;
       });
       const newTotal = updatedComponents.reduce((sum, comp) => sum + comp.amount, 0);
+      console.log('Updated components, new total:', newTotal);
       return {
         ...prev,
         adjustedComponents: updatedComponents,
@@ -935,49 +961,55 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
             </div>
             <p className="text-gray-600">AI analyserer jobben...</p>
           </div>
-        ) : quoteData.aiSuggestion && (
+        ) : (
           <>
-            {/* AI Confidence and Summary */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Zap className="w-5 h-5 text-primary" />
-                    AI-Prisforslag
-                  </div>
-                  <div className={`px-3 py-1 rounded-full text-sm font-medium ${getConfidenceColor(quoteData.aiSuggestion.confidence)}`}>
-                    {quoteData.aiSuggestion.confidence}% sikkerhet
-                  </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center mb-4">
-                  <div className="text-4xl font-bold text-primary mb-2">
-                    kr {quoteData.finalPrice.toLocaleString('nb-NO')},-
-                  </div>
-                  <p className="text-sm text-gray-600 mb-2">
-                    {quoteData.aiSuggestion.reasoning}
-                  </p>
-                  {quoteData.aiSuggestion.alternatives && (
-                    <div className="flex justify-center gap-4 text-xs text-gray-500">
-                      <span>Konservativ: kr {quoteData.aiSuggestion.alternatives.conservative.toLocaleString('nb-NO')}</span>
-                      <span>•</span>
-                      <span>Offensiv: kr {quoteData.aiSuggestion.alternatives.aggressive.toLocaleString('nb-NO')}</span>
+            {/* AI Confidence and Summary - only show if AI suggestion exists */}
+            {quoteData.aiSuggestion && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Zap className="w-5 h-5 text-primary" />
+                      AI-Prisforslag
                     </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+                    <div className={`px-3 py-1 rounded-full text-sm font-medium ${getConfidenceColor(quoteData.aiSuggestion.confidence)}`}>
+                      {quoteData.aiSuggestion.confidence}% sikkerhet
+                    </div>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center mb-4">
+                    <div className="text-4xl font-bold text-primary mb-2">
+                      kr {quoteData.finalPrice.toLocaleString('nb-NO')},-
+                    </div>
+                    <p className="text-sm text-gray-600 mb-2">
+                      {quoteData.aiSuggestion.reasoning}
+                    </p>
+                    {quoteData.aiSuggestion.alternatives && (
+                      <div className="flex justify-center gap-4 text-xs text-gray-500">
+                        <span>Konservativ: kr {quoteData.aiSuggestion.alternatives.conservative.toLocaleString('nb-NO')}</span>
+                        <span>•</span>
+                        <span>Offensiv: kr {quoteData.aiSuggestion.alternatives.aggressive.toLocaleString('nb-NO')}</span>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Interactive Price Components Table */}
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle>Priskomponenter</CardTitle>
+                  <CardTitle>Rediger prisforslag</CardTitle>
                   <div className="flex gap-2">
+                    <Button onClick={openCatalogDialog} size="sm" variant="outline">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Legg til produkt
+                    </Button>
                     <Button onClick={addComponent} size="sm" variant="outline">
                       <Plus className="w-4 h-4 mr-2" />
-                      Legg til komponent
+                      Lag produkt
                     </Button>
                   </div>
                 </div>
@@ -1035,44 +1067,6 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
                   </div>
                 </div>
 
-                {/* Markup inputs */}
-                <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Påslag (%)
-                    </label>
-                    <input
-                      type="number"
-                      value={priceMarkup || ''}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        setPriceMarkup(value === '' ? 0 : Number(value));
-                      }}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                      min="0"
-                      step="1"
-                      placeholder="0"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Materialpåslag (%)
-                    </label>
-                    <input
-                      type="number"
-                      value={materialMarkup || ''}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        setMaterialMarkup(value === '' ? 0 : Number(value));
-                      }}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                      min="0"
-                      step="1"
-                      placeholder="0"
-                    />
-                  </div>
-                </div>
-
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
@@ -1083,6 +1077,7 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
                         <th className="text-right py-2 px-2">Antall</th>
                         <th className="text-right py-2 px-2">Enhet</th>
                         <th className="text-right py-2 px-2">Enhetspris</th>
+                        <th className="text-right py-2 px-2">Påslag (%)</th>
                         <th className="text-right py-2 px-2">Total</th>
                         <th className="text-center py-2 px-2">Sikkerhet</th>
                         <th className="text-center py-2 px-2">Handlinger</th>
@@ -1143,7 +1138,7 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
                           <td className="py-2 px-2 text-right">
                             {component.isEditable ? (
                               <input
-                                type="number"
+                                type="text"
                                 value={component.quantity || 1}
                                 onChange={(e) => {
                                   const quantity = Number(e.target.value);
@@ -1153,7 +1148,7 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
                                 }}
                                 className="w-16 px-2 py-1 text-sm border rounded text-right focus:ring-1 focus:ring-primary"
                                 min="0"
-                                step="0.1"
+                                step="1"
                               />
                             ) : (
                               <span className="text-sm">{component.quantity || 1}</span>
@@ -1192,8 +1187,27 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
                             )}
                           </td>
                           <td className="py-2 px-2 text-right">
+                            {component.isEditable ? (
+                              <input
+                                type="text"
+                                step="1"
+                                value={component.priceMarkup ?? 0}
+                                onChange={(e) => {
+                                  const priceMarkup = Number(e.target.value) || 0;
+                                  updateComponent(component.id, {
+                                    priceMarkup,
+                                  });
+                                }}
+                                className="w-16 px-2 py-1 text-sm border rounded text-right focus:ring-1 focus:ring-primary"
+                                min="0"
+                              />
+                            ) : (
+                              <span className="text-sm">{component.priceMarkup || 0}%</span>
+                            )}
+                          </td>
+                          <td className="py-2 px-2 text-right">
                             <span className="text-sm font-medium">
-                              kr {((component.quantity || 1) * (component.unitPrice || 0)).toLocaleString('nb-NO')}
+                              kr {component.amount.toLocaleString('nb-NO')}
                             </span>
                           </td>
                           <td className="py-2 px-2 text-center">
@@ -1222,7 +1236,7 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
                         </tr>
                       ))}
                       <tr className="border-t-2 font-bold">
-                        <td colSpan={6} className="py-3 px-2 text-right">Total:</td>
+                        <td colSpan={7} className="py-3 px-2 text-right">Total:</td>
                         <td className="py-3 px-2 text-right text-lg whitespace-nowrap">
                           kr {quoteData.finalPrice.toLocaleString('nb-NO')}
                         </td>
@@ -1654,6 +1668,588 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Catalog Dialog - Enhanced & Responsive */}
+      {isMobile ? (
+        <Drawer open={isCatalogDialogOpen} onOpenChange={setIsCatalogDialogOpen}>
+          <DrawerContent className="max-h-[95vh] flex flex-col">
+            <DrawerHeader className="border-b">
+              <div className="flex items-center justify-between">
+                <div>
+                  <DrawerTitle>Produktkatalog</DrawerTitle>
+                  <DrawerDescription>
+                    Velg produkter fra katalogen
+                  </DrawerDescription>
+                </div>
+                {selectedProducts.size > 0 && (
+                  <div className="bg-primary/10 px-3 py-1.5 rounded-lg">
+                    <span className="text-xs font-medium text-primary">
+                      {selectedProducts.size} valgt
+                    </span>
+                  </div>
+                )}
+              </div>
+            </DrawerHeader>
+            
+            <div className="flex-1 overflow-hidden flex flex-col p-4">
+              {/* Mobile Search and Filters */}
+              <div className="space-y-3 mb-4">
+                <input
+                  type="text"
+                  placeholder="Søk etter produkt..."
+                  value={catalogSearchTerm}
+                  onChange={(e) => setCatalogSearchTerm(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                />
+                
+                <div className="flex gap-2">
+                  <Select value={selectedCategoryFilter} onValueChange={(value) => {
+                    setSelectedCategoryFilter(value);
+                    setSelectedSubcategoryFilter('all');
+                  }}>
+                    <SelectTrigger className="flex-1 text-sm">
+                      <SelectValue placeholder="Kategori" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Alle kategorier</SelectItem>
+                      {catalogCategories.map(cat => (
+                        <SelectItem key={cat.id} value={cat.id}>
+                          {cat.navn}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  
+                  {selectedCategoryFilter !== 'all' && catalogSubcategories.filter(s => s.kategoriId === selectedCategoryFilter).length > 0 && (
+                    <Select value={selectedSubcategoryFilter} onValueChange={setSelectedSubcategoryFilter}>
+                      <SelectTrigger className="flex-1 text-sm">
+                        <SelectValue placeholder="Underkategori" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Alle</SelectItem>
+                        {catalogSubcategories
+                          .filter(s => s.kategoriId === selectedCategoryFilter)
+                          .map(subcat => (
+                            <SelectItem key={subcat.id} value={subcat.id}>
+                              {subcat.navn}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+                
+                <Select value={catalogSortBy} onValueChange={(value) => setCatalogSortBy(value as 'name' | 'price')}>
+                  <SelectTrigger className="w-full text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="name">Sorter: Navn</SelectItem>
+                    <SelectItem value="price">Sorter: Pris</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Products List - Mobile */}
+              <div className="flex-1 overflow-y-auto -mx-4 px-4">
+                {isLoadingCatalog ? (
+                  <div className="flex items-center justify-center h-40">
+                    <div className="text-center">
+                      <div className="animate-spin w-8 h-8 mx-auto mb-3 border-4 border-primary border-t-transparent rounded-full"></div>
+                      <p className="text-sm text-gray-500">Laster...</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3 pb-4">
+                    {catalogProducts
+                      .filter(product => {
+                        const matchesSearch = catalogSearchTerm === '' || 
+                          product.produktnavn.toLowerCase().includes(catalogSearchTerm.toLowerCase()) ||
+                          product.beskrivelse?.toLowerCase().includes(catalogSearchTerm.toLowerCase()) ||
+                          product.produsent?.toLowerCase().includes(catalogSearchTerm.toLowerCase());
+                        
+                        const matchesCategory = selectedCategoryFilter === 'all' || 
+                          product.kategoriId === selectedCategoryFilter;
+                        
+                        const matchesSubcategory = selectedSubcategoryFilter === 'all' || 
+                          product.underkategoriId === selectedSubcategoryFilter;
+                        
+                        return matchesSearch && matchesCategory && matchesSubcategory;
+                      })
+                      .sort((a, b) => {
+                        if (catalogSortBy === 'name') {
+                          return a.produktnavn.localeCompare(b.produktnavn);
+                        } else {
+                          return a.enhetspris - b.enhetspris;
+                        }
+                      })
+                      .map(product => {
+                        const category = catalogCategories.find(c => c.id === product.kategoriId);
+                        const subcategory = catalogSubcategories.find(s => s.id === product.underkategoriId);
+                        const isSelected = selectedProducts.has(product.id);
+                        const selectedItem = selectedProducts.get(product.id);
+                        
+                        return (
+                          <div 
+                            key={product.id} 
+                            className={`border rounded-lg p-3 transition-all ${
+                              isSelected 
+                                ? 'border-primary bg-primary/5' 
+                                : 'border-gray-200'
+                            }`}
+                          >
+                            <div className="flex items-start gap-3" onClick={() => toggleProductSelection(product)}>
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                className="mt-1 w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+                              />
+                              
+                              <div className="flex-1 min-w-0">
+                                <h4 className="font-semibold text-sm text-gray-900 mb-0.5">
+                                  {product.produktnavn}
+                                </h4>
+                                {product.produsent && (
+                                  <p className="text-xs text-gray-600 mb-1">
+                                    {product.produsent}
+                                  </p>
+                                )}
+                                {product.beskrivelse && (
+                                  <p className="text-xs text-gray-500 mb-2 line-clamp-2">
+                                    {product.beskrivelse}
+                                  </p>
+                                )}
+                                
+                                <div className="flex items-center justify-between">
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {category && (
+                                      <span className="inline-flex items-center px-1.5 py-0.5 text-xs bg-blue-100 text-blue-700 rounded">
+                                        {category.navn}
+                                      </span>
+                                    )}
+                                    {subcategory && (
+                                      <span className="inline-flex items-center px-1.5 py-0.5 text-xs bg-purple-100 text-purple-700 rounded">
+                                        {subcategory.navn}
+                                      </span>
+                                    )}
+                                  </div>
+                                  
+                                  <div className="text-right">
+                                    <p className="font-bold text-sm text-gray-900">
+                                      {product.enhetspris.toLocaleString('nb-NO')} kr
+                                    </p>
+                                    <p className="text-xs text-gray-500">/{product.enhet}</p>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    
+                    {catalogProducts.filter(product => {
+                      const matchesSearch = catalogSearchTerm === '' || 
+                        product.produktnavn.toLowerCase().includes(catalogSearchTerm.toLowerCase()) ||
+                        product.beskrivelse?.toLowerCase().includes(catalogSearchTerm.toLowerCase()) ||
+                        product.produsent?.toLowerCase().includes(catalogSearchTerm.toLowerCase());
+                      
+                      const matchesCategory = selectedCategoryFilter === 'all' || 
+                        product.kategoriId === selectedCategoryFilter;
+                      
+                      const matchesSubcategory = selectedSubcategoryFilter === 'all' || 
+                        product.underkategoriId === selectedSubcategoryFilter;
+                      
+                      return matchesSearch && matchesCategory && matchesSubcategory;
+                    }).length === 0 && (
+                      <div className="p-8 text-center">
+                        <p className="text-gray-600 text-sm">Ingen produkter funnet</p>
+                        <p className="text-gray-500 text-xs mt-1">Prøv å endre søkeord eller filter</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Mobile Footer */}
+            <DrawerFooter className="border-t bg-gray-50">
+              {selectedProducts.size > 0 && (
+                <div className="text-sm text-gray-600 mb-2 text-center">
+                  <span className="font-medium">{selectedProducts.size}</span> produkt{selectedProducts.size !== 1 ? 'er' : ''} valgt
+                  <span className="block mt-1">
+                    Total: <span className="font-semibold">
+                      {Array.from(selectedProducts.values())
+                        .reduce((sum, { product, quantity }) => sum + (product.enhetspris * quantity), 0)
+                        .toLocaleString('nb-NO')} kr
+                    </span>
+                  </span>
+                </div>
+              )}
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setIsCatalogDialogOpen(false);
+                    setSelectedProducts(new Map());
+                    setCatalogSearchTerm('');
+                    setSelectedCategoryFilter('all');
+                    setSelectedSubcategoryFilter('all');
+                  }}
+                  className="flex-1"
+                >
+                  Avbryt
+                </Button>
+                <Button 
+                  onClick={addSelectedProductsToQuote}
+                  disabled={selectedProducts.size === 0}
+                  className="flex-1"
+                >
+                  Legg til {selectedProducts.size > 0 && `(${selectedProducts.size})`}
+                </Button>
+              </div>
+            </DrawerFooter>
+          </DrawerContent>
+        </Drawer>
+      ) : (
+        <Dialog open={isCatalogDialogOpen} onOpenChange={setIsCatalogDialogOpen}>
+          <DialogContent className="max-w-7xl max-h-[95vh] overflow-hidden flex flex-col p-0">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b">
+            <div className="flex items-center justify-between">
+              <div>
+                <DialogTitle className="text-2xl">Produktkatalog</DialogTitle>
+                <DialogDescription>
+                  Velg produkter fra katalogen og legg til i tilbudet
+                </DialogDescription>
+              </div>
+              {selectedProducts.size > 0 && (
+                <div className="bg-primary/10 px-4 py-2 rounded-lg">
+                  <span className="text-sm font-medium text-primary">
+                    {selectedProducts.size} produkt{selectedProducts.size !== 1 ? 'er' : ''} valgt
+                  </span>
+                </div>
+              )}
+            </div>
+          </DialogHeader>
+          
+          <div className="flex flex-1 overflow-hidden">
+            {/* Left Sidebar - Categories */}
+            <div className="w-64 border-r bg-gray-50 overflow-y-auto p-4">
+              <h3 className="font-semibold text-sm text-gray-700 mb-3 px-2">KATEGORIER</h3>
+              <div className="space-y-1">
+                <button
+                  onClick={() => {
+                    setSelectedCategoryFilter('all');
+                    setSelectedSubcategoryFilter('all');
+                  }}
+                  className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+                    selectedCategoryFilter === 'all' 
+                      ? 'bg-primary text-white' 
+                      : 'hover:bg-gray-200'
+                  }`}
+                >
+                  Alle kategorier
+                  <span className="ml-2 text-xs opacity-75">
+                    ({catalogProducts.length})
+                  </span>
+                </button>
+                
+                {catalogCategories.map(category => {
+                  const categoryProducts = catalogProducts.filter(p => p.kategoriId === category.id);
+                  const categorySubcategories = catalogSubcategories.filter(s => s.kategoriId === category.id);
+                  
+                  return (
+                    <div key={category.id}>
+                      <button
+                        onClick={() => {
+                          setSelectedCategoryFilter(category.id);
+                          setSelectedSubcategoryFilter('all');
+                        }}
+                        className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+                          selectedCategoryFilter === category.id 
+                            ? 'bg-primary text-white' 
+                            : 'hover:bg-gray-200'
+                        }`}
+                      >
+                        {category.navn}
+                        <span className="ml-2 text-xs opacity-75">
+                          ({categoryProducts.length})
+                        </span>
+                      </button>
+                      
+                      {/* Subcategories */}
+                      {selectedCategoryFilter === category.id && categorySubcategories.length > 0 && (
+                        <div className="ml-4 mt-1 space-y-1">
+                          <button
+                            onClick={() => setSelectedSubcategoryFilter('all')}
+                            className={`w-full text-left px-3 py-1.5 rounded text-xs transition-colors ${
+                              selectedSubcategoryFilter === 'all'
+                                ? 'bg-primary/20 text-primary font-medium'
+                                : 'hover:bg-gray-200'
+                            }`}
+                          >
+                            Alle
+                          </button>
+                          {categorySubcategories.map(subcat => {
+                            const subcatProducts = categoryProducts.filter(p => p.underkategoriId === subcat.id);
+                            return (
+                              <button
+                                key={subcat.id}
+                                onClick={() => setSelectedSubcategoryFilter(subcat.id)}
+                                className={`w-full text-left px-3 py-1.5 rounded text-xs transition-colors ${
+                                  selectedSubcategoryFilter === subcat.id
+                                    ? 'bg-primary/20 text-primary font-medium'
+                                    : 'hover:bg-gray-200'
+                                }`}
+                              >
+                                {subcat.navn}
+                                <span className="ml-2 opacity-75">
+                                  ({subcatProducts.length})
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Main Content Area */}
+            <div className="flex-1 flex flex-col overflow-hidden">
+              {/* Toolbar */}
+              <div className="p-4 border-b bg-white space-y-3">
+                <div className="flex gap-3">
+                  <input
+                    type="text"
+                    placeholder="Søk etter produktnavn, produsent eller beskrivelse..."
+                    value={catalogSearchTerm}
+                    onChange={(e) => setCatalogSearchTerm(e.target.value)}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  />
+                  <Select value={catalogSortBy} onValueChange={(value) => setCatalogSortBy(value as 'name' | 'price')}>
+                    <SelectTrigger className="w-40">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="name">Sorter: Navn</SelectItem>
+                      <SelectItem value="price">Sorter: Pris</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                {/* Stats bar */}
+                <div className="flex items-center justify-between text-sm text-gray-600">
+                  <span>
+                    Viser {catalogProducts.filter(product => {
+                      const matchesSearch = catalogSearchTerm === '' || 
+                        product.produktnavn.toLowerCase().includes(catalogSearchTerm.toLowerCase()) ||
+                        product.beskrivelse?.toLowerCase().includes(catalogSearchTerm.toLowerCase()) ||
+                        product.produsent?.toLowerCase().includes(catalogSearchTerm.toLowerCase());
+                      
+                      const matchesCategory = selectedCategoryFilter === 'all' || 
+                        product.kategoriId === selectedCategoryFilter;
+                      
+                      const matchesSubcategory = selectedSubcategoryFilter === 'all' || 
+                        product.underkategoriId === selectedSubcategoryFilter;
+                      
+                      return matchesSearch && matchesCategory && matchesSubcategory;
+                    }).length} produkter
+                  </span>
+                </div>
+              </div>
+
+              {/* Products Grid/List */}
+              <div className="flex-1 overflow-y-auto p-4">
+                {isLoadingCatalog ? (
+                  <div className="flex items-center justify-center h-64">
+                    <div className="text-center">
+                      <div className="animate-spin w-10 h-10 mx-auto mb-4 border-4 border-primary border-t-transparent rounded-full"></div>
+                      <p className="text-gray-500">Laster produkter...</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className={catalogViewMode === 'grid' ? 'grid grid-cols-3 gap-4' : 'space-y-3'}>
+                    {catalogProducts
+                      .filter(product => {
+                        const matchesSearch = catalogSearchTerm === '' || 
+                          product.produktnavn.toLowerCase().includes(catalogSearchTerm.toLowerCase()) ||
+                          product.beskrivelse?.toLowerCase().includes(catalogSearchTerm.toLowerCase()) ||
+                          product.produsent?.toLowerCase().includes(catalogSearchTerm.toLowerCase());
+                        
+                        const matchesCategory = selectedCategoryFilter === 'all' || 
+                          product.kategoriId === selectedCategoryFilter;
+                        
+                        const matchesSubcategory = selectedSubcategoryFilter === 'all' || 
+                          product.underkategoriId === selectedSubcategoryFilter;
+                        
+                        return matchesSearch && matchesCategory && matchesSubcategory;
+                      })
+                      .sort((a, b) => {
+                        if (catalogSortBy === 'name') {
+                          return a.produktnavn.localeCompare(b.produktnavn);
+                        } else {
+                          return a.enhetspris - b.enhetspris;
+                        }
+                      })
+                      .map(product => {
+                        const category = catalogCategories.find(c => c.id === product.kategoriId);
+                        const subcategory = catalogSubcategories.find(s => s.id === product.underkategoriId);
+                        const isSelected = selectedProducts.has(product.id);
+                        const selectedItem = selectedProducts.get(product.id);
+                        
+                        return (
+                          <div 
+                            key={product.id} 
+                            className={`border rounded-lg p-4 transition-all ${
+                              isSelected 
+                                ? 'border-primary bg-primary/5 shadow-md' 
+                                : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
+                            }`}
+                          >
+                            <div className="flex items-start gap-4">
+                              {/* Checkbox */}
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => toggleProductSelection(product)}
+                                className="mt-1 w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+                              />
+                              
+                              {/* Product Info */}
+                              <div className="flex-1 min-w-0">
+                                <h4 className="font-semibold text-gray-900 mb-1">
+                                  {product.produktnavn}
+                                </h4>
+                                {product.produsent && (
+                                  <p className="text-sm text-gray-600 mb-1">
+                                    {product.produsent}
+                                  </p>
+                                )}
+                                {product.beskrivelse && (
+                                  <p className="text-sm text-gray-500 mb-2 line-clamp-2">
+                                    {product.beskrivelse}
+                                  </p>
+                                )}
+                                
+                                <div className="flex flex-wrap gap-2 mt-2">
+                                  {category && (
+                                    <span className="inline-flex items-center px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded">
+                                      {category.navn}
+                                    </span>
+                                  )}
+                                  {subcategory && (
+                                    <span className="inline-flex items-center px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded">
+                                      {subcategory.navn}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              {/* Price and Quantity */}
+                              <div className="text-right space-y-2">
+                                <div>
+                                  <p className="font-bold text-lg text-gray-900">
+                                    {product.enhetspris.toLocaleString('nb-NO')} kr
+                                  </p>
+                                  <p className="text-xs text-gray-500">per {product.enhet}</p>
+                                </div>
+                                
+                                {isSelected && (
+                                  <div className="flex items-center gap-2">
+                                    <label className="text-xs text-gray-600">Antall:</label>
+                                    <input
+                                      type="number"
+                                      min="1"
+                                      value={selectedItem?.quantity || 1}
+                                      onChange={(e) => updateSelectedProductQuantity(product.id, parseInt(e.target.value) || 1)}
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="w-16 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-primary"
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    
+                    {catalogProducts.filter(product => {
+                      const matchesSearch = catalogSearchTerm === '' || 
+                        product.produktnavn.toLowerCase().includes(catalogSearchTerm.toLowerCase()) ||
+                        product.beskrivelse?.toLowerCase().includes(catalogSearchTerm.toLowerCase()) ||
+                        product.produsent?.toLowerCase().includes(catalogSearchTerm.toLowerCase());
+                      
+                      const matchesCategory = selectedCategoryFilter === 'all' || 
+                        product.kategoriId === selectedCategoryFilter;
+                      
+                      const matchesSubcategory = selectedSubcategoryFilter === 'all' || 
+                        product.underkategoriId === selectedSubcategoryFilter;
+                      
+                      return matchesSearch && matchesCategory && matchesSubcategory;
+                    }).length === 0 && (
+                      <div className="col-span-3 p-12 text-center">
+                        <div className="text-gray-400 mb-2">
+                          <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                          </svg>
+                        </div>
+                        <p className="text-gray-600 font-medium">Ingen produkter funnet</p>
+                        <p className="text-gray-500 text-sm mt-1">Prøv å endre søkeord eller filter</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="border-t bg-gray-50 px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-gray-600">
+                {selectedProducts.size > 0 && (
+                  <>
+                    <span className="font-medium">{selectedProducts.size}</span> produkt{selectedProducts.size !== 1 ? 'er' : ''} valgt
+                    {selectedProducts.size > 0 && (
+                      <span className="ml-4">
+                        Total: <span className="font-semibold">
+                          {Array.from(selectedProducts.values())
+                            .reduce((sum, { product, quantity }) => sum + (product.enhetspris * quantity), 0)
+                            .toLocaleString('nb-NO')} kr
+                        </span>
+                      </span>
+                    )}
+                  </>
+                )}
+              </div>
+              <div className="flex gap-3">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setIsCatalogDialogOpen(false);
+                    setSelectedProducts(new Map());
+                    setCatalogSearchTerm('');
+                    setSelectedCategoryFilter('all');
+                    setSelectedSubcategoryFilter('all');
+                  }}
+                >
+                  Avbryt
+                </Button>
+                <Button 
+                  onClick={addSelectedProductsToQuote}
+                  disabled={selectedProducts.size === 0}
+                  className="min-w-32"
+                >
+                  Legg til {selectedProducts.size > 0 && `(${selectedProducts.size})`}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+      )}
     </Drawer>
   );
 };

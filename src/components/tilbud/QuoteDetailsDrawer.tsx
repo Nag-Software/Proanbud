@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, User, FileText, Calendar, DollarSign, Briefcase, Clock, Edit3, Save, XCircle, ExternalLink, Eye, Download, Trash2 } from 'lucide-react';
+import { X, User, FileText, Calendar, DollarSign, Briefcase, Clock, Edit3, Save, XCircle, ExternalLink, Eye, Download, Trash2, Plus } from 'lucide-react';
 import { Tilbud, Kunde, BusinessSettings, PriceComponent } from '@/lib/types';
 import { Card } from '@/components/shared/Card';
 import { updateTilbud, deleteTilbud, TilbudFormData } from '@/lib/services/tilbudService';
@@ -62,6 +62,7 @@ export function QuoteDetailsDrawer({
   const [isEditing, setIsEditing] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [editedQuote, setEditedQuote] = useState<Partial<TilbudFormData>>({});
+  const [editedPriceComponents, setEditedPriceComponents] = useState<PriceComponent[]>([]);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [templateHtml, setTemplateHtml] = useState<string>('');
   const [isLoadingTemplate, setIsLoadingTemplate] = useState(false);
@@ -121,20 +122,32 @@ export function QuoteDetailsDrawer({
       svarfrist: currentQuote.svarfrist,
       template: currentQuote.template || 'modern',
     });
+    // Deep copy of price components for editing
+    setEditedPriceComponents(currentQuote.prisgrunnlag ? JSON.parse(JSON.stringify(currentQuote.prisgrunnlag)) : []);
     setIsEditing(true);
   };
 
   const cancelEditing = () => {
     setIsEditing(false);
     setEditedQuote({});
+    setEditedPriceComponents([]);
   };
 
   const saveChanges = async () => {
     try {
       setIsUpdating(true);
-      await updateTilbud(currentQuote.id, editedQuote);
+      // Calculate new total from edited price components
+      const calculatedTotal = editedPriceComponents.reduce((sum, c) => sum + (c.amount || 0), 0);
+      
+      // Update quote with new price components and recalculated total
+      await updateTilbud(currentQuote.id, {
+        ...editedQuote,
+        prisgrunnlag: editedPriceComponents,
+        belop: calculatedTotal, // Auto-update total based on components
+      });
       setIsEditing(false);
       setEditedQuote({});
+      setEditedPriceComponents([]);
       onQuoteUpdated?.();
     } catch (error) {
       console.error('Error updating quote:', error);
@@ -142,6 +155,45 @@ export function QuoteDetailsDrawer({
     } finally {
       setIsUpdating(false);
     }
+  };
+
+  // Add new price component
+  const addPriceComponent = () => {
+    const newComponent: PriceComponent = {
+      id: `comp-${Date.now()}`,
+      category: 'materialer',
+      name: '',
+      description: '',
+      amount: 0,
+      quantity: 1,
+      unit: 'stk',
+      unitPrice: 0,
+      priceMarkup: 0,
+      materialMarkup: 0,
+      isEditable: true,
+      confidence: 0,
+    };
+    setEditedPriceComponents([...editedPriceComponents, newComponent]);
+  };
+
+  // Update a price component
+  const updatePriceComponent = (index: number, field: keyof PriceComponent, value: any) => {
+    const updated = [...editedPriceComponents];
+    updated[index] = { ...updated[index], [field]: value };
+    
+    // Recalculate amount if quantity or unitPrice changes
+    if (field === 'quantity' || field === 'unitPrice') {
+      const quantity = field === 'quantity' ? value : updated[index].quantity || 1;
+      const unitPrice = field === 'unitPrice' ? value : updated[index].unitPrice || 0;
+      updated[index].amount = quantity * unitPrice;
+    }
+    
+    setEditedPriceComponents(updated);
+  };
+
+  // Delete a price component
+  const deletePriceComponent = (index: number) => {
+    setEditedPriceComponents(editedPriceComponents.filter((_, i) => i !== index));
   };
 
   const formatCurrency = (amount: number) => {
@@ -353,7 +405,7 @@ export function QuoteDetailsDrawer({
       />
       
       {/* Drawer */}
-      <div className={`fixed right-0 top-0 h-full w-full max-w-2xl bg-white shadow-2xl z-50 transform transition-all duration-300 ease-in-out ${
+      <div className={`fixed right-0 top-0 h-full w-full max-w-3xl bg-white shadow-2xl z-50 transform transition-all duration-300 ease-in-out ${
         open ? 'translate-x-0' : 'translate-x-full'
       }`}>
         <div className="flex flex-col h-full">
@@ -517,72 +569,244 @@ export function QuoteDetailsDrawer({
             </Card>
 
             {/* Price Breakdown */}
-            {quote.prisgrunnlag && quote.prisgrunnlag.length > 0 && (
+            {((isEditing && editedPriceComponents.length > 0) || (!isEditing && quote.prisgrunnlag && quote.prisgrunnlag.length > 0)) && (
               <Card>
                 <div className="p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                    <DollarSign className="h-5 w-5 text-green-600" />
-                    Prisgrunnlag
-                  </h3>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                      <DollarSign className="h-5 w-5 text-green-600" />
+                      Prisgrunnlag
+                    </h3>
+                    {isEditing && (
+                      <button
+                        onClick={addPriceComponent}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Legg til komponent
+                      </button>
+                    )}
+                  </div>
+                  
                   <div className="space-y-3">
-                    {quote.prisgrunnlag.map((component, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="font-medium text-gray-900">{component.name}</span>
-                            {component.confidence > 0 && (
-                              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                                component.confidence >= 80 ? 'bg-green-100 text-green-700' :
-                                component.confidence >= 60 ? 'bg-yellow-100 text-yellow-700' :
-                                'bg-red-100 text-red-700'
-                              }`}>
-                                {component.confidence}% sikkerhet
-                              </span>
-                            )}
+                    {isEditing ? (
+                      // Edit mode - show editable fields
+                      editedPriceComponents.map((component, index) => (
+                        <div key={component.id || index} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {/* Name */}
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">Navn</label>
+                              <input
+                                type="text"
+                                value={component.name}
+                                onChange={(e) => updatePriceComponent(index, 'name', e.target.value)}
+                                className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                placeholder="Komponentnavn"
+                              />
+                            </div>
+                            
+                            {/* Category */}
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">Kategori</label>
+                              <select
+                                value={component.category}
+                                onChange={(e) => updatePriceComponent(index, 'category', e.target.value)}
+                                className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              >
+                                <option value="materialer">Materialer</option>
+                                <option value="arbeid">Arbeid</option>
+                                <option value="transport">Transport</option>
+                                <option value="utstyr">Utstyr</option>
+                                <option value="margin">Margin</option>
+                                <option value="annet">Annet</option>
+                              </select>
+                            </div>
+                            
+                            {/* Description */}
+                            <div className="md:col-span-2">
+                              <label className="block text-xs font-medium text-gray-700 mb-1">Beskrivelse</label>
+                              <textarea
+                                value={component.description}
+                                onChange={(e) => updatePriceComponent(index, 'description', e.target.value)}
+                                className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                placeholder="Beskrivelse av komponenten"
+                                rows={2}
+                              />
+                            </div>
+                            
+                            {/* Quantity */}
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">Antall</label>
+                              <input
+                                type="number"
+                                value={component.quantity || 0}
+                                onChange={(e) => updatePriceComponent(index, 'quantity', Number(e.target.value))}
+                                className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                min="0"
+                                step="0.01"
+                              />
+                            </div>
+                            
+                            {/* Unit */}
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">Enhet</label>
+                              <input
+                                type="text"
+                                value={component.unit || ''}
+                                onChange={(e) => updatePriceComponent(index, 'unit', e.target.value)}
+                                className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                placeholder="stk, m², timer"
+                              />
+                            </div>
+                            
+                            {/* Unit Price */}
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">Enhetspris (kr)</label>
+                              <input
+                                type="number"
+                                value={component.unitPrice || 0}
+                                onChange={(e) => updatePriceComponent(index, 'unitPrice', Number(e.target.value))}
+                                className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                min="0"
+                                step="0.01"
+                              />
+                            </div>
+                            
+                            {/* Total Amount */}
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">Totalt beløp (kr)</label>
+                              <input
+                                type="number"
+                                value={component.amount || 0}
+                                onChange={(e) => updatePriceComponent(index, 'amount', Number(e.target.value))}
+                                className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold"
+                                min="0"
+                                step="0.01"
+                              />
+                            </div>
+                            
+                            {/* Price Markup */}
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">Prispåslag (%)</label>
+                              <input
+                                type="number"
+                                value={component.priceMarkup || 0}
+                                onChange={(e) => updatePriceComponent(index, 'priceMarkup', Number(e.target.value))}
+                                className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                min="0"
+                                step="0.1"
+                              />
+                            </div>
+                            
+                            {/* Material Markup */}
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">Materialpåslag (%)</label>
+                              <input
+                                type="number"
+                                value={component.materialMarkup || 0}
+                                onChange={(e) => updatePriceComponent(index, 'materialMarkup', Number(e.target.value))}
+                                className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                min="0"
+                                step="0.1"
+                              />
+                            </div>
                           </div>
-                          <p className="text-sm text-gray-600">{component.description}</p>
-                          <div className="flex items-center gap-4 mt-1 text-xs text-gray-500">
-                            <span>Kategori: {component.category.charAt(0).toUpperCase() + component.category.slice(1)}</span>
-                            {component.quantity && component.unit && (
-                              <span>Antall: {component.quantity} {component.unit}</span>
-                            )}
-                            {component.unitPrice && (
-                              <span>Enhetspris: kr {component.unitPrice.toLocaleString('nb-NO')}</span>
-                            )}
-                            {component.priceMarkup && component.priceMarkup > 0 && (
-                              <span>Prispåslag: {component.priceMarkup}%</span>
-                            )}
-                            {component.materialMarkup && component.materialMarkup > 0 && (
-                              <span>Materialpåslag: {component.materialMarkup}%</span>
-                            )}
+                          
+                          {/* Delete button */}
+                          <div className="mt-3 flex justify-end">
+                            <button
+                              onClick={() => deletePriceComponent(index)}
+                              className="flex items-center gap-1 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded transition-colors"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              Slett
+                            </button>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <div className="font-semibold text-gray-900">
-                            kr {component.amount.toLocaleString('nb-NO')}
+                      ))
+                    ) : (
+                      // View mode - show read-only display
+                      quote.prisgrunnlag?.map((component, index) => (
+                        <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-medium text-gray-900">{component.name}</span>
+                              {component.confidence > 0 && (
+                                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                                  component.confidence >= 80 ? 'bg-green-100 text-green-700' :
+                                  component.confidence >= 60 ? 'bg-yellow-100 text-yellow-700' :
+                                  'bg-red-100 text-red-700'
+                                }`}>
+                                  {component.confidence}% sikkerhet
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-sm text-gray-600">{component.description}</p>
+                            <div className="flex items-center gap-4 mt-1 text-xs text-gray-500">
+                              <span>Kategori: {component.category.charAt(0).toUpperCase() + component.category.slice(1)}</span>
+                              {component.quantity && component.unit && (
+                                <span>Antall: {component.quantity} {component.unit}</span>
+                              )}
+                              {component.unitPrice && (
+                                <span>Enhetspris: kr {component.unitPrice.toLocaleString('nb-NO')}</span>
+                              )}
+                              {component.priceMarkup && component.priceMarkup > 0 && (
+                                <span>Prispåslag: {component.priceMarkup}%</span>
+                              )}
+                              {component.materialMarkup && component.materialMarkup > 0 && (
+                                <span>Materialpåslag: {component.materialMarkup}%</span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="font-semibold text-gray-900">
+                              kr {component.amount.toLocaleString('nb-NO')}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      ))
+                    )}
+                    
                     <div className="border-t pt-3 mt-4 space-y-3">
                       <div className="flex justify-between items-center">
                         <span className="font-semibold text-gray-900">Kundepris (Total)</span>
-                        <span className="font-bold text-lg text-gray-900">{formatCurrency(customerPrice)}</span>
+                        <span className="font-bold text-lg text-gray-900">
+                          {isEditing 
+                            ? formatCurrency(editedPriceComponents.reduce((sum, c) => sum + (c.amount || 0), 0))
+                            : formatCurrency(customerPrice)
+                          }
+                        </span>
                       </div>
 
                       <div className="bg-gray-50 p-3 rounded-lg">
                         <div className="flex justify-between text-sm text-gray-600">
                           <span>Totale kostnader (sum priskomponenter)</span>
-                          <span className="font-medium text-gray-900">{formatCurrency(totalComponentCost)}</span>
+                          <span className="font-medium text-gray-900">
+                            {isEditing
+                              ? formatCurrency(editedPriceComponents.reduce((sum, c) => sum + (c.amount || 0), 0))
+                              : formatCurrency(totalComponentCost)
+                            }
+                          </span>
                         </div>
                         <div className="flex justify-between text-sm text-gray-600 mt-2">
                           <span>Profitt</span>
-                          <span className={`font-medium ${profit >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-                            {formatCurrency(profit)} {customerPrice > 0 && (
-                              <span className="text-xs text-gray-500">({profitMargin.toFixed(1)}%)</span>
-                            )}
+                          <span className={`font-medium ${
+                            isEditing 
+                              ? (0 >= 0 ? 'text-green-700' : 'text-red-700')
+                              : (profit >= 0 ? 'text-green-700' : 'text-red-700')
+                          }`}>
+                            {isEditing 
+                              ? `${formatCurrency(0)} (0.0%)`
+                              : `${formatCurrency(profit)} ${customerPrice > 0 ? `(${profitMargin.toFixed(1)}%)` : ''}`
+                            }
                           </span>
                         </div>
+                        {isEditing && (
+                          <p className="text-xs text-gray-500 mt-2">
+                            💡 Tips: Total beløp vil automatisk oppdateres basert på summen av alle komponenter
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
