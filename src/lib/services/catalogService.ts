@@ -251,6 +251,49 @@ export const getSubcategoriesByCategory = async (categoryId: string): Promise<Su
 };
 
 /**
+ * Get a single subcategory by ID
+ * Note: Since subcategories are stored under their parent category,
+ * we search through all categories to find the subcategory
+ */
+export const getSubcategory = async (subcategoryId: string): Promise<Subcategory | null> => {
+  try {
+    const userId = getCurrentUserId();
+    const catalogRef = ref(db, 'katalog');
+    const snapshot = await get(catalogRef);
+
+    if (!snapshot.exists()) {
+      return null;
+    }
+
+    // Search through all categories to find the subcategory
+    let foundSubcategory: Subcategory | null = null;
+    
+    snapshot.forEach((categorySnapshot) => {
+      categorySnapshot.forEach((itemSnapshot) => {
+        if (itemSnapshot.key === subcategoryId) {
+          const data = itemSnapshot.val();
+          // Verify it's actually a subcategory (has kategoriId but not produktnavn)
+          if (data.kategoriId && !data.produktnavn) {
+            foundSubcategory = {
+              id: itemSnapshot.key!,
+              navn: data.navn,
+              kategoriId: data.kategoriId,
+              beskrivelse: data.beskrivelse || '',
+              opprettet: data.opprettet || Date.now(),
+              oppdatert: data.oppdatert || Date.now(),
+            };
+          }
+        }
+      });
+    });
+
+    return foundSubcategory;
+  } catch (error: any) {
+    throw handleDatabaseError(error, 'henting av underkategori');
+  }
+};
+
+/**
  * Create a new subcategory
  */
 export const createSubcategory = async (formData: SubcategoryFormData): Promise<string> => {
