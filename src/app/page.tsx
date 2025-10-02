@@ -474,7 +474,7 @@ export default function Home() {
                   </h3>
                   <p className="text-gray-600 leading-relaxed">{post.excerpt}</p>
                   <Link
-                    href="#"
+                    href={`/blogg/${post.id}`}
                     className="inline-flex items-center gap-2 text-[#00b85b] hover:text-[#00a050] font-semibold group"
                   >
                     Les mer

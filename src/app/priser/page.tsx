@@ -122,16 +122,16 @@ export default function PricingPage() {
           <div className="flex justify-between items-center h-20">
             <Logo size="lg" />
             <nav className="hidden md:flex items-center gap-8">
-              <a href="#features" className="text-gray-700 hover:text-[#00b85b] transition-colors font-medium">
+              <a href="/#features" className="text-gray-700 hover:text-[#00b85b] transition-colors font-medium">
                 Funksjoner
               </a>
-              <a href="#showcase" className="text-gray-700 hover:text-[#00b85b] transition-colors font-medium">
+              <a href="/#showcase" className="text-gray-700 hover:text-[#00b85b] transition-colors font-medium">
                 Plattform
               </a>
               <a href="/priser" className='text-gray-700 hover:text-[#00b85b] transition-colors font-medium'>
                 Priser
               </a>
-              <a href="#faq" className="text-gray-700 hover:text-[#00b85b] transition-colors font-medium">
+              <a href="/#faq" className="text-gray-700 hover:text-[#00b85b] transition-colors font-medium">
                 FAQ
               </a>
               <a href="/blogg" className="text-gray-700 hover:text-[#00b85b] transition-colors font-medium">
@@ -169,21 +169,21 @@ export default function PricingPage() {
           <div className="md:hidden border-t border-gray-200 bg-white">
             <nav className="px-4 py-4 space-y-4">
               <a 
-                href="#features" 
+                href="/#features" 
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="block text-gray-700 hover:text-[#00b85b] transition-colors font-medium py-2"
               >
                 Funksjoner
               </a>
               <a 
-                href="#showcase" 
+                href="/#showcase" 
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="block text-gray-700 hover:text-[#00b85b] transition-colors font-medium py-2"
               >
                 Plattform
               </a>
               <a 
-                href="#faq" 
+                href="/#faq" 
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="block text-gray-700 hover:text-[#00b85b] transition-colors font-medium py-2"
               >
