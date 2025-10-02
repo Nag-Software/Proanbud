@@ -5,6 +5,7 @@ const config: Config = {
     './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
     './src/app/**/*.{js,ts,jsx,tsx,mdx}',
+    "./src/app/(dashboard)/**/*.{js,ts,jsx,tsx,mdx}"
   ],
   theme: {
     extend: {
@@ -16,7 +17,7 @@ const config: Config = {
           DEFAULT: '#1A4314',
           foreground: '#FFFFFF',
         },
-        accent: '#A2E4B8',
+        accent: '#82ffb2',
         background: '#F8F9FA',
         foreground: '#1C1C1E',
         card: '#FFFFFF',

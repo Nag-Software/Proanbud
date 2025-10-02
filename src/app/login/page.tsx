@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/shared/Ca
 import { loginWithEmail, getAuthErrorMessage } from '@/lib/auth';
 import { LogIn, Eye, EyeOff, Mail, Lock } from 'lucide-react';
 import * as Icons from 'lucide-react';
+import Logo from '@/components/shared/Logo';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -35,10 +36,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="fixed left-5 top-5">
-        <div className="flex items-center gap-3 cursor-pointer" onClick={() => router.push('/')}>
-          <Icons.ShieldCheck className="h-8 w-8 text-primary" />
-          <span className="text-xl font-bold text-text">Proanbud</span>
-        </div>
+        <Logo size="lg" />
       </div>
       <div className="w-full max-w-md">
         <div className="text-center mb-8">

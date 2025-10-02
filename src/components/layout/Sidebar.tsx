@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { logout } from '@/lib/auth';
 import * as Icons from 'lucide-react';
 import { LogOut } from 'lucide-react';
+import Logo from '../shared/Logo';
 
 type IconName = keyof typeof Icons;
 
@@ -59,12 +60,8 @@ export const Sidebar = () => {
 
   return (
     <aside className="hidden lg:flex w-[280px] bg-card border-r border-border flex-col h-screen">
-      {/* Logo */}
       <div className="h-20 flex items-center px-6 border-b border-border">
-        <div className="flex items-center gap-3 cursor-pointer" onClick={() => router.push('/dashboard')}>
-          <Icons.ShieldCheck className="h-8 w-8 text-primary" />
-          <span className="text-xl font-bold text-text">Proanbud</span>
-        </div>
+        <Logo size="md"/>
       </div>
 
       {/* Navigation */}
