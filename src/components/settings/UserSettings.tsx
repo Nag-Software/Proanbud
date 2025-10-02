@@ -5,6 +5,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/shared/Ca
 import { saveUserSettings, UserSettingsData } from '@/lib/services/userSettingsService';
 import * as Icons from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 export const UserSettings = ({ userSettings: initialUserSettings }: { userSettings: UserSettingsData | null}) => {
   const { user } = useAuth();
@@ -20,10 +28,25 @@ export const UserSettings = ({ userSettings: initialUserSettings }: { userSettin
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  
+  // Dialog states
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [showAuthDialog, setShowAuthDialog] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
     if (initialUserSettings) {
-      setUserSettings(initialUserSettings);
+      // Ensure all fields have proper values (no undefined)
+      setUserSettings({
+        name: initialUserSettings.name || '',
+        email: initialUserSettings.email || '',
+        telefon: initialUserSettings.telefon || '',
+        notifications: initialUserSettings.notifications ?? true,
+        emailNotifications: initialUserSettings.emailNotifications ?? true,
+        language: initialUserSettings.language || 'no',
+        timezone: initialUserSettings.timezone || 'Europe/Oslo'
+      });
       setLoading(false);
     } else {
       // If no settings provided, try to load defaults or keep current state
@@ -39,28 +62,36 @@ export const UserSettings = ({ userSettings: initialUserSettings }: { userSettin
   };
 
   const handleSave = async () => {
-    if (!user) return;
+    if (!user) {
+      console.error('Cannot save: User not authenticated');
+      setShowAuthDialog(true);
+      return;
+    }
 
     setSaving(true);
     try {
       // Save all user settings to the realtime database
       // This includes auth information (name, email, telefon) plus additional preferences
+      // Ensure no undefined values - Firebase doesn't accept them
       const allSettingsData = {
-        name: userSettings.name,
-        email: userSettings.email,
-        telefon: userSettings.telefon,
-        notifications: userSettings.notifications,
-        emailNotifications: userSettings.emailNotifications,
-        language: userSettings.language,
-        timezone: userSettings.timezone
+        name: userSettings.name || '',
+        email: userSettings.email || '',
+        telefon: userSettings.telefon || '',
+        notifications: userSettings.notifications ?? true,
+        emailNotifications: userSettings.emailNotifications ?? true,
+        language: userSettings.language || 'no',
+        timezone: userSettings.timezone || 'Europe/Oslo'
       };
 
-      await saveUserSettings(allSettingsData);
+      console.log('Attempting to save user settings for user:', user.uid);
+      await saveUserSettings(allSettingsData, user.uid);
 
       console.log('All user settings saved to database successfully');
+      setShowSuccessDialog(true);
     } catch (error) {
       console.error('Failed to save user settings:', error);
-      // Show error message (you could add a toast notification here)
+      setErrorMessage(error instanceof Error ? error.message : 'En ukjent feil oppstod');
+      setShowErrorDialog(true);
     } finally {
       setSaving(false);
     }
@@ -213,6 +244,7 @@ export const UserSettings = ({ userSettings: initialUserSettings }: { userSettin
         {/* Save Button */}
         <div className="flex justify-end pt-4 border-t border-gray-200">
           <button
+            type="button"
             onClick={handleSave}
             disabled={saving}
             className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -231,6 +263,84 @@ export const UserSettings = ({ userSettings: initialUserSettings }: { userSettin
           </button>
         </div>
       </CardContent>
+
+      {/* Success Dialog */}
+      <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <div className="flex items-center gap-2">
+              <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
+                <Icons.Check className="h-6 w-6 text-green-600" />
+              </div>
+              <DialogTitle>Innstillinger lagret!</DialogTitle>
+            </div>
+            <DialogDescription>
+              Dine brukerinnstillinger er lagret og vil bli brukt fremover.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button
+              type="button"
+              onClick={() => setShowSuccessDialog(false)}
+              className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+            >
+              OK
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Error Dialog */}
+      <Dialog open={showErrorDialog} onOpenChange={setShowErrorDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <div className="flex items-center gap-2">
+              <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center">
+                <Icons.AlertCircle className="h-6 w-6 text-red-600" />
+              </div>
+              <DialogTitle>Kunne ikke lagre</DialogTitle>
+            </div>
+            <DialogDescription>
+              Det oppstod en feil under lagring av innstillingene: {errorMessage}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button
+              type="button"
+              onClick={() => setShowErrorDialog(false)}
+              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+            >
+              Lukk
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Auth Dialog */}
+      <Dialog open={showAuthDialog} onOpenChange={setShowAuthDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <div className="flex items-center gap-2">
+              <div className="h-10 w-10 rounded-full bg-yellow-100 flex items-center justify-center">
+                <Icons.Lock className="h-6 w-6 text-yellow-600" />
+              </div>
+              <DialogTitle>Ikke innlogget</DialogTitle>
+            </div>
+            <DialogDescription>
+              Du må være logget inn for å lagre innstillinger. Vennligst logg inn og prøv igjen.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button
+              type="button"
+              onClick={() => setShowAuthDialog(false)}
+              className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+            >
+              OK
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };

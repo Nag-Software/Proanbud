@@ -7,6 +7,14 @@ import { useAuth } from '@/contexts/AuthContext';
 import { storage, db } from '@/lib/firebase';
 import { ref as storageRef, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { ref as dbRef, set } from 'firebase/database';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 export const BusinessSettings = () => {
   const [businessSettings, setBusinessSettings] = useState({
@@ -39,19 +47,62 @@ export const BusinessSettings = () => {
     handleInputChange('logo', file);
   };
 
-  const handleSave = () => {
-    // Save other business settings here (not implemented)
-    console.log('Saving business settings (local):', businessSettings);
+  const handleSave = async () => {
+    if (!user?.uid) {
+      console.error('Cannot save: User not authenticated');
+      setShowAuthDialog(true);
+      return;
+    }
 
-    // If a logo file is selected, upload it to Firebase Storage and save URL to Realtime DB
-    if (businessSettings.logo && user?.uid) {
-      uploadLogoAndSaveUrl(businessSettings.logo, user.uid);
+    setSaving(true);
+    try {
+      // Save business settings to Firebase Realtime Database
+      const settingsToSave = {
+        companyName: businessSettings.companyName || '',
+        organizationNumber: businessSettings.organizationNumber || '',
+        address: businessSettings.address || '',
+        postalCode: businessSettings.postalCode || '',
+        city: businessSettings.city || '',
+        phone: businessSettings.phone || '',
+        email: businessSettings.email || '',
+        website: businessSettings.website || '',
+        primaryColor: businessSettings.primaryColor || '#1A4314',
+        secondaryColor: businessSettings.secondaryColor || '#A2E4B8',
+        currency: businessSettings.currency || 'NOK',
+        vatRate: businessSettings.vatRate || 25,
+        invoiceTemplate: businessSettings.invoiceTemplate || 'standard',
+        quoteValidityDays: businessSettings.quoteValidityDays || 30,
+        updatedAt: Date.now()
+      };
+
+      await set(dbRef(db, `users/${user.uid}/businessSettings`), settingsToSave);
+      console.log('Business settings saved successfully');
+
+      // If a logo file is selected, upload it to Firebase Storage
+      if (businessSettings.logo) {
+        await uploadLogoAndSaveUrl(businessSettings.logo, user.uid);
+      }
+
+      setShowSuccessDialog(true);
+    } catch (error) {
+      console.error('Failed to save business settings:', error);
+      setErrorMessage(error instanceof Error ? error.message : 'En ukjent feil oppstod');
+      setShowErrorDialog(true);
+    } finally {
+      setSaving(false);
     }
   };
 
   const { user } = useAuth();
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  
+  // Dialog states
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [showAuthDialog, setShowAuthDialog] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   React.useEffect(() => {
     if (!businessSettings.logo) {
@@ -78,18 +129,15 @@ export const BusinessSettings = () => {
       await uploadTask;
       const downloadUrl = await getDownloadURL(sRef);
 
-      // Save URL under UID/businessSettings in Realtime Database
-      await set(dbRef(db, `${uid}/businessSettings`), {
-        imageUrl: downloadUrl,
-        updatedAt: Date.now()
-      });
+      // Update the logoUrl in businessSettings
+      await set(dbRef(db, `users/${uid}/businessSettings/logoUrl`), downloadUrl);
 
       setUploadProgress(null);
-      // Optionally update local state to reflect saved URL
       console.log('Logo uploaded and URL saved:', downloadUrl);
     } catch (err) {
       console.error('Failed to upload logo and save URL:', err);
       setUploadProgress(null);
+      throw err; // Re-throw to be caught by handleSave
     }
   };
 
@@ -215,14 +263,14 @@ export const BusinessSettings = () => {
                 Logo
               </label>
               <div className="flex items-center gap-4">
-                <div className="w-16 h-16 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50">
-                  {businessSettings.logo ? (
-                    <span className="text-xs text-gray-600">Logo</span>
+                <div className="w-16 h-16 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50 overflow-hidden">
+                  {previewUrl ? (
+                    <img src={previewUrl} alt="Logo preview" className="w-full h-full object-cover" />
                   ) : (
                     <Icons.Image className="h-6 w-6 text-gray-400" />
                   )}
                 </div>
-                <div>
+                <div className="flex flex-col gap-2">
                   <input
                     type="file"
                     accept="image/*"
@@ -237,6 +285,19 @@ export const BusinessSettings = () => {
                     <Icons.Upload className="h-4 w-4" />
                     Last opp logo
                   </label>
+                  {businessSettings.logo && (
+                    <span className="text-xs text-gray-500">
+                      {businessSettings.logo.name}
+                    </span>
+                  )}
+                  {uploadProgress !== null && (
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-primary h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${uploadProgress}%` }}
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -339,14 +400,103 @@ export const BusinessSettings = () => {
         {/* Save Button */}
         <div className="flex justify-end pt-4 border-t border-gray-200">
           <button
+            type="button"
             onClick={handleSave}
-            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2"
+            disabled={saving}
+            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Icons.Save className="h-4 w-4" />
-            Lagre endringer
+            {saving ? (
+              <>
+                <Icons.Loader2 className="h-4 w-4 animate-spin" />
+                Lagrer...
+              </>
+            ) : (
+              <>
+                <Icons.Save className="h-4 w-4" />
+                Lagre endringer
+              </>
+            )}
           </button>
         </div>
       </CardContent>
+
+      {/* Success Dialog */}
+      <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <div className="flex items-center gap-2">
+              <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
+                <Icons.Check className="h-6 w-6 text-green-600" />
+              </div>
+              <DialogTitle>Bedriftsinnstillinger lagret!</DialogTitle>
+            </div>
+            <DialogDescription>
+              Bedriftsinnstillingene dine er lagret og vil bli brukt i tilbud og fakturaer.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button
+              type="button"
+              onClick={() => setShowSuccessDialog(false)}
+              className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+            >
+              OK
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Error Dialog */}
+      <Dialog open={showErrorDialog} onOpenChange={setShowErrorDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <div className="flex items-center gap-2">
+              <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center">
+                <Icons.AlertCircle className="h-6 w-6 text-red-600" />
+              </div>
+              <DialogTitle>Kunne ikke lagre</DialogTitle>
+            </div>
+            <DialogDescription>
+              Det oppstod en feil under lagring av bedriftsinnstillingene: {errorMessage}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button
+              type="button"
+              onClick={() => setShowErrorDialog(false)}
+              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+            >
+              Lukk
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Auth Dialog */}
+      <Dialog open={showAuthDialog} onOpenChange={setShowAuthDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <div className="flex items-center gap-2">
+              <div className="h-10 w-10 rounded-full bg-yellow-100 flex items-center justify-center">
+                <Icons.Lock className="h-6 w-6 text-yellow-600" />
+              </div>
+              <DialogTitle>Ikke innlogget</DialogTitle>
+            </div>
+            <DialogDescription>
+              Du må være logget inn for å lagre bedriftsinnstillinger. Vennligst logg inn og prøv igjen.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button
+              type="button"
+              onClick={() => setShowAuthDialog(false)}
+              className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+            >
+              OK
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };

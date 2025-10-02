@@ -42,7 +42,7 @@ export default function SettingsPage() {
                 setUserSettings(initialSettings);
                 // Save initial settings to database
                 const { saveUserSettings } = require('@/lib/services/userSettingsService');
-                saveUserSettings(initialSettings).catch(console.error);
+                saveUserSettings(initialSettings, user.uid).catch(console.error);
             }
         });
 

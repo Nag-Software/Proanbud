@@ -5,8 +5,8 @@ import { Sidebar } from '@/components/layout/Sidebar';
 import { MobileBreadcrumb } from '@/components/layout/MobileBreadcrumb';
 
 export const metadata: Metadata = {
-  title: "Proanbud AI - Admin Dashboard",
-  description: "Admin dashboard for Proanbud AI",
+  title: "Proanbud AI - Dashboard",
+  description: "Dashboard for Proanbud AI",
 };
 
 export default function DashboardLayout({

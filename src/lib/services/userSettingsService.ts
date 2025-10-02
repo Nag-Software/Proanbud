@@ -30,15 +30,15 @@ const getCurrentUserId = (): string | null => {
 };
 
 // Get user settings from database
-export const getUserSettings = async (): Promise<UserSettingsData | null> => {
+export const getUserSettings = async (userId?: string): Promise<UserSettingsData | null> => {
   try {
-    const userId = getCurrentUserId();
-    if (!userId) {
+    const uid = userId || getCurrentUserId();
+    if (!uid) {
       console.warn('Cannot get user settings: user not authenticated');
       return null;
     }
     
-    const settingsRef = ref(db, `users/${userId}/userSettings`);
+    const settingsRef = ref(db, `users/${uid}/userSettings`);
     const snapshot = await get(settingsRef);
     
     if (snapshot.exists()) {
@@ -52,22 +52,35 @@ export const getUserSettings = async (): Promise<UserSettingsData | null> => {
 };
 
 // Save user settings to database
-export const saveUserSettings = async (settings: Omit<UserSettingsData, 'lastUpdated'>): Promise<void> => {
+export const saveUserSettings = async (settings: Omit<UserSettingsData, 'lastUpdated'>, userId?: string): Promise<void> => {
   try {
-    const userId = getCurrentUserId();
-    if (!userId) {
+    const uid = userId || getCurrentUserId();
+    if (!uid) {
       console.warn('Cannot save user settings: user not authenticated');
       throw new Error('User not authenticated. Please log in.');
     }
     
-    const settingsRef = ref(db, `users/${userId}/userSettings`);
+    const settingsRef = ref(db, `users/${uid}/userSettings`);
+    
+    // Remove undefined values - Firebase doesn't allow them
+    const cleanSettings = Object.entries(settings).reduce((acc, [key, value]) => {
+      if (value !== undefined) {
+        acc[key] = value;
+      } else {
+        // Convert undefined to empty string for string fields
+        acc[key] = '';
+      }
+      return acc;
+    }, {} as any);
     
     const settingsWithTimestamp = {
-      ...settings,
+      ...cleanSettings,
       lastUpdated: serverTimestamp()
     };
     
+    console.log('Saving user settings to:', `users/${uid}/userSettings`, settingsWithTimestamp);
     await set(settingsRef, settingsWithTimestamp);
+    console.log('User settings saved successfully');
   } catch (error) {
     console.error('Failed to save user settings:', error);
     throw new Error('Kunne ikke lagre brukerinnstillinger');
@@ -75,15 +88,15 @@ export const saveUserSettings = async (settings: Omit<UserSettingsData, 'lastUpd
 };
 
 // Update specific user settings
-export const updateUserSettings = async (updates: Partial<UserSettingsData>): Promise<void> => {
+export const updateUserSettings = async (updates: Partial<UserSettingsData>, userId?: string): Promise<void> => {
   try {
-    const userId = getCurrentUserId();
-    if (!userId) {
+    const uid = userId || getCurrentUserId();
+    if (!uid) {
       console.warn('Cannot update user settings: user not authenticated');
       throw new Error('User not authenticated. Please log in.');
     }
     
-    const settingsRef = ref(db, `users/${userId}/userSettings`);
+    const settingsRef = ref(db, `users/${uid}/userSettings`);
     
     const updateData = {
       ...updates,
@@ -98,15 +111,15 @@ export const updateUserSettings = async (updates: Partial<UserSettingsData>): Pr
 };
 
 // Initialize default user settings
-export const initializeUserSettings = async (userData: { name: string; email: string }): Promise<void> => {
+export const initializeUserSettings = async (userData: { name: string; email: string }, userId?: string): Promise<void> => {
   try {
-    const userId = getCurrentUserId();
-    if (!userId) {
+    const uid = userId || getCurrentUserId();
+    if (!uid) {
       console.warn('Cannot initialize user settings: user not authenticated');
       return;
     }
     
-    const settingsRef = ref(db, `users/${userId}/userSettings`);
+    const settingsRef = ref(db, `users/${uid}/userSettings`);
     
     // Check if settings already exist
     const snapshot = await get(settingsRef);

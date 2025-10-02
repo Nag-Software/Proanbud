@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { logout } from '@/lib/auth';
 import * as Icons from 'lucide-react';
 import { ChevronRight, Menu, X, LogOut } from 'lucide-react';
+import { getSubscription, type SubscriptionData } from '@/lib/services/stripeService';
 
 type IconName = keyof typeof Icons;
 
@@ -22,11 +23,19 @@ export const MobileBreadcrumb = () => {
   const router = useRouter();
   const { user } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
 
   // Close menu on route change
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [pathname]);
+
+  // Load subscription data
+  useEffect(() => {
+    if (user?.uid) {
+      getSubscription(user.uid).then(setSubscription).catch(console.error);
+    }
+  }, [user?.uid]);
 
   const getCurrentPageInfo = () => {
     const currentNav = navLinks.find(link => link.href === pathname);
@@ -64,6 +73,18 @@ export const MobileBreadcrumb = () => {
   const getInitials = () => {
     const name = getDisplayName();
     return name.charAt(0).toUpperCase();
+  };
+
+  const getPlanBadge = () => {
+    const plan = subscription?.plan || 'free';
+    
+    const badges = {
+      free: { label: 'Gratis', color: 'bg-gray-100 text-gray-700' },
+      basic: { label: 'Basic', color: 'bg-blue-100 text-blue-700' },
+      pro: { label: 'Pro', color: 'bg-purple-100 text-purple-700' },
+    };
+
+    return badges[plan];
   };
 
   const breadcrumbItems = getBreadcrumbItems();
@@ -193,7 +214,12 @@ export const MobileBreadcrumb = () => {
                   {getInitials()}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="font-semibold text-sm text-text truncate">{getDisplayName()}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-semibold text-sm text-text truncate">{getDisplayName()}</p>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${getPlanBadge().color}`}>
+                      {getPlanBadge().label}
+                    </span>
+                  </div>
                   <p className="text-xs text-muted-text truncate">{user?.email}</p>
                 </div>
               </div>

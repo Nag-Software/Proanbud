@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { navLinks } from '@/lib/data';
@@ -9,6 +9,7 @@ import { logout } from '@/lib/auth';
 import * as Icons from 'lucide-react';
 import { LogOut } from 'lucide-react';
 import Logo from '../shared/Logo';
+import { getSubscription, type SubscriptionData } from '@/lib/services/stripeService';
 
 type IconName = keyof typeof Icons;
 
@@ -41,6 +42,13 @@ const NavLink: React.FC<NavLinkProps> = ({ href, label, icon }) => {
 export const Sidebar = () => {
   const { user } = useAuth();
   const router = useRouter();
+  const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
+
+  useEffect(() => {
+    if (user?.uid) {
+      getSubscription(user.uid).then(setSubscription).catch(console.error);
+    }
+  }, [user?.uid]);
 
   const handleLogout = async () => {
     const { error } = await logout();
@@ -56,6 +64,18 @@ export const Sidebar = () => {
   const getInitials = () => {
     const name = getDisplayName();
     return name.charAt(0).toUpperCase();
+  };
+
+  const getPlanBadge = () => {
+    const plan = subscription?.plan || 'free';
+    
+    const badges = {
+      free: { label: 'Gratis', color: 'bg-gray-100 text-gray-700' },
+      basic: { label: 'Basic', color: 'bg-blue-100 text-blue-700' },
+      pro: { label: 'Pro', color: 'bg-purple-100 text-purple-700' },
+    };
+
+    return badges[plan];
   };
 
   return (
@@ -78,8 +98,13 @@ export const Sidebar = () => {
             <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center font-bold text-primary">
               {getInitials()}
             </div>
-            <div>
-              <p className="font-semibold text-sm text-text">{getDisplayName()}</p>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <p className="font-semibold text-sm text-text">{getDisplayName()}</p>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${getPlanBadge().color}`}>
+                  {getPlanBadge().label}
+                </span>
+              </div>
               <p className="text-xs text-muted-text">{user?.email}</p>
             </div>
           </div>

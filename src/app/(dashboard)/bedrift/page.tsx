@@ -14,6 +14,14 @@ import {
   deleteBusinessLogo,
   initializeBusinessSettings 
 } from '@/lib/services/businessService';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 const INDUSTRIES = [
     "Tømrer",
@@ -38,6 +46,14 @@ export default function BedriftPage() {
   const [saving, setSaving] = useState(false);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  
+  // Dialog states
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [showLogoRemovedDialog, setShowLogoRemovedDialog] = useState(false);
+  const [showLogoErrorDialog, setShowLogoErrorDialog] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  
   const [businessSettings, setBusinessSettings] = useState<BusinessSettings>({
     // Company Information
     companyName: '',
@@ -158,10 +174,11 @@ export default function BedriftPage() {
       await saveBusinessSettings(updatedSettings);
       setBusinessSettings(updatedSettings);
       
-      alert('Logo fjernet!');
+      setShowLogoRemovedDialog(true);
     } catch (error) {
       console.error('Failed to remove logo:', error);
-      alert('Kunne ikke fjerne logo. Prøv igjen.');
+      setErrorMessage('Kunne ikke fjerne logo. Vennligst prøv igjen.');
+      setShowLogoErrorDialog(true);
     }
   };
 
@@ -196,10 +213,11 @@ export default function BedriftPage() {
       }
       setLogoFile(null);
       
-      alert('Bedriftsinnstillinger lagret!');
+      setShowSuccessDialog(true);
     } catch (error) {
       console.error('Failed to save business settings:', error);
-      alert('Kunne ikke lagre innstillinger. Prøv igjen.');
+      setErrorMessage('Kunne ikke lagre innstillinger. Vennligst prøv igjen.');
+      setShowErrorDialog(true);
     } finally {
       setSaving(false);
     }
@@ -545,6 +563,7 @@ export default function BedriftPage() {
                   </div>
                   {logoPreview && (
                     <button
+                      type="button"
                       onClick={handleRemoveLogo}
                       className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-red-600 hover:text-red-700"
                     >
@@ -743,6 +762,7 @@ export default function BedriftPage() {
         {/* Save Button */}
         <div className="flex justify-end pt-4 border-t border-gray-200">
           <button
+            type="button"
             onClick={handleSave}
             disabled={saving}
             className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -756,6 +776,110 @@ export default function BedriftPage() {
           </button>
         </div>
       </div>
+
+      {/* Success Dialog */}
+      <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <div className="flex items-center gap-2">
+              <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
+                <Icons.Check className="h-6 w-6 text-green-600" />
+              </div>
+              <DialogTitle>Innstillinger lagret!</DialogTitle>
+            </div>
+            <DialogDescription>
+              Bedriftsinnstillingene dine er lagret og vil bli brukt i tilbud og fakturaer.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button
+              type="button"
+              onClick={() => setShowSuccessDialog(false)}
+              className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+            >
+              OK
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Error Dialog */}
+      <Dialog open={showErrorDialog} onOpenChange={setShowErrorDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <div className="flex items-center gap-2">
+              <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center">
+                <Icons.AlertCircle className="h-6 w-6 text-red-600" />
+              </div>
+              <DialogTitle>Kunne ikke lagre</DialogTitle>
+            </div>
+            <DialogDescription>
+              {errorMessage}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button
+              type="button"
+              onClick={() => setShowErrorDialog(false)}
+              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+            >
+              Lukk
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Logo Removed Dialog */}
+      <Dialog open={showLogoRemovedDialog} onOpenChange={setShowLogoRemovedDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <div className="flex items-center gap-2">
+              <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
+                <Icons.Check className="h-6 w-6 text-green-600" />
+              </div>
+              <DialogTitle>Logo fjernet!</DialogTitle>
+            </div>
+            <DialogDescription>
+              Logoen din er fjernet fra bedriftsprofilen.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button
+              type="button"
+              onClick={() => setShowLogoRemovedDialog(false)}
+              className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+            >
+              OK
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Logo Error Dialog */}
+      <Dialog open={showLogoErrorDialog} onOpenChange={setShowLogoErrorDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <div className="flex items-center gap-2">
+              <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center">
+                <Icons.AlertCircle className="h-6 w-6 text-red-600" />
+              </div>
+              <DialogTitle>Feil med logo</DialogTitle>
+            </div>
+            <DialogDescription>
+              {errorMessage}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button
+              type="button"
+              onClick={() => setShowLogoErrorDialog(false)}
+              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+            >
+              Lukk
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

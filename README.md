@@ -12,6 +12,7 @@ Modern quotation and customer management system for Norwegian businesses.
 - **AI-Powered Pricing**: Intelligent pricing suggestions based on project details
 - **Inbox System**: Centralized message management for quote communications
 - **Business Settings**: Customizable company profiles and branding
+- **💳 Subscription Management**: Complete Stripe integration for Basic and Pro plans
 
 ## 📁 Project Structure
 
@@ -47,6 +48,7 @@ proanbud/
 - **Database**: Firebase Realtime Database
 - **Authentication**: Firebase Authentication
 - **Storage**: Firebase Storage
+- **Payments**: Stripe (Subscriptions & Checkout)
 - **Styling**: Tailwind CSS
 - **UI Components**: Shadcn/ui
 - **Package Manager**: pnpm
@@ -74,11 +76,36 @@ proanbud/
 
 3. **Configure environment variables**
    
-   Create a `.env.local` file:
+   Create a `.env.local` file from the template:
    ```bash
-   # Firebase configuration is already in src/lib/firebase.ts
-   # Add any additional environment variables here
+   cp .env.example .env.local
    ```
+   
+   Fill in your credentials:
+   ```env
+   # Firebase (already configured in src/lib/firebase.ts)
+   
+   # Stripe TEST MODE (for development)
+   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
+   STRIPE_SECRET_KEY=sk_test_...
+   STRIPE_WEBHOOK_SECRET=whsec_...
+   NEXT_PUBLIC_STRIPE_BASIC_PRICE_ID=price_...
+   NEXT_PUBLIC_STRIPE_PRO_PRICE_ID=price_...
+   
+   # App Configuration
+   NEXT_PUBLIC_APP_URL=http://localhost:3000
+   ```
+   
+   **Quick Stripe Setup** (Test Mode):
+   ```bash
+   # Automatisk oppsett med Stripe CLI
+   ./setup-stripe-test.sh
+   
+   # Eller følg manuell guide
+   # See: STRIPE_TEST_MODE_SETUP.md
+   ```
+   
+   See [STRIPE_QUICKSTART.md](./STRIPE_QUICKSTART.md) for full Stripe setup.
 
 4. **Deploy database rules** (Important!)
    ```bash
@@ -130,16 +157,22 @@ See [DATABASE_RULES.md](./DATABASE_RULES.md) for complete documentation.
 /
 ├── users/
 │   └── {userId}/
-│       ├── profile/              # User profile
-│       ├── userSettings/         # User preferences
-│       ├── businessSettings/     # Company information
-│       ├── tilbud/               # Quotes
-│       ├── kunder/               # Customers
-│       ├── inbox/                # Messages
-│       └── analytics/            # Analytics data
-└── katalog/                      # Shared product catalog
+│       ├── profile/                      # User profile
+│       ├── userSettings/                 # User preferences
+│       ├── businessSettings/             # Company information
+│       ├── tilbud/                       # Quotes
+│       ├── kunder/                       # Customers
+│       ├── inbox/                        # Messages
+│       ├── analytics/                    # Analytics data
+│       ├── stripeCustomerId              # 💳 Stripe customer ID
+│       ├── stripeSubscriptionId          # 💳 Active subscription
+│       ├── subscriptionStatus            # 💳 Subscription status
+│       ├── subscriptionPriceId           # 💳 Current price/plan
+│       ├── subscriptionCurrentPeriodEnd  # 💳 Billing period end
+│       └── invoices/                     # 💳 Payment history
+└── katalog/                              # Shared product catalog
     └── {categoryId}/
-        └── {itemId}/             # Subcategories or Products
+        └── {itemId}/                     # Subcategories or Products
 ```
 
 ## 🚢 Deployment
@@ -165,8 +198,17 @@ const nextConfig: NextConfig = {
 
 ## 📚 Documentation
 
+### Database & Security
 - [Database Rules Documentation](./DATABASE_RULES.md)
 - [Deployment Guide](./DEPLOY_DATABASE_RULES.md)
+
+### Stripe Integration
+- [🚀 Stripe Quick Start](./STRIPE_QUICKSTART.md) - Get started in 5 minutes
+- [🧪 Test Mode Setup](./STRIPE_TEST_MODE_SETUP.md) - **START HERE** for development
+- [📖 Complete Setup Guide](./STRIPE_SETUP.md) - Detailed Stripe configuration
+- [🧪 Testing Guide](./STRIPE_TESTING.md) - All test scenarios
+- [🔒 Security Guide](./STRIPE_SECURITY.md) - Firebase security rules
+- [🔴 Live Mode Guide](./STRIPE_LIVE_MODE_SETUP.md) - Production setup
 
 ## 🤝 Contributing
 

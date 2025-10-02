@@ -224,3 +224,38 @@ export interface SubcategoryFormData {
   kategoriId: string;
   beskrivelse?: string;
 }
+
+// Subscription & Billing Types
+export interface SubscriptionPlan {
+  id: 'free' | 'basic' | 'pro';
+  name: string;
+  price: number;
+  period: string;
+  features: string[];
+  color: string;
+  popular?: boolean;
+  stripePriceId?: string;
+}
+
+export interface UserSubscription {
+  plan: 'free' | 'basic' | 'pro';
+  status: 'active' | 'canceled' | 'past_due' | 'incomplete' | 'trialing';
+  stripeCustomerId?: string;
+  stripeSubscriptionId?: string;
+  subscriptionPriceId?: string;
+  currentPeriodEnd?: number;
+  currentPeriodStart?: number;
+  cancelAtPeriodEnd?: boolean;
+  subscriptionUpdatedAt?: number;
+  subscriptionCanceledAt?: number;
+}
+
+export interface Invoice {
+  id: string;
+  amount: number;
+  currency: string;
+  status: string;
+  paidAt: number;
+  invoiceUrl: string;
+  invoicePdf: string;
+}

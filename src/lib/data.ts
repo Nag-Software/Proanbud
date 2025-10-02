@@ -438,6 +438,6 @@ export const navLinks: NavLink[] = [
 ];
 
 export const currentUser: User = {
-  navn: 'caspernag',
-  bedrift: 'Nag Snekkeri AS'
+  navn: 'test',
+  bedrift: 'Test AS'
 };

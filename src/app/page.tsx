@@ -13,7 +13,6 @@ import {
   TrendingUp, 
   FileText, 
   Smartphone,
-  ChevronDown,
   Mail,
   Phone,
   MapPin,
@@ -24,15 +23,19 @@ import {
   Check,
   BarChart3,
   Users,
-  Shield
+  Shield,
+  Menu,
+  X
 } from 'lucide-react';
 import Logo from '@/components/shared/Logo';
 import { HeroCarousel } from '@/components/ui/hero-carousel';
+import { FaqSection } from '@/components/shared/FaqSection';
+import Footer from '@/components/shared/Footer';
 
 export default function Home() {
   const { user, loading } = useAuth();
   const router = useRouter();
-  const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && user) {
@@ -128,14 +131,17 @@ export default function Home() {
               <a href="#showcase" className="text-gray-700 hover:text-[#00b85b] transition-colors font-medium">
                 Plattform
               </a>
+              <a href="/priser" className='text-gray-700 hover:text-[#00b85b] transition-colors font-medium'>
+                Priser
+              </a>
               <a href="#faq" className="text-gray-700 hover:text-[#00b85b] transition-colors font-medium">
                 FAQ
               </a>
-              <a href="#blog" className="text-gray-700 hover:text-[#00b85b] transition-colors font-medium">
+              <a href="/blogg" className="text-gray-700 hover:text-[#00b85b] transition-colors font-medium">
                 Blogg
               </a>
             </nav>
-            <div className="flex items-center gap-4">
+            <div className="hidden md:flex items-center gap-4">
               <Link
                 href="/login"
                 className="text-gray-700 hover:text-[#00b85b] transition-colors font-medium"
@@ -149,8 +155,69 @@ export default function Home() {
                 Kom igang
               </Link>
             </div>
+            
+            {/* Mobile Menu Toggle */}
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="md:hidden p-2 text-gray-700 hover:text-[#00b85b] transition-colors"
+              aria-label="Toggle mobile menu"
+            >
+              {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </button>
           </div>
         </div>
+
+        {/* Mobile Menu */}
+        {isMobileMenuOpen && (
+          <div className="md:hidden border-t border-gray-200 bg-white">
+            <nav className="px-4 py-4 space-y-4">
+              <a 
+                href="#features" 
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="block text-gray-700 hover:text-[#00b85b] transition-colors font-medium py-2"
+              >
+                Funksjoner
+              </a>
+              <a 
+                href="#showcase" 
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="block text-gray-700 hover:text-[#00b85b] transition-colors font-medium py-2"
+              >
+                Plattform
+              </a>
+              <a 
+                href="#faq" 
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="block text-gray-700 hover:text-[#00b85b] transition-colors font-medium py-2"
+              >
+                FAQ
+              </a>
+              <a 
+                href="/blogg" 
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="block text-gray-700 hover:text-[#00b85b] transition-colors font-medium py-2"
+              >
+                Blogg
+              </a>
+              <div className="pt-4 border-t border-gray-200 space-y-3">
+                <Link
+                  href="/login"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="block w-full text-center text-gray-700 hover:text-[#00b85b] transition-colors font-medium py-3 border-2 border-gray-200 rounded-xl hover:border-[#00b85b]"
+                >
+                  Logg inn
+                </Link>
+                <Link
+                  href="/signup"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="block w-full text-center bg-[#82ffb2] text-gray-900 px-6 py-3 rounded-xl transition-all font-semibold shadow-lg shadow-[#82ffb2]/20 hover:shadow-xl hover:shadow-[#82ffb2]/30"
+                >
+                  Kom igang
+                </Link>
+              </div>
+            </nav>
+          </div>
+        )}
       </header>
 
       {/* Hero Section with Video */}
@@ -359,44 +426,7 @@ export default function Home() {
       </section>
 
       {/* FAQ Section */}
-      <section id="faq" className="py-24 bg-white">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16 space-y-4">
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900">
-              Ofte stilte spørsmål
-            </h2>
-            <p className="text-xl text-gray-600">
-              Alt du trenger å vite om Proanbud
-            </p>
-          </div>
-
-          <div className="space-y-4">
-            {faqs.map((faq, index) => (
-              <div
-                key={index}
-                className="border border-gray-200 rounded-2xl overflow-hidden hover:border-[#82ffb2]/50 transition-colors"
-              >
-                <button
-                  onClick={() => setOpenFaq(openFaq === index ? null : index)}
-                  className="w-full px-8 py-6 flex items-center justify-between text-left hover:bg-gray-50 transition-colors"
-                >
-                  <span className="text-lg font-semibold text-gray-900">{faq.question}</span>
-                  <ChevronDown
-                    className={`w-5 h-5 text-gray-500 transition-transform ${
-                      openFaq === index ? 'rotate-180' : ''
-                    }`}
-                  />
-                </button>
-                {openFaq === index && (
-                  <div className="px-8 pb-6">
-                    <p className="text-gray-600 leading-relaxed">{faq.answer}</p>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <FaqSection faqs={faqs} />
 
       {/* Blog Section */}
       <section id="blog" className="py-24 bg-gradient-to-br from-gray-50 to-white">
@@ -411,7 +441,7 @@ export default function Home() {
               </p>
             </div>
             <Link
-              href="#blog"
+              href="/blogg"
               className="hidden md:flex items-center gap-2 text-[#00b85b] hover:text-[#00a050] font-semibold group"
             >
               Se alle artikler
@@ -458,8 +488,17 @@ export default function Home() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-24 bg-[#82ffb2]">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-8">
+      <section className="py-24 bg-[#82ffb2] relative overflow-hidden">
+        {/* Grainy texture overlay */}
+        <div 
+          className="absolute inset-0 opacity-20 pointer-events-none"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
+            backgroundRepeat: 'repeat',
+            backgroundSize: '200px 200px'
+          }}
+        />
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-8 relative z-10">
           <h2 className="text-4xl md:text-5xl font-bold text-gray-900">
             Klar til å effektivisere tilbudsprosessen?
           </h2>
@@ -494,127 +533,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-gray-900 text-gray-300">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="py-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-12">
-            {/* Company Info */}
-            <div className="lg:col-span-2 space-y-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#82ffb2] flex items-center justify-center">
-                  <Zap className="w-6 h-6 text-gray-900" />
-                </div>
-                <span className="text-2xl font-bold text-white">Proanbud</span>
-              </div>
-              <p className="text-gray-400 leading-relaxed max-w-sm">
-                Den komplette tilbudsplattformen for moderne håndverkere. Spar tid, øk lønnsomhet og vinn flere oppdrag.
-              </p>
-              <div className="flex items-center gap-4">
-                <a
-                  href="#"
-                  className="w-10 h-10 rounded-lg bg-gray-800 hover:bg-[#82ffb2] flex items-center justify-center transition-colors group"
-                >
-                  <Linkedin className="w-5 h-5 group-hover:text-gray-900" />
-                </a>
-                <a
-                  href="#"
-                  className="w-10 h-10 rounded-lg bg-gray-800 hover:bg-[#82ffb2] flex items-center justify-center transition-colors group"
-                >
-                  <Twitter className="w-5 h-5 group-hover:text-gray-900" />
-                </a>
-                <a
-                  href="#"
-                  className="w-10 h-10 rounded-lg bg-gray-800 hover:bg-[#82ffb2] flex items-center justify-center transition-colors group"
-                >
-                  <Facebook className="w-5 h-5 group-hover:text-gray-900" />
-                </a>
-              </div>
-            </div>
-
-            {/* Product */}
-            <div>
-              <h3 className="text-white font-bold mb-4">Produkt</h3>
-              <ul className="space-y-3">
-                <li><a href="#features" className="hover:text-[#82ffb2] transition-colors">Funksjoner</a></li>
-                <li><a href="#" className="hover:text-[#82ffb2] transition-colors">Priser</a></li>
-                <li><a href="#" className="hover:text-[#82ffb2] transition-colors">Integrasjoner</a></li>
-                <li><a href="#" className="hover:text-[#82ffb2] transition-colors">API</a></li>
-                <li><a href="#" className="hover:text-[#82ffb2] transition-colors">Hva er nytt</a></li>
-              </ul>
-            </div>
-
-            {/* Company */}
-            <div>
-              <h3 className="text-white font-bold mb-4">Selskap</h3>
-              <ul className="space-y-3">
-                <li><a href="#" className="hover:text-[#82ffb2] transition-colors">Om oss</a></li>
-                <li><a href="#blog" className="hover:text-[#82ffb2] transition-colors">Blogg</a></li>
-                <li><a href="#" className="hover:text-[#82ffb2] transition-colors">Karriere</a></li>
-                <li><a href="#" className="hover:text-[#82ffb2] transition-colors">Presse</a></li>
-                <li><a href="#" className="hover:text-[#82ffb2] transition-colors">Partnere</a></li>
-              </ul>
-            </div>
-
-            {/* Support */}
-            <div>
-              <h3 className="text-white font-bold mb-4">Support</h3>
-              <ul className="space-y-3">
-                <li><a href="#" className="hover:text-[#82ffb2] transition-colors">Hjelpesenter</a></li>
-                <li><a href="#faq" className="hover:text-[#82ffb2] transition-colors">FAQ</a></li>
-                <li><a href="#" className="hover:text-[#82ffb2] transition-colors">Kontakt</a></li>
-                <li><a href="#" className="hover:text-[#82ffb2] transition-colors">Status</a></li>
-                <li><a href="#" className="hover:text-[#82ffb2] transition-colors">Dokumentasjon</a></li>
-              </ul>
-            </div>
-          </div>
-
-          {/* Contact Bar */}
-          <div className="border-t border-gray-800 py-8">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-gray-800 flex items-center justify-center">
-                  <Mail className="w-5 h-5 text-[#82ffb2]" />
-                </div>
-                <div>
-                  <div className="text-sm text-gray-400">E-post</div>
-                  <div className="text-white font-medium">post@proanbud.no</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-gray-800 flex items-center justify-center">
-                  <Phone className="w-5 h-5 text-[#82ffb2]" />
-                </div>
-                <div>
-                  <div className="text-sm text-gray-400">Telefon</div>
-                  <div className="text-white font-medium">+47 (utilgjengelig)</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-gray-800 flex items-center justify-center">
-                  <MapPin className="w-5 h-5 text-[#82ffb2]" />
-                </div>
-                <div>
-                  <div className="text-sm text-gray-400">Adresse</div>
-                  <div className="text-white font-medium">Bergen, Norge</div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Bottom Bar */}
-          <div className="border-t border-gray-800 py-8 flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-gray-400 text-sm">
-              © 2024 Nag Software. Alle rettigheter forbeholdt.
-            </p>
-            <div className="flex items-center gap-6 text-sm">
-              <Link href="/personvern" className="hover:text-[#82ffb2] transition-colors">Personvern</Link>
-              <Link href="/vilkar" className="hover:text-[#82ffb2] transition-colors">Vilkår</Link>
-              <Link href="/cookies" className="hover:text-[#82ffb2] transition-colors">Cookies</Link>
-              <Link href="/tilgjengelighet" className="hover:text-[#82ffb2] transition-colors">Tilgjengelighet</Link>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <Footer />
 
       <style jsx>{`
         @keyframes float {

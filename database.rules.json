@@ -71,6 +71,48 @@
               ".validate": "newData.hasChildren(['jobbtype', 'inntekt', 'prosent']) && newData.child('inntekt').isNumber() && newData.child('prosent').isNumber()"
             }
           }
+        },
+        
+        "subscription": {
+          ".read": "auth != null && auth.uid == $userId",
+          ".write": false,
+          ".validate": "newData.hasChildren(['plan', 'status', 'updatedAt']) && newData.child('plan').val().matches(/^(free|basic|pro)$/) && newData.child('status').val().matches(/^(active|canceled|past_due|incomplete|trialing|incomplete_expired|unpaid)$/) && newData.child('updatedAt').isNumber()",
+          
+          "stripeCustomerId": {
+            ".validate": "newData.isString()"
+          },
+          "stripeSubscriptionId": {
+            ".validate": "newData.isString()"
+          },
+          "stripePriceId": {
+            ".validate": "newData.isString()"
+          },
+          "currentPeriodStart": {
+            ".validate": "newData.isNumber()"
+          },
+          "currentPeriodEnd": {
+            ".validate": "newData.isNumber()"
+          },
+          "cancelAtPeriodEnd": {
+            ".validate": "newData.isBoolean()"
+          },
+          "canceledAt": {
+            ".validate": "newData.isNumber()"
+          },
+          "trialStart": {
+            ".validate": "newData.isNumber()"
+          },
+          "trialEnd": {
+            ".validate": "newData.isNumber()"
+          }
+        },
+        
+        "invoices": {
+          ".read": "auth != null && auth.uid == $userId",
+          ".write": false,
+          "$invoiceId": {
+            ".validate": "newData.hasChildren(['amount', 'currency', 'status', 'createdAt']) && newData.child('amount').isNumber() && newData.child('createdAt').isNumber()"
+          }
         }
       }
     },
