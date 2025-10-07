@@ -5,7 +5,6 @@ import Link from 'next/link';
 import * as Icons from 'lucide-react';
 import Logo from '@/components/shared/Logo';
 import { Menu, X } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 
 interface BlogPost {
   id: string;
@@ -82,21 +81,12 @@ export default function BlogPage() {
 
   const categories = ['Alle', 'Tips & Triks', 'Beste praksis', 'Teknologi', 'Strategi', 'Produktnyheter', 'Kundecase'];
   const [selectedCategory, setSelectedCategory] = React.useState('Alle');
-  const [searchQuery, setSearchQuery] = React.useState('');
+
+  const filteredPosts = selectedCategory === 'Alle' 
+    ? blogPosts 
+    : blogPosts.filter(post => post.category === selectedCategory);
+
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
-
-  // Filter posts based on category and search query
-  const filteredPosts = blogPosts.filter(post => {
-    const matchesCategory = selectedCategory === 'Alle' || post.category === selectedCategory;
-    const matchesSearch = searchQuery === '' || 
-      post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      post.excerpt.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      post.category.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    return matchesCategory && matchesSearch;
-  });
-
-  const router = useRouter();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
@@ -106,16 +96,16 @@ export default function BlogPage() {
           <div className="flex justify-between items-center h-20">
             <Logo size="lg" />
             <nav className="hidden md:flex items-center gap-8">
-              <a href="/#features" className="text-gray-700 hover:text-[#00b85b] transition-colors font-medium">
+              <a href="#features" className="text-gray-700 hover:text-[#00b85b] transition-colors font-medium">
                 Funksjoner
               </a>
-              <a href="/#showcase" className="text-gray-700 hover:text-[#00b85b] transition-colors font-medium">
+              <a href="#showcase" className="text-gray-700 hover:text-[#00b85b] transition-colors font-medium">
                 Plattform
               </a>
               <a href="/priser" className='text-gray-700 hover:text-[#00b85b] transition-colors font-medium'>
                 Priser
               </a>
-              <a href="/#faq" className="text-gray-700 hover:text-[#00b85b] transition-colors font-medium">
+              <a href="#faq" className="text-gray-700 hover:text-[#00b85b] transition-colors font-medium">
                 FAQ
               </a>
               <a href="/blogg" className="text-gray-700 hover:text-[#00b85b] transition-colors font-medium">
@@ -153,21 +143,21 @@ export default function BlogPage() {
           <div className="md:hidden border-t border-gray-200 bg-white">
             <nav className="px-4 py-4 space-y-4">
               <a 
-                href="/#features" 
+                href="#features" 
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="block text-gray-700 hover:text-[#00b85b] transition-colors font-medium py-2"
               >
                 Funksjoner
               </a>
               <a 
-                href="/#showcase" 
+                href="#showcase" 
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="block text-gray-700 hover:text-[#00b85b] transition-colors font-medium py-2"
               >
                 Plattform
               </a>
               <a 
-                href="/#faq" 
+                href="#faq" 
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="block text-gray-700 hover:text-[#00b85b] transition-colors font-medium py-2"
               >
@@ -202,95 +192,35 @@ export default function BlogPage() {
       </header>
 
       {/* Hero Section */}
-      <section className="relative py-12 md:py-16 px-4 text-white overflow-hidden">
-        {/* Background with gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
-          <div className="absolute inset-0 bg-[url('/assets/sunset.jpg')] bg-cover bg-center opacity-20" />
-          {/* Subtle grid pattern */}
-          <div 
-            className="absolute inset-0 opacity-10"
-            style={{
-              backgroundImage: `linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-                               linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px)`,
-              backgroundSize: '50px 50px'
-            }}
-          />
-          {/* Accent gradient orbs */}
-          <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#00b85b]/20 rounded-full blur-3xl" />
-          <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-[#82ffb2]/10 rounded-full blur-3xl" />
-        </div>
-
-        <div className="container mx-auto max-w-5xl text-center relative z-10">
-          {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 mb-5">
-            <Icons.BookOpen className="h-3.5 w-3.5 text-[#82ffb2]" />
-            <span className="text-xs font-medium text-white/90">Kunnskap & Innsikt</span>
-          </div>
-
-          {/* Main heading */}
-          <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold mb-4 tracking-tight">
-            <span className="bg-gradient-to-r from-white to-white/80 bg-clip-text text-transparent">
-              Blogg for profesjonelle
-            </span>
-            <br />
-            <span className="bg-gradient-to-r from-[#82ffb2] to-[#00b85b] bg-clip-text text-transparent">
-              tilbudsgivere
-            </span>
-          </h1>
-
-          {/* Subtitle */}
-          <p className="text-base md:text-lg text-white/80 mb-6 max-w-3xl mx-auto leading-relaxed">
-            Tips, innsikt og beste praksis for å lage bedre tilbud, øke gevinstprosent og vokse din virksomhet
-          </p>
-          
-          {/* Search Bar */}
-          <div className="max-w-2xl mx-auto relative group">
-            <div className="absolute inset-0 bg-gradient-to-r from-[#00b85b]/30 to-[#82ffb2]/30 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            <div className="relative bg-white/10 backdrop-blur-md border border-white/20 rounded-xl overflow-hidden shadow-2xl">
-              <input
+      <section className="py-16 px-4 bg-gradient-to-t from-primary to-blue-600 text-white">
+        {/* Grainy texture overlay */}
+        <div 
+          className="absolute inset-0 opacity-10 pointer-events-none"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
+            backgroundRepeat: 'repeat',
+            backgroundSize: '400px 400px'
+          }}
+        />
+            <div className="container mx-auto max-w-4xl text-center">
+            <h1 className="text-5xl md:text-6xl font-bold mb-6">
+                Blogg
+            </h1>
+            <p className="text-xl text-white/90 mb-8">
+                Tips, innsikt og nyheter om tilbudsgivning, prising og hvordan du kan vokse din virksomhet
+            </p>
+            
+            {/* Search Bar */}
+            <div className="max-w-2xl mx-auto relative">
+                <input
                 type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Søk etter artikler..."
-                className="w-full px-5 py-3 md:py-3.5 bg-transparent text-white placeholder:text-white/60 outline-none"
-              />
-              {searchQuery && (
-                <button 
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-14 top-1/2 -translate-y-1/2 p-2 text-white/60 hover:text-white transition-colors"
-                  aria-label="Clear search"
-                >
-                  <Icons.X className="h-4 w-4" />
-                </button>
-              )}
-              <button 
-                className="absolute right-2 cursor-pointer top-1/2 -translate-y-1/2 p-2.5 bg-gradient-to-r from-[#00b85b] to-[#82ffb2] rounded-lg hover:shadow-lg hover:shadow-[#00b85b]/50 transition-all duration-300"
-                aria-label="Search"
-              >
-                <Icons.Search className="h-4 w-4 text-white" onClick={() => {router.push("#to-blogs");}}/>
-              </button>
+                className="w-full px-6 py-4 rounded-lg text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-white"
+                />
+                <Icons.Search className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 h-5 w-5" />
             </div>
-          </div>
-
-          {/* Stats or Social Proof */}
-          <div className="mt-8 flex flex-wrap justify-center gap-6 md:gap-8 text-sm">
-            <div className="flex items-center gap-2">
-              <Icons.FileText className="h-4 w-4 text-[#82ffb2]" />
-              <span className="text-white/70">{blogPosts.length} artikler</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Icons.Calendar className="h-4 w-4 text-[#82ffb2]" />
-              <span className="text-white/70">Nye artikler månedlig</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Icons.Clock className="h-4 w-4 text-[#82ffb2]" />
-              <span className="text-white/70">4-10 min lesing</span>
-            </div>
-          </div>
         </div>
       </section>
-
-      <div id="to-blogs" />
 
       {/* Category Filter */}
       <section className="py-8 px-4 border-b border-gray-200 bg-white">
@@ -318,20 +248,7 @@ export default function BlogPage() {
         <div className="container mx-auto max-w-6xl">
           {filteredPosts.length === 0 ? (
             <div className="text-center py-12">
-              <Icons.SearchX className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600 text-lg mb-2">
-                {searchQuery 
-                  ? `Ingen artikler funnet for "${searchQuery}"` 
-                  : 'Ingen artikler funnet i denne kategorien.'}
-              </p>
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="text-primary hover:text-primary/80 underline mt-2"
-                >
-                  Nullstill søk
-                </button>
-              )}
+              <p className="text-gray-600 text-lg">Ingen artikler funnet i denne kategorien.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
