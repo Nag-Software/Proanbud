@@ -6,9 +6,10 @@ const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KE
 export async function POST(request: NextRequest) {
   try {
     if (!resend) {
-      console.warn('Resend API key not configured');
+      console.error('❌ Resend API key not configured');
+      console.error('Please set RESEND_API_KEY in .env.local');
       return NextResponse.json(
-        { error: 'Email service not configured' },
+        { error: 'Email service not configured - missing RESEND_API_KEY' },
         { status: 503 }
       );
     }
@@ -16,27 +17,33 @@ export async function POST(request: NextRequest) {
     const { to, subject, message, from, customerId, quoteId } = await request.json();
 
     if (!to || !subject || !message) {
+      console.error('❌ Missing required fields:', { to: !!to, subject: !!subject, message: !!message });
       return NextResponse.json(
         { error: 'Missing required fields: to, subject, message' },
         { status: 400 }
       );
     }
 
+    console.log('📧 Sending email:', {
+      to,
+      subject,
+      from: from || 'Proanbud <post@proanbud.no>',
+      quoteId,
+      customerId,
+      messageLength: message.length
+    });
+
     const data = await resend.emails.send({
       from: from || 'Proanbud <post@proanbud.no>',
       to: [to],
       subject: subject,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #2563eb;">Proanbud AI</h2>
-          <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            ${message.replace(/\n/g, '<br>')}
-          </div>
-          <p style="color: #64748b; font-size: 14px;">
-            Denne e-posten ble sendt fra Proanbud AI-systemet.
-          </p>
-        </div>
-      `,
+      html: message, // Use the message directly as HTML
+    });
+
+    console.log('✅ Email sent successfully:', {
+      messageId: data.data?.id,
+      to,
+      quoteId
     });
 
     return NextResponse.json({
@@ -46,10 +53,15 @@ export async function POST(request: NextRequest) {
       quoteId
     });
 
-  } catch (error) {
-    console.error('Error sending email:', error);
+  } catch (error: any) {
+    console.error('❌ Error sending email:', error);
+    console.error('Error details:', {
+      message: error.message,
+      name: error.name,
+      stack: error.stack
+    });
     return NextResponse.json(
-      { error: 'Failed to send email' },
+      { error: error.message || 'Failed to send email' },
       { status: 500 }
     );
   }

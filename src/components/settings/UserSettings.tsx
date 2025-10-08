@@ -38,9 +38,10 @@ export const UserSettings = ({ userSettings: initialUserSettings }: { userSettin
   useEffect(() => {
     if (initialUserSettings) {
       // Ensure all fields have proper values (no undefined)
+      // Email always comes from Firebase Auth, not from database
       setUserSettings({
         name: initialUserSettings.name || '',
-        email: initialUserSettings.email || '',
+        email: user?.email || '',
         telefon: initialUserSettings.telefon || '',
         notifications: initialUserSettings.notifications ?? true,
         emailNotifications: initialUserSettings.emailNotifications ?? true,
@@ -52,7 +53,7 @@ export const UserSettings = ({ userSettings: initialUserSettings }: { userSettin
       // If no settings provided, try to load defaults or keep current state
       setLoading(false);
     }
-  }, [initialUserSettings]);
+  }, [initialUserSettings, user]);
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setUserSettings(prev => ({
@@ -72,10 +73,11 @@ export const UserSettings = ({ userSettings: initialUserSettings }: { userSettin
     try {
       // Save all user settings to the realtime database
       // This includes auth information (name, email, telefon) plus additional preferences
+      // Email is always synced from Firebase Auth, not editable by user
       // Ensure no undefined values - Firebase doesn't accept them
       const allSettingsData = {
         name: userSettings.name || '',
-        email: userSettings.email || '',
+        email: user.email || '',  // Always use Auth email as source of truth
         telefon: userSettings.telefon || '',
         notifications: userSettings.notifications ?? true,
         emailNotifications: userSettings.emailNotifications ?? true,
@@ -147,12 +149,20 @@ export const UserSettings = ({ userSettings: initialUserSettings }: { userSettin
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 E-post
               </label>
-              <input
-                type="email"
-                value={userSettings.email}
-                onChange={(e) => handleInputChange('email', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-              />
+              <div className="relative">
+                <input
+                  type="email"
+                  value={user?.email || ''}
+                  readOnly
+                  disabled
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed"
+                  title="E-postadressen er låst til din innloggingskonto"
+                />
+                <Icons.Lock className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                E-postadressen kan ikke endres og er knyttet til din konto
+              </p>
             </div>
             
             <div>

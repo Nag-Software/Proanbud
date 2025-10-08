@@ -20,6 +20,15 @@ export interface ActivityItem {
   amount?: number;
 }
 
+export interface ConversationEntry {
+  message: string;
+  timestamp: number;
+  sentBy: 'customer' | 'business';
+  sentTo?: string;
+  emailId?: string;
+  type?: 'quote_question' | 'quote_approved' | 'quote_rejected' | 'reply';
+}
+
 export interface InboxMessage {
   id: string;
   from: string;
@@ -29,11 +38,27 @@ export interface InboxMessage {
   isRead: boolean;
   quoteId?: string;
   customerId?: string;
-  type: 'quote_sent' | 'quote_opened' | 'quote_question' | 'quote_approved' | 'quote_rejected' | 'general_inquiry';
+  type: 'quote_sent' | 'quote_opened' | 'quote_question' | 'quote_approved' | 'quote_rejected' | 'quote_conversation' | 'general_inquiry' | 'outgoing_reply';
   customerName?: string;
   quoteTitle?: string;
   isFlagged?: boolean;
   folder?: string;
+  hasReply?: boolean;
+  relatedMessageId?: string; // Link to original message for replies
+  sentTo?: string; // Email address for outgoing messages
+  emailId?: string; // Email service ID for tracking
+  lastReplyAt?: number;
+  lastMessageAt?: number; // Timestamp of last message in conversation
+  conversation?: Record<string, ConversationEntry>;
+}
+
+export interface CustomerFeedback {
+  id: string;
+  quoteId: string;
+  message: string;
+  timestamp: string;
+  customerName: string;
+  type: 'question' | 'comment' | 'approval' | 'rejection';
 }
 
 export interface Tilbud {
@@ -43,11 +68,13 @@ export interface Tilbud {
   jobbtype: string;
   belop: number;
   beskrivelse?: string;
-  status: 'venter' | 'vunnet' | 'tapt';
+  status: 'draft' | 'venter' | 'vunnet' | 'tapt';
   dato: string;
   svarfrist: string;
   prisgrunnlag?: PriceComponent[];
   template?: string;
+  viewToken?: string; // Unique token for customer to view quote without auth
+  userId?: string; // Owner of the quote
 }
 
 export interface Kunde {
@@ -114,7 +141,7 @@ export interface User {
   avatar?: string;
 }
 
-export type TilbudStatus = 'venter' | 'vunnet' | 'tapt';
+export type TilbudStatus = 'draft' | 'venter' | 'vunnet' | 'tapt';
 
 export interface ColumnDef<T> {
   accessorKey: string;

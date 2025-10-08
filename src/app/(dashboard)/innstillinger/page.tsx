@@ -27,7 +27,11 @@ export default function SettingsPage() {
             if (snapshot.exists()) {
                 const dbSettings = snapshot.val();
                 // Use database settings as the source of truth
-                setUserSettings(dbSettings as UserSettingsData);
+                // But always override email with Auth email (source of truth for email)
+                setUserSettings({
+                    ...dbSettings,
+                    email: user.email || ''
+                } as UserSettingsData);
             } else {
                 // No DB settings, initialize with Auth data
                 const initialSettings: UserSettingsData = {

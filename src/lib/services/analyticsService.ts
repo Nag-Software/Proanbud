@@ -17,6 +17,7 @@ export interface UserAnalytics {
   totalTilbud: number;
   vunnetTilbud: number;
   totalRevenue: number;
+  totalProfit: number; // Total profit from won quotes (margin category)
   winRate: number;
   lastUpdated: number;
   monthlyData: MonthlyData[];
@@ -31,6 +32,7 @@ export interface MonthlyData {
   tilbudt: number;
   antallTilbud: number;
   antallVunnet: number;
+  profitt: number; // Profit for this month
 }
 
 export interface DailyData {
@@ -54,12 +56,27 @@ export interface JobbtypeStats {
 // Helper function to get user-scoped path
 const getUserPath = (userId: string, collection: string) => `users/${userId}/${collection}`;
 
-// Helper function to ensure user is authenticated
+// Helper function to ensure user is authenticated and get a valid user ID
 const getCurrentUserId = (): string => {
   if (!auth.currentUser) {
-    throw new Error('User not authenticated. Please log in.');
+    throw new Error('Bruker ikke autentisert. Vennligst logg inn på nytt.');
   }
-  return auth.currentUser.uid;
+  
+  const uid = auth.currentUser.uid;
+  
+  // Validate that the UID doesn't contain invalid characters for Firebase paths
+  if (!uid || typeof uid !== 'string' || uid.trim().length === 0) {
+    throw new Error('Ugyldig bruker-ID. Vennligst logg inn på nytt.');
+  }
+  
+  // Firebase path segments cannot contain . # $ [ ] or /
+  const invalidChars = /[.#$[\]/]/;
+  if (invalidChars.test(uid)) {
+    console.error('Invalid characters found in user ID:', uid);
+    throw new Error('Ugyldig bruker-ID format. Vennligst kontakt support.');
+  }
+  
+  return uid;
 };
 
 // Enhanced error handling function for Realtime Database
@@ -94,6 +111,11 @@ const handleDatabaseError = (error: any, operation: string): Error => {
       default:
         return new Error(`Firebase feil (${error.code}): ${error.message || `Kunne ikke ${operation}`}`);
     }
+  }
+  
+  // Check for token/authentication issues
+  if (error.message?.includes('invalid token') || error.message?.includes('Invalid token')) {
+    return new Error(`Autentiseringsfeil: Ugyldig token. Vennligst logg ut og inn igjen.`);
   }
   
   // Check for network/connection issues
@@ -138,6 +160,7 @@ export const updateUserAnalytics = async (): Promise<void> => {
     let totalTilbud = 0;
     let vunnetTilbud = 0;
     let totalRevenue = 0;
+    let totalProfit = 0;
     const monthlyDataMap = new Map<string, MonthlyData>();
     const dailyDataMap = new Map<string, DailyData>();
     const jobbypeStatsMap = new Map<string, JobbtypeStats>();
@@ -168,6 +191,7 @@ export const updateUserAnalytics = async (): Promise<void> => {
             tilbudt: 0,
             antallTilbud: 0,
             antallVunnet: 0,
+            profitt: 0,
           });
         }
         
@@ -226,6 +250,38 @@ export const updateUserAnalytics = async (): Promise<void> => {
           monthData.omsatt += tilbud.belop;
           jobbypeStats.antallVunnet++;
           jobbypeStats.vunnetVerdi += tilbud.belop;
+          
+          // Calculate profit from priceMarkup in prisgrunnlag components
+          if (tilbud.prisgrunnlag && Array.isArray(tilbud.prisgrunnlag)) {
+            let tilbudProfit = 0;
+            
+            console.log('📊 [updateUserAnalytics] Calculating profit for tilbud:', tilbud.id || 'unknown', 'Status:', tilbud.status);
+            console.log('   Prisgrunnlag components:', tilbud.prisgrunnlag.length);
+            
+            tilbud.prisgrunnlag.forEach((comp: any, idx: number) => {
+              // Calculate profit from markup percentage
+              if (comp.priceMarkup && comp.priceMarkup > 0 && comp.amount) {
+                // The amount includes the markup, so we need to calculate the base price first
+                // Formula: basePrice = amount / (1 + markup/100)
+                // Profit = amount - basePrice
+                const markupMultiplier = 1 + (comp.priceMarkup / 100);
+                const basePrice = comp.amount / markupMultiplier;
+                const profit = comp.amount - basePrice;
+                console.log(`   Component ${idx}: ${comp.name} - Amount: ${comp.amount}, Markup: ${comp.priceMarkup}%, Profit: ${profit.toFixed(2)}`);
+                tilbudProfit += profit;
+              }
+              
+              // Also include direct margin components
+              if (comp.category === 'margin' && comp.amount) {
+                console.log(`   Component ${idx}: ${comp.name} - Margin: ${comp.amount}`);
+                tilbudProfit += comp.amount;
+              }
+            });
+            
+            console.log('   ✅ Total profit for this tilbud:', tilbudProfit.toFixed(2));
+            totalProfit += tilbudProfit;
+            monthData.profitt += tilbudProfit;
+          }
         }
       });
     }
@@ -239,6 +295,13 @@ export const updateUserAnalytics = async (): Promise<void> => {
         ? Math.round((stats.antallVunnet / stats.antallTilbud) * 100) 
         : 0;
     });
+
+    console.log('💰 ANALYTICS SUMMARY [updateUserAnalytics]:');
+    console.log('   Total Tilbud:', totalTilbud);
+    console.log('   Vunnet Tilbud:', vunnetTilbud);
+    console.log('   Total Revenue:', totalRevenue.toLocaleString('nb-NO'), 'kr');
+    console.log('   Total Profit:', totalProfit.toLocaleString('nb-NO'), 'kr');
+    console.log('   Win Rate:', winRate, '%');
     
     // Prepare analytics data
     const analytics: UserAnalytics = {
@@ -246,6 +309,7 @@ export const updateUserAnalytics = async (): Promise<void> => {
       totalTilbud,
       vunnetTilbud,
       totalRevenue,
+      totalProfit,
       winRate,
       lastUpdated: Date.now(),
       monthlyData: Array.from(monthlyDataMap.values()).sort((a, b) => {
@@ -383,6 +447,7 @@ const calculateAnalyticsFromTilbud = (tilbudData: any, kundData: any): UserAnaly
   let totalTilbud = 0;
   let vunnetTilbud = 0;
   let totalRevenue = 0;
+  let totalProfit = 0;
   const monthlyDataMap = new Map<string, MonthlyData>();
   const jobbypeStatsMap = new Map<string, JobbtypeStats>();
 
@@ -407,6 +472,7 @@ const calculateAnalyticsFromTilbud = (tilbudData: any, kundData: any): UserAnaly
           tilbudt: 0,
           antallTilbud: 0,
           antallVunnet: 0,
+          profitt: 0,
         });
       }
       
@@ -431,7 +497,6 @@ const calculateAnalyticsFromTilbud = (tilbudData: any, kundData: any): UserAnaly
       jobbypeStats.antallTilbud++;
       jobbypeStats.totalVerdi += tilbud.belop || 0;
 
-      // Check if tilbud is won
       if (tilbud.status === 'vunnet') {
         vunnetTilbud++;
         totalRevenue += tilbud.belop || 0;
@@ -439,6 +504,32 @@ const calculateAnalyticsFromTilbud = (tilbudData: any, kundData: any): UserAnaly
         monthData.omsatt += tilbud.belop || 0;
         jobbypeStats.antallVunnet++;
         jobbypeStats.vunnetVerdi += tilbud.belop || 0;
+        
+        // Calculate profit from priceMarkup in prisgrunnlag components
+        if (tilbud.prisgrunnlag && Array.isArray(tilbud.prisgrunnlag)) {
+          let tilbudProfit = 0;
+          
+          tilbud.prisgrunnlag.forEach((comp: any, idx: number) => {
+            // Calculate profit from markup percentage
+            if (comp.priceMarkup && comp.priceMarkup > 0 && comp.amount) {
+              // The amount includes the markup, so we need to calculate the base price first
+              // Formula: basePrice = amount / (1 + markup/100)
+              // Profit = amount - basePrice
+              const markupMultiplier = 1 + (comp.priceMarkup / 100);
+              const basePrice = comp.amount / markupMultiplier;
+              const profit = comp.amount - basePrice;
+              tilbudProfit += profit;
+            }
+            
+            // Also include direct margin components
+            if (comp.category === 'margin' && comp.amount) {
+              tilbudProfit += comp.amount;
+            }
+          });
+          
+          totalProfit += tilbudProfit;
+          monthData.profitt += tilbudProfit;
+        }
       }
     });
   }
@@ -457,11 +548,19 @@ const calculateAnalyticsFromTilbud = (tilbudData: any, kundData: any): UserAnaly
   const rawMonthlyData = Array.from(monthlyDataMap.values());
   const filledMonthlyData = fillMonthlyDataGaps(rawMonthlyData);
 
+  console.log('💰 ANALYTICS SUMMARY:');
+  console.log('   Total Tilbud:', totalTilbud);
+  console.log('   Vunnet Tilbud:', vunnetTilbud);
+  console.log('   Total Revenue:', totalRevenue.toLocaleString('nb-NO'), 'kr');
+  console.log('   Total Profit:', totalProfit.toLocaleString('nb-NO'), 'kr');
+  console.log('   Win Rate:', winRate, '%');
+
   return {
     totalCustomers,
     totalTilbud,
     vunnetTilbud,
     totalRevenue,
+    totalProfit,
     winRate,
     lastUpdated: Date.now(),
     monthlyData: filledMonthlyData,
@@ -492,6 +591,7 @@ const generatePlaceholderMonths = (startDate: Date, endDate: Date): MonthlyData[
       tilbudt: 0,
       antallTilbud: 0,
       antallVunnet: 0,
+      profitt: 0,
     });
     
     // Move to next month
@@ -884,6 +984,12 @@ export const getDashboardKPIsWithChange = async () => {
           value: '0%',
           change: '+0%',
           icon: 'Target'
+        },
+        {
+          title: 'Total Profitt',
+          value: '0 kr',
+          change: '+0%',
+          icon: 'TrendingUp'
         }
       ];
     }
@@ -917,14 +1023,18 @@ export const getDashboardKPIsWithChange = async () => {
       currentMonthData?.antallVunnet || 0, 
       previousMonthData?.antallVunnet || 0
     );
+    const profitChange = calculatePercentageChange(
+      currentMonthData?.profitt || 0, 
+      previousMonthData?.profitt || 0
+    );
 
     // Active tilbud are those with status 'venter'
-    const activeTilbud = analytics.totalTilbud - analytics.vunnetTilbud;
+    const activeTilbud = (analytics.totalTilbud || 0) - (analytics.vunnetTilbud || 0);
     
     return [
       {
         title: 'Total Omsetning',
-        value: `${analytics.totalRevenue.toLocaleString('nb-NO')} kr`,
+        value: `${(analytics.totalRevenue || 0).toLocaleString('nb-NO')} kr`,
         change: `${revenueChange >= 0 ? '+' : ''}${revenueChange.toFixed(1)}%`,
         icon: 'DollarSign'
       },
@@ -936,15 +1046,21 @@ export const getDashboardKPIsWithChange = async () => {
       },
       {
         title: 'Vunnede Tilbud',
-        value: analytics.vunnetTilbud.toString(),
+        value: (analytics.vunnetTilbud || 0).toString(),
         change: `${vunnetChange >= 0 ? '+' : ''}${vunnetChange.toFixed(1)}%`,
         icon: 'Award'
       },
       {
         title: 'Treffprosent',
-        value: `${analytics.winRate.toFixed(1)}%`,
+        value: `${(analytics.winRate || 0).toFixed(1)}%`,
         change: `+4.1%`, // Placeholder - could be calculated with historical data
         icon: 'Target'
+      },
+      {
+        title: 'Total Profitt',
+        value: `${(analytics.totalProfit || 0).toLocaleString('nb-NO')} kr`,
+        change: `${profitChange >= 0 ? '+' : ''}${profitChange.toFixed(1)}%`,
+        icon: 'TrendingUp'
       }
     ];
   } catch (error) {

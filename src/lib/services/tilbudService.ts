@@ -63,7 +63,7 @@ export interface TilbudFormData {
   prosjekt: string;
   jobbtype: string;
   belop: number;
-  status: 'venter' | 'vunnet' | 'tapt';
+  status: 'draft' | 'venter' | 'vunnet' | 'tapt';
   dato: string;
   svarfrist: string;
   beskrivelse?: string;
@@ -123,6 +123,8 @@ const convertRealtimeTilbud = (key: string, data: RealtimeTilbud): Tilbud => {
     dato: data.dato,
     svarfrist: data.svarfrist,
     prisgrunnlag: (data as any).prisgrunnlag,
+    viewToken: (data as any).viewToken, // Include viewToken for customer access
+    userId: (data as any).userId, // Include userId for ownership
   };
 };
 
@@ -203,6 +205,16 @@ const ensureConnection = async (): Promise<void> => {
   console.log('✅ Firebase connection verified');
 };
 
+// Helper function to generate a secure random token
+const generateViewToken = (): string => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let token = '';
+  for (let i = 0; i < 32; i++) {
+    token += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return token;
+};
+
 // Create a new tilbud
 export const createTilbud = async (tilbudData: TilbudFormData): Promise<string> => {
   try {
@@ -213,6 +225,10 @@ export const createTilbud = async (tilbudData: TilbudFormData): Promise<string> 
     const userId = getCurrentUserId();
     
     const now = serverTimestamp();
+    const viewToken = generateViewToken(); // Generate unique token for customer access
+    
+    console.log('🔑 Generated viewToken for new quote:', viewToken);
+    
     const newTilbud: Omit<RealtimeTilbudInput, 'id'> = {
       kundenavn: tilbudData.kundenavn.trim(),
       prosjekt: tilbudData.prosjekt.trim(),
@@ -224,6 +240,7 @@ export const createTilbud = async (tilbudData: TilbudFormData): Promise<string> 
       opprettet: now,
       oppdatert: now,
       userId: userId,
+      viewToken: viewToken, // Add view token
     };
 
     // Add optional fields if they exist
@@ -243,7 +260,10 @@ export const createTilbud = async (tilbudData: TilbudFormData): Promise<string> 
     // Add to user's Realtime Database path
     const tilbudRef = ref(db, getUserPath(userId, 'tilbud'));
     const newTilbudRef = push(tilbudRef);
+    console.log('💾 Saving quote with ID:', newTilbudRef.key);
+    console.log('💾 Quote data includes viewToken:', newTilbud.viewToken);
     await set(newTilbudRef, newTilbud);
+    console.log('✅ Quote saved successfully');
 
     // Update customer statistics (increment tilbud count)
     try {
@@ -284,6 +304,35 @@ export const createTilbud = async (tilbudData: TilbudFormData): Promise<string> 
     return newTilbudRef.key!;
   } catch (error) {
     throw handleDatabaseError(error, 'opprette tilbud');
+  }
+};
+
+// Get tilbud by ID
+export const getTilbudById = async (tilbudId: string): Promise<Tilbud | null> => {
+  try {
+    await ensureConnection();
+    const userId = getCurrentUserId();
+
+    const tilbudRef = ref(db, `${getUserPath(userId, 'tilbud')}/${tilbudId}`);
+    console.log('🔍 Fetching quote from path:', `${getUserPath(userId, 'tilbud')}/${tilbudId}`);
+    const snapshot = await get(tilbudRef);
+    
+    if (!snapshot.exists()) {
+      console.log('❌ Quote not found');
+      return null;
+    }
+
+    const rawData = snapshot.val() as RealtimeTilbud;
+    console.log('📦 Raw quote data:', rawData);
+    console.log('🔑 ViewToken in raw data:', (rawData as any).viewToken);
+    
+    const converted = convertRealtimeTilbud(tilbudId, rawData);
+    console.log('✅ Converted quote:', converted);
+    console.log('🔑 ViewToken in converted quote:', converted.viewToken);
+    
+    return converted;
+  } catch (error) {
+    throw handleDatabaseError(error, 'hente tilbud');
   }
 };
 
@@ -367,28 +416,6 @@ export const getTilbudPaginated = async (limitCount: number = 50): Promise<Tilbu
   }
 };
 
-// Get a single tilbud by ID
-export const getTilbudById = async (tilbudId: string): Promise<Tilbud | null> => {
-  try {
-    // Test connection first
-    await ensureConnection();
-
-    // Get current user ID
-    const userId = getCurrentUserId();
-
-    const tilbudRef = ref(db, `${getUserPath(userId, 'tilbud')}/${tilbudId}`);
-    const snapshot = await get(tilbudRef);
-
-    if (!snapshot.exists()) {
-      return null;
-    }
-
-    return convertSingleRealtimeTilbud(snapshot);
-  } catch (error) {
-    throw handleDatabaseError(error, 'hente tilbud');
-  }
-};
-
 // Search tilbud by customer name or project
 export const searchTilbud = async (searchTerm: string): Promise<Tilbud[]> => {
   try {
@@ -459,8 +486,8 @@ export const updateTilbud = async (tilbudId: string, updates: Partial<TilbudForm
     // Get current data to check status change and update stats accordingly
     let shouldUpdateStats = false;
     let customerName = '';
-    let oldStatus: 'venter' | 'vunnet' | 'tapt' | null = null;
-    let newStatus: 'venter' | 'vunnet' | 'tapt' | null = null;
+    let oldStatus: 'draft' | 'venter' | 'vunnet' | 'tapt' | null = null;
+    let newStatus: 'draft' | 'venter' | 'vunnet' | 'tapt' | null = null;
     
     if (updates.status !== undefined) {
       const snapshot = await get(tilbudRef);
@@ -672,5 +699,39 @@ export const getTilbudAnalytics = async () => {
     };
   } catch (error) {
     throw handleDatabaseError(error, 'hente tilbud-analyser');
+  }
+};
+
+// Add viewToken to an existing quote that doesn't have one
+export const ensureViewToken = async (tilbudId: string): Promise<string> => {
+  try {
+    await ensureConnection();
+    const userId = getCurrentUserId();
+
+    const tilbudRef = ref(db, `${getUserPath(userId, 'tilbud')}/${tilbudId}`);
+    const snapshot = await get(tilbudRef);
+    
+    if (!snapshot.exists()) {
+      throw new Error('Quote not found');
+    }
+
+    const data = snapshot.val() as RealtimeTilbud;
+    
+    // If viewToken already exists, return it
+    if ((data as any).viewToken) {
+      console.log('✅ ViewToken already exists:', (data as any).viewToken);
+      return (data as any).viewToken;
+    }
+
+    // Generate and save new viewToken
+    const viewToken = generateViewToken();
+    console.log('🔑 Generating new viewToken for existing quote:', viewToken);
+    
+    await update(tilbudRef, { viewToken });
+    console.log('✅ ViewToken saved successfully');
+    
+    return viewToken;
+  } catch (error) {
+    throw handleDatabaseError(error, 'legge til viewToken');
   }
 };

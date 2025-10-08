@@ -9,7 +9,10 @@ import { logout } from '@/lib/auth';
 import * as Icons from 'lucide-react';
 import { LogOut } from 'lucide-react';
 import Logo from '../shared/Logo';
-import { getSubscription, type SubscriptionData } from '@/lib/services/stripeService';
+import { ThemeToggle } from '../shared/ThemeToggle';
+import { NotificationButton } from '../shared/NotificationButton';
+import { ref, onValue, off } from 'firebase/database';
+import { db } from '@/lib/firebase';
 
 type IconName = keyof typeof Icons;
 
@@ -30,7 +33,7 @@ const NavLink: React.FC<NavLinkProps> = ({ href, label, icon }) => {
       className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors duration-200 ${
         isActive
           ? 'bg-primary text-primary-foreground'
-          : 'text-muted-text hover:bg-gray-100'
+          : 'text-muted-text hover:bg-gray-100 dark:hover:bg-gray-800'
       }`}
     >
       {Icon && <Icon className="h-5 w-5" />}
@@ -42,13 +45,32 @@ const NavLink: React.FC<NavLinkProps> = ({ href, label, icon }) => {
 export const Sidebar = () => {
   const { user } = useAuth();
   const router = useRouter();
-  const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
+  const [displayName, setDisplayName] = useState<string>('');
 
   useEffect(() => {
-    if (user?.uid) {
-      getSubscription(user.uid).then(setSubscription).catch(console.error);
+    if (!user?.uid) {
+      setDisplayName('');
+      return;
     }
-  }, [user?.uid]);
+
+    // Set up real-time listener for user settings from database
+    const userSettingsRef = ref(db, `users/${user.uid}/userSettings`);
+    const unsubscribe = onValue(userSettingsRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const settings = snapshot.val();
+        // Use name from database if available
+        setDisplayName(settings.name || user.displayName || user.email?.split('@')[0] || 'User');
+      } else {
+        // Fallback to Firebase Auth displayName
+        setDisplayName(user.displayName || user.email?.split('@')[0] || 'User');
+      }
+    });
+
+    // Cleanup listener on unmount
+    return () => {
+      off(userSettingsRef, 'value', unsubscribe);
+    };
+  }, [user]);
 
   const handleLogout = async () => {
     const { error } = await logout();
@@ -58,7 +80,7 @@ export const Sidebar = () => {
   };
 
   const getDisplayName = () => {
-    return user?.displayName || user?.email?.split('@')[0] || 'User';
+    return displayName || user?.displayName || user?.email?.split('@')[0] || 'User';
   };
 
   const getInitials = () => {
@@ -67,9 +89,9 @@ export const Sidebar = () => {
   };
 
   const getPlanBadge = () => {
-    const plan = subscription?.plan || 'free';
+    const plan = 'free'; // Hardcoded until subscription system is implemented
     
-    const badges = {
+    const badges: Record<string, { label: string; color: string }> = {
       free: { label: 'Gratis', color: 'bg-gray-100 text-gray-700' },
       basic: { label: 'Basic', color: 'bg-blue-100 text-blue-700' },
       pro: { label: 'Pro', color: 'bg-purple-100 text-purple-700' },
@@ -80,8 +102,12 @@ export const Sidebar = () => {
 
   return (
     <aside className="hidden lg:flex w-[280px] bg-card border-r border-border flex-col h-screen">
-      <div className="h-20 flex items-center px-6 border-b border-border">
+      <div className="h-20 flex items-center justify-between px-6 border-b border-border">
         <Logo size="md"/>
+        <div className="flex items-center gap-2">
+          <NotificationButton />
+          <ThemeToggle />
+        </div>
       </div>
 
       {/* Navigation */}
@@ -95,7 +121,7 @@ export const Sidebar = () => {
       <div className="p-4 border-t border-border">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center font-bold text-primary">
+            <div className="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center font-bold text-primary dark:text-primary-foreground">
               {getInitials()}
             </div>
             <div className="flex-1">

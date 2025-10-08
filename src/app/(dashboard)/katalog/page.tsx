@@ -147,7 +147,7 @@ export default function KatalogPage() {
     const handleDeleteCategory = async (categoryId: string, categoryName: string) => {
         const confirmed = await confirm({
             title: 'Slett kategori',
-            description: `Er du sikker på at du vil slette kategorien "${categoryName}"?\n\nMerk: Du må først slette alle underkategorier før du kan slette kategorien.`,
+            description: `Er du sikker på at du vil slette kategorien "${categoryName}"?\n\nAdvarsel: Dette vil også slette alle underkategorier og produkter i denne kategorien.`,
             confirmText: 'Slett',
             cancelText: 'Avbryt',
             variant: 'destructive',
@@ -171,10 +171,10 @@ export default function KatalogPage() {
         }
     };
 
-    const handleDeleteSubcategory = async (subcategoryId: string, subcategoryName: string) => {
+    const handleDeleteSubcategory = async (categoryId: string, subcategoryId: string, subcategoryName: string) => {
         const confirmed = await confirm({
             title: 'Slett underkategori',
-            description: `Er du sikker på at du vil slette underkategorien "${subcategoryName}"?\n\nMerk: Du må først slette alle produkter før du kan slette underkategorien.`,
+            description: `Er du sikker på at du vil slette underkategorien "${subcategoryName}"?\n\nAdvarsel: Dette vil også slette alle produkter i denne underkategorien.`,
             confirmText: 'Slett',
             cancelText: 'Avbryt',
             variant: 'destructive',
@@ -183,7 +183,7 @@ export default function KatalogPage() {
         if (!confirmed) return;
 
         try {
-            await deleteSubcategory(subcategoryId);
+            await deleteSubcategory(categoryId, subcategoryId);
             // Reset selection if deleted subcategory was selected
             if (selectedSubcategory === subcategoryId) {
                 setSelectedSubcategory(null);
@@ -310,7 +310,7 @@ export default function KatalogPage() {
                                                         <button
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
-                                                                handleDeleteSubcategory(sub.id, sub.navn);
+                                                                handleDeleteSubcategory(category.id, sub.id, sub.navn);
                                                             }}
                                                             className="p-1 mr-2 text-red-600 hover:bg-red-50 rounded opacity-0 group-hover:opacity-100 transition-opacity"
                                                             title="Slett underkategori"

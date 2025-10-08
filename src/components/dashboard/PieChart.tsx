@@ -52,8 +52,8 @@ export const DashboardPieChart = () => {
           <CardTitle className="text-base sm:text-lg text-center">Tilbud Status</CardTitle>
         </CardHeader>
         <CardContent className="flex-1 flex flex-col justify-center">
-          <div className="flex-1 bg-gray-200 animate-pulse rounded-lg min-h-[200px] flex items-center justify-center">
-            <span className="text-gray-500 text-sm">Laster data...</span>
+          <div className="flex-1 bg-gray-200 dark:bg-secondary animate-pulse rounded-lg min-h-[200px] flex items-center justify-center">
+            <span className="text-gray-500 dark:text-muted-foreground text-sm">Laster data...</span>
           </div>
         </CardContent>
       </Card>
@@ -67,7 +67,7 @@ export const DashboardPieChart = () => {
       </CardHeader>
       <CardContent className="flex-1 flex flex-col justify-center">
         {pieData.length > 0 ? (
-          <div className="flex-1 min-h-[200px] flex items-center justify-center">
+          <div className="flex-1 min-h-[200px] flex items-center justify-center pb-4">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -91,10 +91,11 @@ export const DashboardPieChart = () => {
                     'Andel'
                   ]}
                   contentStyle={{
-                    backgroundColor: 'white',
-                    border: '1px solid #e2e8f0',
+                    backgroundColor: 'var(--card)',
+                    border: '1px solid var(--border)',
                     borderRadius: '8px',
-                    fontSize: '12px'
+                    fontSize: '12px',
+                    color: 'var(--foreground)'
                   }}
                 />
               </PieChart>
@@ -103,8 +104,8 @@ export const DashboardPieChart = () => {
         ) : (
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center py-8">
-              <p className="text-gray-500 text-sm">Ingen tilbudsdata tilgjengelig</p>
-              <p className="text-xs text-gray-400 mt-1">Opprett tilbud for å se statusfordeling</p>
+              <p className="text-gray-500 dark:text-muted-foreground text-sm">Ingen tilbudsdata tilgjengelig</p>
+              <p className="text-xs text-gray-400 dark:text-muted-foreground mt-1">Opprett tilbud for å se statusfordeling</p>
             </div>
           </div>
         )}
@@ -118,7 +119,7 @@ export const DashboardPieChart = () => {
                   className="w-3 h-3 rounded-full flex-shrink-0"
                   style={{ backgroundColor: entry.color }}
                 />
-                <span className="text-xs text-gray-600">
+                <span className="text-xs text-gray-600 dark:text-muted-foreground">
                   {entry.name} ({entry.count})
                 </span>
               </div>

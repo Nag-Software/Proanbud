@@ -3,16 +3,24 @@
 import { useState, useEffect } from 'react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { Card } from '@/components/shared/Card';
-import { InboxMessage, Kunde, Tilbud } from '@/lib/types';
-import { Mail, MailOpen, Clock, User, Send, Eye, MessageSquare, CheckCircle, XCircle, FileText, Trash2, Flag, FlagOff } from 'lucide-react';
+import { InboxMessage, Kunde, Tilbud, ConversationEntry } from '@/lib/types';
+import { Mail, MailOpen, Clock, User, Send, Eye, MessageSquare, CheckCircle, XCircle, FileText, Trash2, Flag, FlagOff, Building2, AlertCircle } from 'lucide-react';
 import { CustomerDetailsDrawer } from '@/components/kunder/CustomerDetailsDrawer';
 import { QuoteDetailsDrawer } from '@/components/tilbud/QuoteDetailsDrawer';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { getInboxMessages, markMessageAsRead, deleteInboxMessage, flagMessage, unflagMessage, moveMessageToFolder, getFolders } from '@/lib/services/inboxService';
 import { getCustomer } from '@/lib/services/customerService';
 import { getTilbudById } from '@/lib/services/tilbudService';
-import { ref, onValue, off } from 'firebase/database';
+import { ref, onValue, off, push, set } from 'firebase/database';
 import { db } from '@/lib/firebase';
 import { auth } from '@/lib/firebase';
 
@@ -50,6 +58,8 @@ const getMessageTypeIcon = (type: InboxMessage['type']) => {
       return <CheckCircle className="h-4 w-4 text-green-600" />;
     case 'quote_rejected':
       return <XCircle className="h-4 w-4 text-red-500" />;
+    case 'outgoing_reply':
+      return <Send className="h-4 w-4 text-blue-600" />;
     default:
       return <Mail className="h-4 w-4 text-gray-500" />;
   }
@@ -67,6 +77,8 @@ const getMessageTypeLabel = (type: InboxMessage['type']) => {
       return 'Godkjent';
     case 'quote_rejected':
       return 'Avvist';
+    case 'outgoing_reply':
+      return 'Sendt svar';
     default:
       return 'Generell';
   }
@@ -93,6 +105,19 @@ export default function InnboksPage() {
   const [isSendingNewMessage, setIsSendingNewMessage] = useState(false);
 
   const [error, setError] = useState<string | null>(null);
+
+  // Dialog state
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogTitle, setDialogTitle] = useState('');
+  const [dialogMessage, setDialogMessage] = useState('');
+  const [dialogType, setDialogType] = useState<'success' | 'error'>('success');
+
+  const showDialog = (title: string, message: string, type: 'success' | 'error' = 'success') => {
+    setDialogTitle(title);
+    setDialogMessage(message);
+    setDialogType(type);
+    setDialogOpen(true);
+  };
 
   useEffect(() => {
     let unsubscribe: () => void;
@@ -130,6 +155,16 @@ export default function InnboksPage() {
               .sort(([, a], [, b]) => b.timestamp - a.timestamp)
               .forEach(([key, data]) => {
                 try {
+                  // Debug logging for conversation data
+                  if (data.type === 'quote_conversation') {
+                    console.log('📨 Loading quote_conversation:', key);
+                    console.log('📨 Conversation data:', data.conversation);
+                    console.log('📨 Has conversation?', !!data.conversation);
+                    if (data.conversation) {
+                      console.log('📨 Conversation keys:', Object.keys(data.conversation));
+                    }
+                  }
+
                   // Convert Firebase data to InboxMessage format
                   const message: InboxMessage = {
                     id: key,
@@ -145,6 +180,13 @@ export default function InnboksPage() {
                     quoteTitle: data.quoteTitle,
                     isFlagged: data.isFlagged || false,
                     folder: data.folder || 'innboks',
+                    conversation: data.conversation,
+                    hasReply: data.hasReply,
+                    lastReplyAt: data.lastReplyAt,
+                    lastMessageAt: data.lastMessageAt,
+                    relatedMessageId: data.relatedMessageId,
+                    sentTo: data.sentTo,
+                    emailId: data.emailId,
                   };
                   messages.push(message);
                   folderSet.add(message.folder || 'innboks');
@@ -211,11 +253,11 @@ export default function InnboksPage() {
         setCustomerDrawerOpen(true);
       } else {
         console.error('Customer not found:', customerId);
-        alert('Kunne ikke finne kunden');
+        showDialog('Feil', 'Kunne ikke finne kunden', 'error');
       }
     } catch (error) {
       console.error('Error fetching customer:', error);
-      alert('Kunne ikke hente kundedata');
+      showDialog('Feil', 'Kunne ikke hente kundedata', 'error');
     }
   };
 
@@ -227,11 +269,11 @@ export default function InnboksPage() {
         setQuoteDrawerOpen(true);
       } else {
         console.error('Quote not found:', quoteId);
-        alert('Kunne ikke finne tilbudet');
+        showDialog('Feil', 'Kunne ikke finne tilbudet', 'error');
       }
     } catch (error) {
       console.error('Error fetching quote:', error);
-      alert('Kunne ikke hente tilbudsdata');
+      showDialog('Feil', 'Kunne ikke hente tilbudsdata', 'error');
     }
   };
 
@@ -248,31 +290,42 @@ export default function InnboksPage() {
 
     setIsSendingReply(true);
     try {
-      const response = await fetch('/api/send-email', {
+      if (!auth.currentUser) {
+        throw new Error('Bruker ikke autentisert');
+      }
+
+      const userId = auth.currentUser.uid;
+
+      console.log('📧 Sending reply to message:', selectedMessage.id);
+      const response = await fetch(`/api/inbox/${selectedMessage.id}/reply`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          to: selectedMessage.from, // This should be the customer's email, but we only have name
-          subject: replySubject,
-          message: replyMessage,
-          customerId: selectedMessage.customerId,
-          quoteId: selectedMessage.quoteId,
+          userId: userId,
+          replySubject: replySubject,
+          replyMessage: replyMessage,
         }),
       });
 
-      if (response.ok) {
-        alert('Svar sendt!');
-        setIsReplying(false);
-        setReplySubject('');
-        setReplyMessage('');
-      } else {
-        throw new Error('Failed to send reply');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to send reply');
       }
-    } catch (error) {
-      console.error('Error sending reply:', error);
-      alert('Kunne ikke sende svar. Prøv igjen.');
+
+      const result = await response.json();
+      console.log('✅ Reply sent successfully:', result);
+      
+      showDialog('Suksess', 'Svar sendt til kunden!', 'success');
+      setIsReplying(false);
+      setReplySubject('');
+      setReplyMessage('');
+      
+      // Messages will automatically update via real-time listener
+    } catch (error: any) {
+      console.error('❌ Error sending reply:', error);
+      showDialog('Feil', error.message || 'Kunne ikke sende svar. Prøv igjen.', 'error');
     } finally {
       setIsSendingReply(false);
     }
@@ -296,7 +349,7 @@ export default function InnboksPage() {
       }
     } catch (error) {
       console.error('Error deleting message:', error);
-      alert('Kunne ikke slette meldingen. Prøv igjen.');
+      showDialog('Feil', 'Kunne ikke slette meldingen. Prøv igjen.', 'error');
     }
   };
 
@@ -318,7 +371,7 @@ export default function InnboksPage() {
       }
     } catch (error) {
       console.error('Error toggling flag:', error);
-      alert('Kunne ikke endre flagg-status. Prøv igjen.');
+      showDialog('Feil', 'Kunne ikke endre flagg-status. Prøv igjen.', 'error');
     }
   };
 
@@ -336,7 +389,7 @@ export default function InnboksPage() {
       }
     } catch (error) {
       console.error('Error moving message:', error);
-      alert('Kunne ikke flytte meldingen. Prøv igjen.');
+      showDialog('Feil', 'Kunne ikke flytte meldingen. Prøv igjen.', 'error');
     }
   };
 
@@ -352,8 +405,15 @@ export default function InnboksPage() {
 
     setIsSendingNewMessage(true);
     try {
-      // For now, we'll create a general inquiry message
-      // In a real app, you'd want to send an actual email
+      if (!auth.currentUser) {
+        throw new Error('Bruker ikke autentisert');
+      }
+
+      const userId = auth.currentUser.uid;
+
+      console.log('📧 Sending new message to:', newMessageTo);
+      
+      // Send email
       const response = await fetch('/api/send-email', {
         method: 'POST',
         headers: {
@@ -366,18 +426,43 @@ export default function InnboksPage() {
         }),
       });
 
-      if (response.ok) {
-        alert('Melding sendt!');
-        setIsCreatingMessage(false);
-        setNewMessageSubject('');
-        setNewMessageTo('');
-        setNewMessageContent('');
-      } else {
-        throw new Error('Failed to send message');
+      if (!response.ok) {
+        throw new Error('Failed to send email');
       }
-    } catch (error) {
-      console.error('Error sending new message:', error);
-      alert('Kunne ikke sende meldingen. Prøv igjen.');
+
+      const emailResult = await response.json();
+      console.log('✅ Email sent:', emailResult);
+
+      // Create outgoing message log in "sendt" folder since it has no reference
+      const outgoingInboxRef = ref(db, `users/${userId}/inbox`);
+      const outgoingMessageRef = push(outgoingInboxRef);
+      
+      const outgoingMessage = {
+        from: 'Deg',
+        subject: newMessageSubject,
+        message: newMessageContent,
+        timestamp: Date.now(),
+        isRead: true, // Mark as read since it's our own message
+        type: 'outgoing_reply',
+        isFlagged: false,
+        folder: 'sendt', // New messages without reference go to "sendt"
+        sentTo: newMessageTo,
+        emailId: emailResult.messageId,
+        opprettet: Date.now(),
+        oppdatert: Date.now(),
+      };
+
+      await set(outgoingMessageRef, outgoingMessage);
+      console.log('✅ Outgoing message log created in "sendt" folder');
+
+      showDialog('Suksess', 'Melding sendt!', 'success');
+      setIsCreatingMessage(false);
+      setNewMessageSubject('');
+      setNewMessageTo('');
+      setNewMessageContent('');
+    } catch (error: any) {
+      console.error('❌ Error sending new message:', error);
+      showDialog('Feil', error.message || 'Kunne ikke sende meldingen. Prøv igjen.', 'error');
     } finally {
       setIsSendingNewMessage(false);
     }
@@ -390,7 +475,14 @@ export default function InnboksPage() {
     setNewMessageContent('');
   };
 
-  const filteredMessages = messages.filter(message => (message.folder || 'innboks') === selectedFolder);
+  // Filter messages by folder, but exclude outgoing_reply without relatedMessageId
+  // (replies are shown in conversation log, not as separate messages)
+  const filteredMessages = messages.filter(message => {
+    const inCorrectFolder = (message.folder || 'innboks') === selectedFolder;
+    // Show outgoing_reply only if it has no relatedMessageId (standalone messages)
+    const shouldShow = message.type !== 'outgoing_reply' || !message.relatedMessageId;
+    return inCorrectFolder && shouldShow;
+  });
 
   const unreadCount = filteredMessages.filter(m => !m.isRead).length;
 
@@ -486,7 +578,7 @@ export default function InnboksPage() {
                   onClick={() => handleMessageClick(message)}
                   className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${
                     selectedMessage?.id === message.id ? 'bg-blue-50 border-l-4 border-l-blue-500 lg:border-l-4' : ''
-                  } ${!message.isRead ? 'bg-gray-50' : ''}`}
+                  } ${!message.isRead ? 'bg-gray-50' : ''} ${message.type === 'outgoing_reply' ? 'bg-blue-50/30' : ''}`}
                 >
                   <div className="flex items-start gap-3">
                     <div className="flex-shrink-0 mt-1 flex items-center gap-1">
@@ -496,19 +588,30 @@ export default function InnboksPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center gap-2">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (message.customerId) {
-                                handleCustomerClick(message.customerId);
-                              }
-                            }}
-                            className={`text-sm font-medium truncate hover:text-blue-600 transition-colors ${
-                              !message.isRead ? 'text-gray-900' : 'text-gray-700'
-                            }`}
-                          >
-                            {message.customerName || message.from}
-                          </button>
+                          {message.type === 'outgoing_reply' ? (
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-blue-900">
+                                Til: {message.customerName || message.from}
+                              </span>
+                              {message.sentTo && (
+                                <span className="text-xs text-gray-500">({message.sentTo})</span>
+                              )}
+                            </div>
+                          ) : (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (message.customerId) {
+                                  handleCustomerClick(message.customerId);
+                                }
+                              }}
+                              className={`text-sm font-medium truncate hover:text-blue-600 transition-colors ${
+                                !message.isRead ? 'text-gray-900' : 'text-gray-700'
+                              }`}
+                            >
+                              {message.customerName || message.from}
+                            </button>
+                          )}
                           <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600">
                             {getMessageTypeLabel(message.type)}
                           </span>
@@ -781,8 +884,126 @@ export default function InnboksPage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="prose prose-sm max-w-none">
-                    <p className="whitespace-pre-wrap">{selectedMessage.message}</p>
+                  <div className="space-y-6">
+                    {/* Original Message */}
+                    <div className="prose prose-sm max-w-none">
+                      <div className={`p-4 rounded-lg border ${
+                        selectedMessage.type === 'outgoing_reply' 
+                          ? 'bg-blue-50 border-blue-200' 
+                          : 'bg-gray-50 border-gray-200'
+                      }`}>
+                        <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+                          {selectedMessage.type === 'outgoing_reply' ? (
+                            <>
+                              <Building2 className="h-4 w-4 text-blue-600" />
+                              <span className="font-medium text-blue-900">Sendt av deg</span>
+                            </>
+                          ) : (
+                            <>
+                              <User className="h-4 w-4" />
+                              <span className="font-medium">{selectedMessage.customerName || selectedMessage.from}</span>
+                            </>
+                          )}
+                          <span className="text-gray-400">•</span>
+                          <span>{formatDateLong(selectedMessage.timestamp)}</span>
+                          {selectedMessage.sentTo && (
+                            <>
+                              <span className="text-gray-400">•</span>
+                              <span className="text-xs">Sendt til {selectedMessage.sentTo}</span>
+                            </>
+                          )}
+                        </div>
+                        {selectedMessage.message && selectedMessage.type !== 'quote_conversation' && (
+                          <p className="whitespace-pre-wrap text-gray-800">{selectedMessage.message}</p>
+                        )}
+                        {selectedMessage.type === 'quote_conversation' && (!selectedMessage.conversation || Object.keys(selectedMessage.conversation).length === 0) && (
+                          <p className="text-gray-500 italic">Ingen meldinger i samtalen ennå</p>
+                        )}
+                        {selectedMessage.emailId && (
+                          <div className="mt-2 text-xs text-gray-500 flex items-center gap-1">
+                            <CheckCircle className="h-3 w-3 text-green-500" />
+                            E-post sendt (ID: {selectedMessage.emailId.substring(0, 8)}...)
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Conversation History / Replies */}
+                    {(() => {
+                      console.log('🔍 Selected message:', selectedMessage.id);
+                      console.log('🔍 Has conversation?', !!selectedMessage.conversation);
+                      console.log('🔍 Conversation:', selectedMessage.conversation);
+                      if (selectedMessage.conversation) {
+                        console.log('🔍 Conversation keys:', Object.keys(selectedMessage.conversation));
+                      }
+                      return null;
+                    })()}
+                    {selectedMessage.conversation && Object.keys(selectedMessage.conversation).length > 0 && (
+                      <div className="space-y-4">
+                        <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                          <MessageSquare className="h-4 w-4" />
+                          {selectedMessage.type === 'quote_conversation' ? 'Meldinger' : 'Samtalehistorikk'} ({Object.keys(selectedMessage.conversation).length})
+                        </h4>
+                        <div className="space-y-3">
+                          {Object.entries(selectedMessage.conversation)
+                            .sort(([, a], [, b]) => (a as ConversationEntry).timestamp - (b as ConversationEntry).timestamp)
+                            .map(([replyId, replyData]) => {
+                              const reply = replyData as ConversationEntry;
+                              return (
+                              <div
+                                key={replyId}
+                                className={`p-4 rounded-lg border ${
+                                  reply.sentBy === 'business'
+                                    ? 'bg-blue-50 border-blue-200 ml-8'
+                                    : 'bg-gray-50 border-gray-200 mr-8'
+                                }`}
+                              >
+                                <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+                                  {reply.sentBy === 'business' ? (
+                                    <>
+                                      <Building2 className="h-4 w-4 text-blue-600" />
+                                      <span className="font-medium text-blue-900">Du</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <User className="h-4 w-4" />
+                                      <span className="font-medium">{selectedMessage.customerName || selectedMessage.from}</span>
+                                      {reply.type === 'quote_approved' && (
+                                        <span className="text-green-600 text-xs">✅ Godkjent</span>
+                                      )}
+                                      {reply.type === 'quote_rejected' && (
+                                        <span className="text-red-600 text-xs">❌ Avvist</span>
+                                      )}
+                                      {reply.type === 'quote_question' && (
+                                        <span className="text-blue-600 text-xs">💬 Spørsmål</span>
+                                      )}
+                                    </>
+                                  )}
+                                  <span className="text-gray-400">•</span>
+                                  <span>{new Date(reply.timestamp).toLocaleString('nb-NO')}</span>
+                                  {reply.sentTo && (
+                                    <>
+                                      <span className="text-gray-400">•</span>
+                                      <span className="text-xs">Sendt til {reply.sentTo}</span>
+                                    </>
+                                  )}
+                                </div>
+                                <p className="whitespace-pre-wrap text-sm text-gray-800">{reply.message}</p>
+                              </div>
+                            );
+                            })}
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedMessage.hasReply && (
+                      <div className="text-sm text-gray-500 flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span>
+                          Besvart {selectedMessage.lastReplyAt && new Date(selectedMessage.lastReplyAt).toLocaleString('nb-NO')}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -821,6 +1042,26 @@ export default function InnboksPage() {
           }}
         />
       )}
+
+      {/* Message Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {dialogType === 'error' ? (
+                <AlertCircle className="h-5 w-5 text-red-500" />
+              ) : (
+                <CheckCircle className="h-5 w-5 text-green-500" />
+              )}
+              {dialogTitle}
+            </DialogTitle>
+            <DialogDescription>{dialogMessage}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={() => setDialogOpen(false)}>OK</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

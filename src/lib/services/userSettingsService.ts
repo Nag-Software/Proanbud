@@ -17,6 +17,7 @@ export interface UserSettingsData {
   language: string;
   timezone: string;
   dashboardLayout?: any[];
+  dashboardLayoutMobile?: any[];
   lastUpdated?: number;
 }
 

@@ -8,7 +8,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { logout } from '@/lib/auth';
 import * as Icons from 'lucide-react';
 import { ChevronRight, Menu, X, LogOut } from 'lucide-react';
-import { getSubscription, type SubscriptionData } from '@/lib/services/stripeService';
+import { ThemeToggle } from '../shared/ThemeToggle';
+import { NotificationButton } from '../shared/NotificationButton';
+import { ref, onValue, off } from 'firebase/database';
+import { db } from '@/lib/firebase';
 
 type IconName = keyof typeof Icons;
 
@@ -23,19 +26,38 @@ export const MobileBreadcrumb = () => {
   const router = useRouter();
   const { user } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
+  const [displayName, setDisplayName] = useState<string>('');
 
   // Close menu on route change
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [pathname]);
 
-  // Load subscription data
+  // Listen to user settings for name updates
   useEffect(() => {
-    if (user?.uid) {
-      getSubscription(user.uid).then(setSubscription).catch(console.error);
+    if (!user?.uid) {
+      setDisplayName('');
+      return;
     }
-  }, [user?.uid]);
+
+    // Set up real-time listener for user settings from database
+    const userSettingsRef = ref(db, `users/${user.uid}/userSettings`);
+    const unsubscribe = onValue(userSettingsRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const settings = snapshot.val();
+        // Use name from database if available
+        setDisplayName(settings.name || user.displayName || user.email?.split('@')[0] || 'User');
+      } else {
+        // Fallback to Firebase Auth displayName
+        setDisplayName(user.displayName || user.email?.split('@')[0] || 'User');
+      }
+    });
+
+    // Cleanup listener on unmount
+    return () => {
+      off(userSettingsRef, 'value', unsubscribe);
+    };
+  }, [user]);
 
   const getCurrentPageInfo = () => {
     const currentNav = navLinks.find(link => link.href === pathname);
@@ -67,7 +89,7 @@ export const MobileBreadcrumb = () => {
   };
 
   const getDisplayName = () => {
-    return user?.displayName || user?.email?.split('@')[0] || 'User';
+    return displayName || user?.displayName || user?.email?.split('@')[0] || 'User';
   };
 
   const getInitials = () => {
@@ -76,9 +98,9 @@ export const MobileBreadcrumb = () => {
   };
 
   const getPlanBadge = () => {
-    const plan = subscription?.plan || 'free';
+    const plan = 'free'; // Hardcoded until subscription system is implemented
     
-    const badges = {
+    const badges: Record<string, { label: string; color: string }> = {
       free: { label: 'Gratis', color: 'bg-gray-100 text-gray-700' },
       basic: { label: 'Basic', color: 'bg-blue-100 text-blue-700' },
       pro: { label: 'Pro', color: 'bg-purple-100 text-purple-700' },
@@ -121,14 +143,18 @@ export const MobileBreadcrumb = () => {
             })}
           </div>
 
-          {/* Menu Button - Apple-style interaction */}
-          <button
-            onClick={() => setIsMobileMenuOpen(true)}
-            className="p-2.5 text-muted-text hover:text-text hover:bg-gray-100/80 rounded-xl transition-all duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] hover:scale-105 active:scale-95 backdrop-blur-sm"
-            aria-label="Open menu"
-          >
-            <Menu className="h-5 w-5" />
-          </button>
+          {/* Notification, Theme Toggle and Menu Button */}
+          <div className="flex items-center gap-2">
+            <NotificationButton />
+            <ThemeToggle />
+            <button
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="p-2.5 text-muted-text hover:text-text hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-all duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] hover:scale-105 active:scale-95 backdrop-blur-sm"
+              aria-label="Open menu"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -157,11 +183,11 @@ export const MobileBreadcrumb = () => {
           style={{ transitionDelay: isMobileMenuOpen ? '100ms' : '0ms' }}>
             <div className="flex items-center gap-3">
               <Icons.ShieldCheck className="h-6 w-6 text-primary" />
-              <span className="text-lg font-bold text-text">Proanbud</span>
+              <span className="text-lg font-bold text-foreground">Proanbud</span>
             </div>
             <button
               onClick={() => setIsMobileMenuOpen(false)}
-              className="p-2.5 text-muted-text hover:text-text hover:bg-gray-100/80 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95"
+              className="p-2.5 text-muted-text hover:text-foreground hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95"
               aria-label="Close menu"
             >
               <X className="h-5 w-5" />
@@ -192,7 +218,7 @@ export const MobileBreadcrumb = () => {
                     className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-all duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] transform hover:scale-[1.02] active:scale-[0.98] ${
                       isActive
                         ? 'bg-primary/10 text-primary shadow-sm border border-primary/20'
-                        : 'text-muted-text hover:bg-gray-100/60 hover:text-text'
+                        : 'text-muted-text hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-foreground'
                     }`}
                   >
                     {LinkIcon && <LinkIcon className="h-5 w-5 flex-shrink-0" />}
@@ -215,17 +241,17 @@ export const MobileBreadcrumb = () => {
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <p className="font-semibold text-sm text-text truncate">{getDisplayName()}</p>
+                    <p className="font-semibold text-sm text-foreground truncate">{getDisplayName()}</p>
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${getPlanBadge().color}`}>
                       {getPlanBadge().label}
                     </span>
                   </div>
-                  <p className="text-xs text-muted-text truncate">{user?.email}</p>
+                  <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
                 </div>
               </div>
               <button 
                 onClick={handleLogout}
-                className="text-muted-text hover:text-red-600 transition-all duration-200 p-2.5 hover:bg-red-50/80 rounded-xl hover:scale-105 active:scale-95"
+                className="text-muted-text hover:text-red-600 dark:hover:text-red-400 transition-all duration-200 p-2.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl hover:scale-105 active:scale-95"
                 title="Logout"
               >
                 <LogOut className="h-5 w-5" />

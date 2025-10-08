@@ -12,8 +12,8 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "Proanbud AI",
-  description: "Admin dashboard for Proanbud AI",
+  title: "Proanbud",
+  description: "AI-drevet tilbudssystem for håndverkere",
 };
 
 export default function RootLayout({
@@ -24,8 +24,22 @@ export default function RootLayout({
   const gaId = process.env.NEXT_PUBLIC_GA_ID;
 
   return (
-    <html lang="en">
-      <body className={`${spaceGrotesk.variable} font-sans bg-background text-text`}>
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                const theme = localStorage.getItem('theme');
+                if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                  document.documentElement.classList.add('dark');
+                }
+              } catch (e) {}
+            `,
+          }}
+        />
+      </head>
+      <body className={`${spaceGrotesk.variable} font-sans bg-background text-foreground`} suppressHydrationWarning>
         {gaId && <GoogleAnalytics gaId={gaId} />}
         <AuthProvider>
           {children}

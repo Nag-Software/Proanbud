@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, User, FileText, Calendar, DollarSign, Briefcase, Clock, Edit3, Save, XCircle, ExternalLink, Eye, Download, Trash2, Plus } from 'lucide-react';
+import { X, User, FileText, Calendar, DollarSign, Briefcase, Clock, Edit3, Save, XCircle, ExternalLink, Eye, Download, Trash2, Plus, Play, RotateCcw, Send } from 'lucide-react';
 import { Tilbud, Kunde, BusinessSettings, PriceComponent } from '@/lib/types';
 import { Card } from '@/components/shared/Card';
 import { updateTilbud, deleteTilbud, TilbudFormData } from '@/lib/services/tilbudService';
@@ -49,6 +49,7 @@ interface QuoteDetailsDrawerProps {
   onQuoteUpdated?: () => void;
   onOpenCustomerDrawer?: (customer: Kunde) => void;
   customers?: Kunde[];
+  onEditQuote?: (quote: Tilbud) => void;
 }
 
 export function QuoteDetailsDrawer({ 
@@ -57,7 +58,8 @@ export function QuoteDetailsDrawer({
   onOpenChange, 
   onQuoteUpdated, 
   onOpenCustomerDrawer,
-  customers = []
+  customers = [],
+  onEditQuote
 }: QuoteDetailsDrawerProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -70,6 +72,8 @@ export function QuoteDetailsDrawer({
   const [businessSettings, setBusinessSettings] = useState<BusinessSettings | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [emailCooldown, setEmailCooldown] = useState(0);
 
   // Reset editing state when drawer closes
   useEffect(() => {
@@ -102,6 +106,16 @@ export function QuoteDetailsDrawer({
     fetchBusinessSettings();
   }, []);
 
+  // Email cooldown timer
+  useEffect(() => {
+    if (emailCooldown > 0) {
+      const timer = setTimeout(() => {
+        setEmailCooldown(emailCooldown - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [emailCooldown]);
+
   if (!quote) return null;
 
   // At this point, quote is guaranteed to be non-null
@@ -131,6 +145,158 @@ export function QuoteDetailsDrawer({
     setIsEditing(false);
     setEditedQuote({});
     setEditedPriceComponents([]);
+  };
+
+  const handleResendEmail = async () => {
+    if (!relatedCustomer || emailCooldown > 0 || isSendingEmail) return;
+
+    setIsSendingEmail(true);
+    try {
+      console.log('📧 Resending quote email to:', relatedCustomer.epost);
+      console.log('🔗 Quote viewToken:', quote.viewToken);
+      console.log('🔗 Quote ID:', quote.id);
+
+      // Ensure the quote has a viewToken
+      let viewToken = quote.viewToken;
+      if (!viewToken) {
+        console.log('⚠️ ViewToken missing, generating new one...');
+        const { ensureViewToken } = await import('@/lib/services/tilbudService');
+        viewToken = await ensureViewToken(quote.id);
+        console.log('✅ ViewToken generated:', viewToken);
+      }
+
+      const baseUrl = window.location.origin;
+      const viewUrl = viewToken 
+        ? `${baseUrl}/tilbudsvisning/${quote.id}?token=${viewToken}`
+        : null;
+      
+      console.log('🔗 Generated viewUrl:', viewUrl);
+
+      // Generate email HTML
+      const emailHtml = generateEmailHtml(quote, relatedCustomer, viewUrl);
+
+      const emailResponse = await fetch('/api/send-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          to: relatedCustomer.epost,
+          subject: `Tilbud: ${quote.prosjekt}`,
+          message: emailHtml,
+          customerId: relatedCustomer.id,
+          quoteId: quote.id,
+        }),
+      });
+
+      if (!emailResponse.ok) {
+        const errorData = await emailResponse.json();
+        throw new Error(errorData.error || 'Failed to send email');
+      }
+
+      const responseData = await emailResponse.json();
+      console.log('✅ Email resent successfully:', responseData);
+      
+      alert(`Tilbud sendt på nytt til ${relatedCustomer.epost}!`);
+      setEmailCooldown(10); // Start 10 second cooldown
+    } catch (error: any) {
+      console.error('❌ Error resending email:', error);
+      alert(`Kunne ikke sende e-post:\n${error.message}`);
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
+
+  const generateEmailHtml = (quote: Tilbud, customer: Kunde, viewUrl: string | null) => {
+    const companyName = businessSettings?.companyName || 'Håndverksbedrift';
+    
+    return `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 20px; text-align: center;">
+          ${businessSettings?.logoUrl ? `<img src="${businessSettings.logoUrl}" alt="${companyName}" style="max-height: 60px; margin-bottom: 20px;">` : ''}
+          <h1 style="color: #ffffff; margin: 0; font-size: 28px;">Nytt tilbud fra ${companyName}</h1>
+        </div>
+        
+        <div style="padding: 40px 20px;">
+          <h2 style="color: #333333; margin-top: 0;">${quote.prosjekt}</h2>
+          
+          <p style="color: #666666; font-size: 16px; line-height: 1.6;">
+            Hei ${customer.navn},
+          </p>
+          
+          <p style="color: #666666; font-size: 16px; line-height: 1.6;">
+            ${viewUrl ? 'Vi sender tilbudet på nytt. ' : ''}Takk for henvendelsen! Her er vårt tilbud for prosjektet "${quote.prosjekt}".
+          </p>
+          
+          <div style="background-color: #f8f9fa; border-left: 4px solid #667eea; padding: 20px; margin: 30px 0;">
+            <p style="margin: 0 0 10px 0; color: #333333;"><strong>Totalpris:</strong></p>
+            <p style="margin: 0; font-size: 32px; font-weight: bold; color: #667eea;">${quote.belop?.toLocaleString('nb-NO') || 0} kr</p>
+          </div>
+          
+          <div style="margin: 30px 0;">
+            <p style="color: #666666; font-size: 14px; margin: 5px 0;">
+              <strong>Tilbudsdato:</strong> ${quote.dato || new Date().toLocaleDateString('nb-NO')}
+            </p>
+            <p style="color: #666666; font-size: 14px; margin: 5px 0;">
+              <strong>Svarfrist:</strong> ${quote.svarfrist || new Date(Date.now() + 14*24*60*60*1000).toLocaleDateString('nb-NO')}
+            </p>
+          </div>
+          
+          ${viewUrl ? `
+          <div style="text-align: center; margin: 40px 0;">
+            <a href="${viewUrl}" style="display: inline-block; background-color: #667eea; color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-size: 18px; font-weight: bold;">
+              Se tilbud og svar
+            </a>
+          </div>
+          
+          <p style="color: #666666; font-size: 14px; text-align: center; margin-top: 20px;">
+            På tilbudssiden kan du:
+          </p>
+          <ul style="color: #666666; font-size: 14px; text-align: left; max-width: 400px; margin: 10px auto;">
+            <li>Se full prissammendrag og beskrivelse</li>
+            <li>Godkjenne eller avvise tilbudet</li>
+            <li>Stille spørsmål eller komme med innspill</li>
+          </ul>
+          ` : ''}
+          
+          ${quote.beskrivelse ? `
+          <div style="margin: 30px 0;">
+            <h3 style="color: #333333;">Beskrivelse:</h3>
+            <p style="color: #666666; font-size: 14px; line-height: 1.6; white-space: pre-wrap;">
+              ${quote.beskrivelse}
+            </p>
+          </div>
+          ` : ''}
+          
+          <div style="border-top: 1px solid #e0e0e0; margin-top: 40px; padding-top: 20px;">
+            <p style="color: #666666; font-size: 14px; margin: 5px 0;">
+              <strong>${companyName}</strong>
+            </p>
+            ${businessSettings?.organizationNumber ? `
+            <p style="color: #999999; font-size: 12px; margin: 5px 0;">
+              Org.nr: ${businessSettings.organizationNumber}
+            </p>
+            ` : ''}
+            ${businessSettings?.phone ? `
+            <p style="color: #666666; font-size: 14px; margin: 5px 0;">
+              📞 ${businessSettings.phone}
+            </p>
+            ` : ''}
+            ${businessSettings?.email ? `
+            <p style="color: #666666; font-size: 14px; margin: 5px 0;">
+              ✉️ ${businessSettings.email}
+            </p>
+            ` : ''}
+          </div>
+        </div>
+        
+        <div style="background-color: #f8f9fa; padding: 20px; text-align: center;">
+          <p style="color: #999999; font-size: 12px; margin: 0;">
+            Powered by Proanbud AI
+          </p>
+        </div>
+      </div>
+    `;
   };
 
   const saveChanges = async () => {
@@ -259,8 +425,19 @@ export function QuoteDetailsDrawer({
   // Pricing calculations for reconciliation and profit
   const totalComponentCost = (quote.prisgrunnlag || []).reduce((sum, c) => sum + (c.amount || 0), 0);
   const customerPrice = quote.belop || 0;
-  const profit = customerPrice - totalComponentCost;
-  const profitMargin = customerPrice > 0 ? (profit / customerPrice) * 100 : 0;
+  
+  // Calculate actual profit considering markup
+  const totalProfit = (quote.prisgrunnlag || []).reduce((sum, c) => {
+    const amount = c.amount || 0;
+    const markupPercent = c.priceMarkup || 0;
+    // Calculate base cost: amount / (1 + markup%)
+    const baseCost = markupPercent > 0 ? amount / (1 + markupPercent / 100) : amount;
+    // Profit = final amount - base cost
+    const profit = amount - baseCost;
+    return sum + profit;
+  }, 0);
+  
+  const profitMargin = customerPrice > 0 ? (totalProfit / customerPrice) * 100 : 0;
 
   const truncateFilename = (filename: string, maxLength: number = 30) => {
     if (filename.length <= maxLength) return filename;
@@ -434,12 +611,38 @@ export function QuoteDetailsDrawer({
                   </button>
                 </>
               ) : (
-                <button
-                  onClick={startEditing}
-                  className="p-2 hover:bg-blue-100 rounded-lg transition-colors"
-                >
-                  <Edit3 className="h-5 w-5 text-blue-600" />
-                </button>
+                <div className="flex gap-2">
+                  {quote?.status === 'draft' && onEditQuote && (
+                    <button
+                      onClick={() => onEditQuote(quote)}
+                      className="p-2 hover:bg-purple-100 rounded-lg transition-colors"
+                      title="Fortsett redigering"
+                    >
+                      <Play className="h-5 w-5 text-purple-600" />
+                    </button>
+                  )}
+                  {/* Send tilbud på nytt button with cooldown */}
+                  {relatedCustomer && quote?.status !== 'draft' && (
+                    <button
+                      onClick={handleResendEmail}
+                      disabled={emailCooldown > 0 || isSendingEmail}
+                      className="px-3 py-2 hover:bg-green-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      title={emailCooldown > 0 ? `Vent ${emailCooldown} sekunder` : 'Send tilbud på nytt'}
+                    >
+                      <Send className="h-4 w-4 text-green-600" />
+                      <span className="text-sm font-medium text-green-600">
+                        {isSendingEmail ? 'Sender...' : 'Send tilbud'}
+                        {emailCooldown > 0 && ` (${emailCooldown}s)`}
+                      </span>
+                    </button>
+                  )}
+                  <button
+                    onClick={startEditing}
+                    className="p-2 hover:bg-blue-100 rounded-lg transition-colors"
+                  >
+                    <Edit3 className="h-5 w-5 text-blue-600" />
+                  </button>
+                </div>
               )}
               {/* Delete button */}
               <button
@@ -794,11 +997,11 @@ export function QuoteDetailsDrawer({
                           <span className={`font-medium ${
                             isEditing 
                               ? (0 >= 0 ? 'text-green-700' : 'text-red-700')
-                              : (profit >= 0 ? 'text-green-700' : 'text-red-700')
+                              : (totalProfit >= 0 ? 'text-green-700' : 'text-red-700')
                           }`}>
                             {isEditing 
                               ? `${formatCurrency(0)} (0.0%)`
-                              : `${formatCurrency(profit)} ${customerPrice > 0 ? `(${profitMargin.toFixed(1)}%)` : ''}`
+                              : `${formatCurrency(totalProfit)} ${customerPrice > 0 ? `(${profitMargin.toFixed(1)}%)` : ''}`
                             }
                           </span>
                         </div>

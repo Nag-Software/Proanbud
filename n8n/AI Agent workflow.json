@@ -1,0 +1,149 @@
+{
+  "name": "AI Agent workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "f7666602-b37a-460f-a066-1dac1a92901c",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        48,
+        -48
+      ],
+      "id": "9a58e538-bbd6-40cc-bf23-147c0c208477",
+      "name": "Webhook",
+      "webhookId": "f7666602-b37a-460f-a066-1dac1a92901c"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Du er en profesjonell kostnadsanalytiker innen bygg og håndverk. Din oppgave er å lage et realistisk og markedsnært kostnadsestimat basert på en jobb-beskrivelse og en bedriftsprofil.\n\nInput:\n\nJobb-beskrivelse: {{ $json.body.prompt }}\n\nBedriftsprofil: {{ $json.body.businessInfo }}\n\nKrav og regler:\n\nSpråk: alltid norsk.\n\nHver kostnad skal brytes ned i tydelige komponenter (materialer eller arbeid).\n\nMengder skal alltid avrundes opp til nærmeste hele tall.\n\nTrevirke: navn må inkludere dimensjon (f.eks. 28x120 mm), og beskrivelse må angi behandling (f.eks. trykkimpregnert terrassebord). trevirke er per meter.\n\nIsolasjon er per m2\n\nFestemidler: bruk korrekt type (rustfri/varmgalvanisert), riktig størrelse, og beregn antall ut fra klare formler (f.eks. «2 skruer per bordende + 1 per 30 cm»).\n\nArbeid: beregn realistisk timebruk for oppgaven, oppgi timepris i norsk marked.\n\nAlle komponenter skal ha: mengde, enhet, enhetspris, prisnivå-begrunnelse og et usikkerhetsnivå.\n\nSummér alle komponenter til et totalestimat.\n\nBeregn også to alternative totaler:\n\nKonservativt estimat: +10–20 % høyere.\n\nAggressivt estimat: −10–15 % lavere.\n\nOppgi en samlet sikkerhetsscore i prosent, med en kort forklaring på hva den bygger på (datagrunnlag, antakelser, prisnivå).\n\nDokumenter alltid eksplisitt i en antakelsesliste hvordan beregningene er gjort (antall bord, dimensjoner, skruer, arbeidstid osv.).\n\nKvalitetssikring:\n\nBruk realistiske, norske markedspriser (heller litt høyt enn for lavt).\n\nGi korte, profesjonelle begrunnelser for hver mengde og pris.\n\nVær konsekvent og presis – estimatet skal kunne brukes i en forretningskontekst.\n\nCategory skal kun være en av følgende:\n- materialer\n- arbeid\n- utstyr\n- transport\n- annet\n\nPass på at summen av priskompoennter er det samme som totalprice!\n\nIkke legg på påslag eller mva.",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        416,
+        -48
+      ],
+      "id": "f15c1802-6c6f-4534-8ad0-09ad17867003",
+      "name": "AI Agent",
+      "alwaysOutputData": false,
+      "notes": "output data as a clean json object."
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        912,
+        -48
+      ],
+      "id": "efc478f5-8870-4190-9f9e-235d447a5ba4",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{ \"totalPrice\": 123.45, \"confidence\": 0.95, \"components\": [ { \"id\": \"abc123\", \"category\": \"materialer | arbeid \", \"name\": \"Example Name\", \"description\": \"Example Description\", \"amount\": 10, \"unit\": \"stk\", \"unitPrice\": 50, \"priceMarkup\": 5, \"materialMarkup\": 2, \"isEditable\": true, \"confidence\": 0.9 } ], \"reasoning\": \"Some reasoning here\", \"alternatives\": { \"conservative\": 100, \"aggressive\": 200 } }",
+        "autoFix": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        592,
+        160
+      ],
+      "id": "84a9c445-fcd9-484f-b1a3-4b3c16fb047f",
+      "name": "Structured Output Parser",
+      "notes": "isEditable must allways be true."
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatDeepSeek",
+      "typeVersion": 1,
+      "position": [
+        416,
+        256
+      ],
+      "id": "9d728223-7955-4ac0-9081-0da9b5b78217",
+      "name": "DeepSeek Chat Model",
+      "credentials": {
+        "deepSeekApi": {
+          "id": "2H7pom5EAlEPfRev",
+          "name": "DeepSeek account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DeepSeek Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Structured Output Parser",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {},
+  "versionId": "064002b5-efd1-4a8e-a1b5-9494f90a19f1",
+  "meta": {
+    "templateId": "ready-to-run-ai-workflow-v1",
+    "templateCredsSetupCompleted": true,
+    "instanceId": "1f0a6384f1bd0c2b043170832edb98e2d20cb7bee2a2a75b5061eb2fa4e1a031"
+  },
+  "id": "FJPehKyCyL3VjhCw",
+  "tags": []
+}

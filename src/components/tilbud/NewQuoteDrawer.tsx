@@ -36,7 +36,7 @@ import {
   Calculator,
   Palette
 } from 'lucide-react';
-import { createTilbud, TilbudFormData, getUniqueCategoriesFromQuotes } from '@/lib/services/tilbudService';
+import { createTilbud, updateTilbud, getTilbudById, TilbudFormData, getUniqueCategoriesFromQuotes } from '@/lib/services/tilbudService';
 import { getCustomers } from '@/lib/services/customerService';
 import { getBusinessContextForAI, getBusinessSettings } from '@/lib/services/businessService';
 import { getProducts, getCategories, getSubcategories } from '@/lib/services/catalogService';
@@ -85,6 +85,7 @@ interface NewQuoteDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onTilbudCreated?: () => void;
+  editingQuote?: Tilbud | null;
 }
 
 interface QuoteData {
@@ -102,7 +103,7 @@ const STEPS = [
   { id: 4, title: 'Design', description: 'Velg mal og send tilbud', icon: Palette },
 ];
 
-export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChange, onTilbudCreated }) => {
+export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChange, onTilbudCreated, editingQuote }) => {
   const breakpoints = useBreakpoint();
   const isMobile = !breakpoints.md;
   const [currentStep, setCurrentStep] = useState(1);
@@ -264,6 +265,34 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
       };
     });
   }, [priceMarkup, materialMarkup]);
+
+  // Initialize data when editing a quote
+  useEffect(() => {
+    if (editingQuote && open) {
+      // Find the customer for this quote
+      const customer = customers.find(c => c.navn === editingQuote.kundenavn);
+      if (customer) {
+        setSelectedCustomerId(customer.id);
+      }
+      
+      // Set project details
+      setProjectName(editingQuote.prosjekt);
+      setQuoteMessage(editingQuote.beskrivelse || '');
+      setSelectedTemplate(editingQuote.template || 'modern');
+      
+      // Set quote data
+      setQuoteData({
+        jobDescription: editingQuote.beskrivelse || '',
+        images: [],
+        aiSuggestion: null,
+        adjustedComponents: editingQuote.prisgrunnlag || [],
+        finalPrice: editingQuote.belop,
+      });
+      
+      // Go directly to step 2 (price components)
+      setCurrentStep(2);
+    }
+  }, [editingQuote, open, customers]);
 
   const loadCustomers = async () => {
     try {
@@ -493,6 +522,63 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
     }
   };
 
+  const handleSaveDraft = async () => {
+    if (!selectedCustomerId || !projectName) {
+      alert('Vennligst velg kunde og skriv prosjektnavn');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
+      
+      const tilbudData: TilbudFormData = {
+        kundenavn: selectedCustomer?.navn || '',
+        prosjekt: projectName,
+        jobbtype: 'Generell',
+        belop: quoteData.finalPrice,
+        status: 'draft' as const,
+        dato: new Date().toISOString().split('T')[0],
+        svarfrist: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 14 days from now
+        beskrivelse: quoteMessage || quoteData.jobDescription,
+        notater: `AI-generert tilbud med ${quoteData.adjustedComponents.length} prisgrunnlagskomponenter (UTKAST)`,
+        prisgrunnlag: quoteData.adjustedComponents,
+        template: selectedTemplate,
+      };
+
+      // Create or update the draft quote
+      if (editingQuote) {
+        await updateTilbud(editingQuote.id, tilbudData);
+      } else {
+        await createTilbud(tilbudData);
+      }
+
+      // Reset form and close drawer
+      setCurrentStep(1);
+      setQuoteData({
+        jobDescription: '',
+        images: [],
+        aiSuggestion: null,
+        adjustedComponents: [],
+        finalPrice: 0,
+      });
+      setSelectedCustomerId('');
+      setProjectName('');
+      setQuoteMessage('');
+      setSelectedTemplate('modern');
+      onOpenChange(false);
+      
+      if (onTilbudCreated) {
+        onTilbudCreated();
+      }
+    } catch (error) {
+      console.error('Error saving draft:', error);
+      alert('Kunne ikke lagre utkast. Prøv igjen.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!selectedCustomerId || !projectName) {
       alert('Vennligst velg kunde og skriv prosjektnavn');
@@ -517,19 +603,63 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
         template: selectedTemplate,
       };
 
-      // Create the quote
-      const quoteId = await createTilbud(tilbudData);
+      // Create or update the quote
+      let quoteId: string;
+      if (editingQuote) {
+        await updateTilbud(editingQuote.id, tilbudData);
+        quoteId = editingQuote.id;
+      } else {
+        quoteId = await createTilbud(tilbudData);
+      }
 
       // Send email to customer
-      try {
+      let emailSent = false;
+      
+      // Check if customer has email address
+      if (!selectedCustomer?.epost) {
+        console.log('⚠️ Customer has no email address, skipping email send');
+        console.log('Customer data:', selectedCustomer);
+        alert(`Tilbud opprettet!\n\nKunden ${selectedCustomer?.navn} har ingen registrert e-postadresse.\nVennligst legg til e-post i kunderegisteret for å kunne sende tilbud.`);
+      } else {
+        // Only try to send email if customer has email address
+        console.log('📧 Customer has email, attempting to send:', selectedCustomer.epost);
+        
+        try {
+        // Get the saved quote with viewToken
+        console.log('📋 Fetching quote by ID:', quoteId);
+        const savedQuote = await getTilbudById(quoteId);
+        console.log('📋 Retrieved quote:', savedQuote);
+        console.log('📋 ViewToken:', savedQuote?.viewToken);
+        
+        if (!savedQuote) {
+          console.error('❌ Could not retrieve quote');
+          console.error('QuoteId:', quoteId);
+          throw new Error('Kunne ikke hente tilbud fra databasen');
+        }
+
+        // Ensure viewToken exists - generate one if missing
+        let viewToken = savedQuote.viewToken;
+        if (!viewToken) {
+          console.log('⚠️ ViewToken missing, generating new one...');
+          const { ensureViewToken } = await import('@/lib/services/tilbudService');
+          viewToken = await ensureViewToken(quoteId);
+          console.log('✅ ViewToken generated:', viewToken);
+        }
+
         const businessSettings = await getBusinessSettings();
+        const baseUrl = window.location.origin;
+        const viewUrl = `${baseUrl}/tilbudsvisning/${quoteId}?token=${viewToken}`;
+        
+        console.log('Sending email to:', selectedCustomer!.epost);
+        console.log('View URL:', viewUrl);
         
         const quoteForEmail = {
           id: quoteId,
-          ...tilbudData
+          ...tilbudData,
+          viewToken: viewToken
         };
 
-        const emailHtml = await generateQuoteHtml(quoteForEmail, selectedCustomer!, businessSettings);
+        const emailHtml = await generateQuoteHtml(quoteForEmail, selectedCustomer!, businessSettings, viewUrl);
 
         const emailResponse = await fetch('/api/send-email', {
           method: 'POST',
@@ -539,18 +669,29 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
           body: JSON.stringify({
             to: selectedCustomer!.epost,
             subject: `Tilbud: ${projectName}`,
-            message: `Vedlagt finner du vårt tilbud for prosjektet "${projectName}".<br><br>${emailHtml}`,
+            message: emailHtml,
             customerId: selectedCustomer!.id,
             quoteId: quoteId,
           }),
         });
 
         if (!emailResponse.ok) {
-          console.warn('Failed to send email, but quote was created successfully');
+          const errorData = await emailResponse.json();
+          console.error('Email API error:', errorData);
+          throw new Error(errorData.error || 'Failed to send email');
         }
-      } catch (emailError) {
-        console.warn('Error sending email:', emailError);
-        // Don't fail the whole operation if email fails
+
+        const responseData = await emailResponse.json();
+        console.log('Email sent successfully:', responseData);
+        emailSent = true;
+        } catch (emailError: any) {
+          console.error('Error sending email:', emailError);
+          alert(`Tilbud opprettet, men e-post kunne ikke sendes:\n${emailError.message}\n\nVennligst send tilbudet manuelt til ${selectedCustomer!.epost}`);
+        }
+      }
+
+      if (emailSent) {
+        alert(`Tilbud sendt til ${selectedCustomer!.epost}!`);
       }
 
       onTilbudCreated?.();
@@ -565,51 +706,100 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
   };
 
   // Helper to generate full quote HTML for emails using selected template
-  const generateQuoteHtml = async (quote: any, customer: Kunde, businessSettings: BusinessSettings | null) => {
-    const template = await downloadTemplate(quote.template || selectedTemplate);
-    let html = template;
-
-    // Basic replacements used in preview generation
-    html = html.replace(/\{\{quote\.prosjekt\}\}/g, quote.prosjekt || '');
-    html = html.replace(/\{\{quote\.id\}\}/g, quote.id ? quote.id.slice(-6).toUpperCase() : '');
-    html = html.replace(/\{\{quote\.dato\}\}/g, quote.dato || new Date().toLocaleDateString('nb-NO'));
-    html = html.replace(/\{\{quote\.svarfrist\}\}/g, quote.svarfrist || new Date(Date.now() + 14*24*60*60*1000).toLocaleDateString('nb-NO'));
-    html = html.replace(/\{\{quote\.status\}\}/g, 'Venter på svar');
-    html = html.replace(/\{\{quote\.kundenavn\}\}/g, quote.kundenavn || customer.navn || '');
-    html = html.replace(/\{\{quote\.jobbtype\}\}/g, quote.jobbtype || '');
-    html = html.replace(/\{\{quote\.belop\}\}/g, `${quote.belop?.toLocaleString('nb-NO') || 0} kr`);
-
-    // Customer placeholders
-    html = html.replace(/\{\{customer\.epost\}\}/g, customer.epost || '');
-    html = html.replace(/\{\{customer\.telefon\}\}/g, customer.telefon || '');
-
-    // Business placeholders
-    if (businessSettings) {
-      html = html.replace(/\{\{business\.name\}\}/g, businessSettings.companyName || '');
-      html = html.replace(/\{\{business\.orgnr\}\}/g, businessSettings.organizationNumber || '');
-      html = html.replace(/\{\{business\.address\}\}/g, businessSettings.address || '');
-    }
-
-    // Price components table
-    let priceComponentsHtml = '';
-    if (quote.prisgrunnlag && quote.prisgrunnlag.length > 0) {
-      quote.prisgrunnlag.forEach((component: any, index: number) => {
-        const rowStyle = index % 2 === 0 ? 'background: #f9fafb;' : '';
-        priceComponentsHtml += `
-          <tr style="${rowStyle}">
-            <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">${component.name}</td>
-            <td style="padding: 12px; text-align: center; border-bottom: 1px solid #e5e7eb;">${component.quantity || 1}</td>
-            <td style="padding: 12px; text-align: center; border-bottom: 1px solid #e5e7eb;">${(component.unitPrice || 0).toLocaleString('nb-NO')} kr</td>
-            <td style="padding: 12px; text-align: right; border-bottom: 1px solid #e5e7eb; font-weight: 500;">${component.amount.toLocaleString('nb-NO')} kr</td>
-          </tr>
-        `;
-      });
-    } else {
-      priceComponentsHtml = `<tr><td colspan="4" style="padding:20px;text-align:center;color:#6b7280;">Ingen prisgrunnlag definert</td></tr>`;
-    }
-    html = html.replace(/\{\{quote\.prisgrunnlag\}\}/g, priceComponentsHtml);
-
-    return html;
+  const generateQuoteHtml = async (quote: any, customer: Kunde, businessSettings: BusinessSettings | null, viewUrl?: string) => {
+    // Generate a nice email with the view link
+    const companyName = businessSettings?.companyName || 'Håndverksbedrift';
+    
+    console.log('🔗 Generating email HTML with viewUrl:', viewUrl);
+    console.log('🔗 Quote viewToken:', quote.viewToken);
+    
+    return `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 20px; text-align: center;">
+          ${businessSettings?.logoUrl ? `<img src="${businessSettings.logoUrl}" alt="${companyName}" style="max-height: 60px; margin-bottom: 20px;">` : ''}
+          <h1 style="color: #ffffff; margin: 0; font-size: 28px;">Nytt tilbud fra ${companyName}</h1>
+        </div>
+        
+        <div style="padding: 40px 20px;">
+          <h2 style="color: #333333; margin-top: 0;">${quote.prosjekt}</h2>
+          
+          <p style="color: #666666; font-size: 16px; line-height: 1.6;">
+            Hei ${customer.navn},
+          </p>
+          
+          <p style="color: #666666; font-size: 16px; line-height: 1.6;">
+            Takk for henvendelsen! Vi har laget et tilbud for prosjektet "${quote.prosjekt}".
+          </p>
+          
+          <div style="background-color: #f8f9fa; border-left: 4px solid #667eea; padding: 20px; margin: 30px 0;">
+            <p style="margin: 0 0 10px 0; color: #333333;"><strong>Totalpris:</strong></p>
+            <p style="margin: 0; font-size: 32px; font-weight: bold; color: #667eea;">${quote.belop?.toLocaleString('nb-NO') || 0} kr</p>
+          </div>
+          
+          <div style="margin: 30px 0;">
+            <p style="color: #666666; font-size: 14px; margin: 5px 0;">
+              <strong>Tilbudsdato:</strong> ${quote.dato || new Date().toLocaleDateString('nb-NO')}
+            </p>
+            <p style="color: #666666; font-size: 14px; margin: 5px 0;">
+              <strong>Svarfrist:</strong> ${quote.svarfrist || new Date(Date.now() + 14*24*60*60*1000).toLocaleDateString('nb-NO')}
+            </p>
+          </div>
+          
+          ${viewUrl ? `
+          <div style="text-align: center; margin: 40px 0;">
+            <a href="${viewUrl}" style="display: inline-block; background-color: #667eea; color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-size: 18px; font-weight: bold;">
+              Se tilbud og svar
+            </a>
+          </div>
+          
+          <p style="color: #666666; font-size: 14px; text-align: center; margin-top: 20px;">
+            På tilbudssiden kan du:
+          </p>
+          <ul style="color: #666666; font-size: 14px; text-align: left; max-width: 400px; margin: 10px auto;">
+            <li>Se full prissammendrag og beskrivelse</li>
+            <li>Godkjenne eller avvise tilbudet</li>
+            <li>Stille spørsmål eller komme med innspill</li>
+          </ul>
+          ` : ''}
+          
+          ${quote.beskrivelse ? `
+          <div style="margin: 30px 0;">
+            <h3 style="color: #333333;">Beskrivelse:</h3>
+            <p style="color: #666666; font-size: 14px; line-height: 1.6; white-space: pre-wrap;">
+              ${quote.beskrivelse}
+            </p>
+          </div>
+          ` : ''}
+          
+          <div style="border-top: 1px solid #e0e0e0; margin-top: 40px; padding-top: 20px;">
+            <p style="color: #666666; font-size: 14px; margin: 5px 0;">
+              <strong>${companyName}</strong>
+            </p>
+            ${businessSettings?.organizationNumber ? `
+            <p style="color: #999999; font-size: 12px; margin: 5px 0;">
+              Org.nr: ${businessSettings.organizationNumber}
+            </p>
+            ` : ''}
+            ${businessSettings?.phone ? `
+            <p style="color: #666666; font-size: 14px; margin: 5px 0;">
+              📞 ${businessSettings.phone}
+            </p>
+            ` : ''}
+            ${businessSettings?.email ? `
+            <p style="color: #666666; font-size: 14px; margin: 5px 0;">
+              ✉️ ${businessSettings.email}
+            </p>
+            ` : ''}
+          </div>
+        </div>
+        
+        <div style="background-color: #f8f9fa; padding: 20px; text-align: center;">
+          <p style="color: #999999; font-size: 12px; margin: 0;">
+            Powered by Proanbud AI
+          </p>
+        </div>
+      </div>
+    `;
   };
 
   const handlePrevious = () => {
@@ -1410,7 +1600,7 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
             </div>
 
             {/* Summary Stats */}
-            <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
+            <div className="grid grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
               <div className="text-center">
                 <div className="text-2xl font-bold text-gray-900">{quoteData.adjustedComponents.length}</div>
                 <div className="text-sm text-gray-600">Priskomponenter</div>
@@ -1420,6 +1610,36 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
                   {quoteData.adjustedComponents.filter(c => c.confidence > 0).length}
                 </div>
                 <div className="text-sm text-gray-600">AI-genererte</div>
+              </div>
+              <div className="text-center">
+                <div className={`text-2xl font-bold ${
+                  (() => {
+                    const totalProfit = quoteData.adjustedComponents.reduce((sum, c) => {
+                      const amount = c.amount || 0;
+                      const markupPercent = c.priceMarkup || 0;
+                      // Calculate base cost: amount / (1 + markup%)
+                      const baseCost = markupPercent > 0 ? amount / (1 + markupPercent / 100) : amount;
+                      // Profit = final amount - base cost
+                      const profit = amount - baseCost;
+                      return sum + profit;
+                    }, 0);
+                    return totalProfit >= 0 ? 'text-green-700' : 'text-red-700';
+                  })()
+                }`}>
+                  kr {(() => {
+                    const totalProfit = quoteData.adjustedComponents.reduce((sum, c) => {
+                      const amount = c.amount || 0;
+                      const markupPercent = c.priceMarkup || 0;
+                      // Calculate base cost: amount / (1 + markup%)
+                      const baseCost = markupPercent > 0 ? amount / (1 + markupPercent / 100) : amount;
+                      // Profit = final amount - base cost
+                      const profit = amount - baseCost;
+                      return sum + profit;
+                    }, 0);
+                    return totalProfit.toLocaleString('nb-NO');
+                  })()}
+                </div>
+                <div className="text-sm text-gray-600">Total profitt</div>
               </div>
             </div>
           </div>
@@ -1435,6 +1655,17 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
           <ArrowLeft className="w-4 h-4" />
           Tilbake
         </Button>
+        {selectedCustomerId && projectName.trim().length > 0 && (
+          <Button 
+            variant="outline"
+            className="flex items-center justify-center gap-2 px-4"
+            onClick={handleSaveDraft}
+            disabled={isSubmitting}
+          >
+            <Edit3 className="w-4 h-4" />
+            {isSubmitting ? 'Lagrer...' : 'Lagre som utkast'}
+          </Button>
+        )}
         <Button 
           className="flex-1 flex items-center justify-center gap-2"
           onClick={handleNext}
@@ -1566,6 +1797,15 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
         >
           <ArrowLeft className="w-4 h-4" />
           Tilbake
+        </Button>
+        <Button 
+          variant="outline"
+          className="flex-1 flex items-center justify-center gap-2"
+          onClick={handleSaveDraft}
+          disabled={isSubmitting || !selectedCustomerId || !projectName}
+        >
+          <Edit3 className="w-4 h-4" />
+          {isSubmitting ? 'Lagrer...' : 'Lagre som utkast'}
         </Button>
         <Button 
           className="flex-1 flex items-center justify-center gap-2"
