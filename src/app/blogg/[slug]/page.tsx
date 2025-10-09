@@ -7,6 +7,7 @@ import { PortableText } from '@portabletext/react'
 import { client, singlePostQuery, allPostSlugsQuery, formatDate, urlForImage, calculateReadingTime } from '@/lib/sanity'
 import * as Icons from 'lucide-react'
 import Logo from '@/components/shared/Logo'
+import ShareButton from '@/components/shared/ShareButton'
 
 /**
  * TypeScript-grensesnitt for blogginnlegg
@@ -292,6 +293,11 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
             <Icons.Clock className="h-4 w-4" />
             <span>{readingTime} min lesing</span>
           </div>
+          <ShareButton
+            url={`/blogg/${post.slug.current}`}
+            title={post.title}
+            description={post.excerpt}
+          />
         </div>
 
         {/* Featured image */}
