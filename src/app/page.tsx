@@ -125,16 +125,16 @@ export default function Home() {
           <div className="flex justify-between items-center h-20">
             <Logo size="lg" />
             <nav className="hidden md:flex items-center gap-8">
-              <a href="#features" className="text-gray-700 hover:text-[#00b85b] transition-colors font-medium">
+              <a href="/#features" className="text-gray-700 hover:text-[#00b85b] transition-colors font-medium">
                 Funksjoner
               </a>
-              <a href="#showcase" className="text-gray-700 hover:text-[#00b85b] transition-colors font-medium">
+              <a href="/#showcase" className="text-gray-700 hover:text-[#00b85b] transition-colors font-medium">
                 Plattform
               </a>
               <a href="/priser" className='text-gray-700 hover:text-[#00b85b] transition-colors font-medium'>
                 Priser
               </a>
-              <a href="#faq" className="text-gray-700 hover:text-[#00b85b] transition-colors font-medium">
+              <a href="/#faq" className="text-gray-700 hover:text-[#00b85b] transition-colors font-medium">
                 FAQ
               </a>
               <a href="/blogg" className="text-gray-700 hover:text-[#00b85b] transition-colors font-medium">
@@ -227,7 +227,7 @@ export default function Home() {
       </header>
 
       {/* Hero Section with Video */}
-      <section className="relative overflow-hidden py-10 lg:py-15 bg-white">
+      <section className="relative overflow-hidden py-10 lg:py-15 bg-white mt-5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div className="text-center lg:text-left space-y-7">

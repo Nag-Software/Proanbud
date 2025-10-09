@@ -24,8 +24,13 @@ export default function RootLayout({
   const gaId = process.env.NEXT_PUBLIC_GA_ID;
 
   return (
-    <html lang="en">
-      <body className={`${spaceGrotesk.variable} font-sans bg-background text-foreground`}>
+    <html lang="no">
+      <head>
+        <link rel="icon" href="/favicon.ico" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="description" content="AI-drevet tilbudssystem for håndverkere" />
+      </head>
+      <body className={`${spaceGrotesk.variable} font-sans bg-background text-foreground`} suppressHydrationWarning>
         {gaId && <GoogleAnalytics gaId={gaId} />}
         <AuthProvider>
           {children}
