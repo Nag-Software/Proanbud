@@ -9,7 +9,6 @@ import { logout } from '@/lib/auth';
 import * as Icons from 'lucide-react';
 import { LogOut } from 'lucide-react';
 import Logo from '../shared/Logo';
-import { ThemeToggle } from '../shared/ThemeToggle';
 import { NotificationButton } from '../shared/NotificationButton';
 import { ref, onValue, off } from 'firebase/database';
 import { db } from '@/lib/firebase';
@@ -33,7 +32,7 @@ const NavLink: React.FC<NavLinkProps> = ({ href, label, icon }) => {
       className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors duration-200 ${
         isActive
           ? 'bg-primary text-primary-foreground'
-          : 'text-muted-text hover:bg-gray-100 dark:hover:bg-gray-800'
+          : 'text-muted-text hover:bg-gray-100'
       }`}
     >
       {Icon && <Icon className="h-5 w-5" />}
@@ -106,7 +105,6 @@ export const Sidebar = () => {
         <Logo size="md"/>
         <div className="flex items-center gap-2">
           <NotificationButton />
-          <ThemeToggle />
         </div>
       </div>
 
@@ -121,7 +119,7 @@ export const Sidebar = () => {
       <div className="p-4 border-t border-border">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center font-bold text-primary dark:text-primary-foreground">
+            <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center font-bold text-primary">
               {getInitials()}
             </div>
             <div className="flex-1">

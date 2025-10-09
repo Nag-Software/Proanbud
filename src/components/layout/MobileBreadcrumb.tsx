@@ -8,7 +8,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { logout } from '@/lib/auth';
 import * as Icons from 'lucide-react';
 import { ChevronRight, Menu, X, LogOut } from 'lucide-react';
-import { ThemeToggle } from '../shared/ThemeToggle';
 import { NotificationButton } from '../shared/NotificationButton';
 import { ref, onValue, off } from 'firebase/database';
 import { db } from '@/lib/firebase';
@@ -143,13 +142,12 @@ export const MobileBreadcrumb = () => {
             })}
           </div>
 
-          {/* Notification, Theme Toggle and Menu Button */}
+          {/* Notification and Menu Button */}
           <div className="flex items-center gap-2">
             <NotificationButton />
-            <ThemeToggle />
             <button
               onClick={() => setIsMobileMenuOpen(true)}
-              className="p-2.5 text-muted-text hover:text-text hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-all duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] hover:scale-105 active:scale-95 backdrop-blur-sm"
+              className="p-2.5 text-muted-text hover:text-text hover:bg-gray-100 rounded-xl transition-all duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] hover:scale-105 active:scale-95 backdrop-blur-sm"
               aria-label="Open menu"
             >
               <Menu className="h-5 w-5" />
@@ -171,13 +169,13 @@ export const MobileBreadcrumb = () => {
         />
         
         {/* Sliding Menu Panel - Apple-like animation */}
-        <div className={`fixed inset-y-0 left-0 w-80 max-w-[88vw] bg-white/95 dark:bg-card/95 backdrop-blur-xl border-r border-border/30 flex flex-col shadow-2xl transform transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] ${
+        <div className={`fixed inset-y-0 left-0 w-80 max-w-[88vw] bg-white/95 backdrop-blur-xl border-r border-border/30 flex flex-col shadow-2xl transform transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] ${
           isMobileMenuOpen 
             ? 'translate-x-0 opacity-100 scale-100' 
             : '-translate-x-full opacity-0 scale-[0.98]'
         }`}>
           {/* Header with enhanced blur */}
-          <div className={`h-16 flex items-center justify-between px-5 border-b border-border/30 bg-white/80 dark:bg-card/80 backdrop-blur-xl transition-all duration-500 ${
+          <div className={`h-16 flex items-center justify-between px-5 border-b border-border/30 bg-white/80 backdrop-blur-xl transition-all duration-500 ${
             isMobileMenuOpen ? 'translate-y-0 opacity-100' : '-translate-y-2 opacity-0'
           }`}
           style={{ transitionDelay: isMobileMenuOpen ? '100ms' : '0ms' }}>
@@ -187,7 +185,7 @@ export const MobileBreadcrumb = () => {
             </div>
             <button
               onClick={() => setIsMobileMenuOpen(false)}
-              className="p-2.5 text-muted-text hover:text-foreground hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95"
+              className="p-2.5 text-muted-text hover:text-foreground hover:bg-gray-100 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95"
               aria-label="Close menu"
             >
               <X className="h-5 w-5" />
@@ -218,7 +216,7 @@ export const MobileBreadcrumb = () => {
                     className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-all duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] transform hover:scale-[1.02] active:scale-[0.98] ${
                       isActive
                         ? 'bg-primary/10 text-primary shadow-sm border border-primary/20'
-                        : 'text-muted-text hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-foreground'
+                        : 'text-muted-text hover:bg-gray-100 hover:text-foreground'
                     }`}
                   >
                     {LinkIcon && <LinkIcon className="h-5 w-5 flex-shrink-0" />}
@@ -230,7 +228,7 @@ export const MobileBreadcrumb = () => {
           </nav>
 
           {/* User Section with slide-up animation */}
-          <div className={`p-4 border-t border-border/30 bg-white/60 dark:bg-card/60 backdrop-blur-xl transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] ${
+          <div className={`p-4 border-t border-border/30 bg-white/60 backdrop-blur-xl transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] ${
             isMobileMenuOpen ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
           }`}
           style={{ transitionDelay: isMobileMenuOpen ? '300ms' : '0ms' }}>
@@ -251,7 +249,7 @@ export const MobileBreadcrumb = () => {
               </div>
               <button 
                 onClick={handleLogout}
-                className="text-muted-text hover:text-red-600 dark:hover:text-red-400 transition-all duration-200 p-2.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl hover:scale-105 active:scale-95"
+                className="text-muted-text hover:text-red-600 transition-all duration-200 p-2.5 hover:bg-red-50 rounded-xl hover:scale-105 active:scale-95"
                 title="Logout"
               >
                 <LogOut className="h-5 w-5" />

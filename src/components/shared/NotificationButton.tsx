@@ -148,7 +148,7 @@ export const NotificationButton = () => {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 text-muted-text hover:text-text hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+        className="relative p-2 text-muted-text hover:text-text hover:bg-gray-100 rounded-lg transition-colors"
         aria-label="Notifications"
       >
         <Bell className="h-5 w-5" />
@@ -165,8 +165,8 @@ export const NotificationButton = () => {
           <div className="lg:hidden fixed inset-0 bg-black/20 backdrop-blur-sm z-40" onClick={() => setIsOpen(false)} />
           
           {/* Notification dropdown */}
-          <div className="fixed lg:absolute left-2 right-2 lg:left-0 lg:right-auto top-16 lg:top-auto mt-0 lg:mt-2 w-auto lg:w-80 max-w-md lg:max-w-none bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50">
-            <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="fixed lg:absolute left-2 right-2 lg:left-0 lg:right-auto top-16 lg:top-auto mt-0 lg:mt-2 w-auto lg:w-80 max-w-md lg:max-w-none bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+            <div className="p-4 border-b border-gray-200">
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold text-text">Varsler</h3>
                 {unreadCount > 0 && (
@@ -180,16 +180,16 @@ export const NotificationButton = () => {
           <div className="max-h-96 overflow-y-auto">
             {unreadMessages.length === 0 ? (
               <div className="p-8 text-center">
-                <Bell className="h-12 w-12 mx-auto text-gray-300 dark:text-gray-600 mb-2" />
+                <Bell className="h-12 w-12 mx-auto text-gray-300 mb-2" />
                 <p className="text-sm text-muted-text">Ingen nye varsler</p>
               </div>
             ) : (
-              <div className="divide-y divide-gray-100 dark:divide-gray-700">
+              <div className="divide-y divide-gray-100">
                 {unreadMessages.map((message) => (
                   <button
                     key={message.id}
                     onClick={() => handleNotificationClick(message)}
-                    className="w-full p-4 text-left hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                    className="w-full p-4 text-left hover:bg-gray-50 transition-colors"
                   >
                     <div className="flex items-start gap-3">
                       <div className="flex-1 min-w-0">
@@ -221,7 +221,7 @@ export const NotificationButton = () => {
           </div>
 
           {unreadMessages.length > 0 && (
-            <div className="p-3 border-t border-gray-200 dark:border-gray-700">
+            <div className="p-3 border-t border-gray-200">
               <button
                 onClick={handleViewAll}
                 className="w-full py-2 text-sm text-primary hover:text-primary/80 font-medium transition-colors"

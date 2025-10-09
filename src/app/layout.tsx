@@ -24,22 +24,8 @@ export default function RootLayout({
   const gaId = process.env.NEXT_PUBLIC_GA_ID;
 
   return (
-    <html lang="en" suppressHydrationWarning>
-      <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              try {
-                const theme = localStorage.getItem('theme');
-                if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-                  document.documentElement.classList.add('dark');
-                }
-              } catch (e) {}
-            `,
-          }}
-        />
-      </head>
-      <body className={`${spaceGrotesk.variable} font-sans bg-background text-foreground`} suppressHydrationWarning>
+    <html lang="en">
+      <body className={`${spaceGrotesk.variable} font-sans bg-background text-foreground`}>
         {gaId && <GoogleAnalytics gaId={gaId} />}
         <AuthProvider>
           {children}

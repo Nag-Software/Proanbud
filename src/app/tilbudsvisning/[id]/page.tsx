@@ -121,10 +121,10 @@ export default function TilbudsvisningPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
         <div className="text-center">
           <Loader2 className="h-12 w-12 animate-spin mx-auto text-blue-600 mb-4" />
-          <p className="text-slate-600 dark:text-slate-400">Laster tilbud...</p>
+          <p className="text-slate-600">Laster tilbud...</p>
         </div>
       </div>
     );
@@ -132,13 +132,13 @@ export default function TilbudsvisningPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 p-4">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4">
         <Card className="max-w-md w-full">
           <CardHeader>
             <CardTitle className="text-red-600">Feil</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-slate-600 dark:text-slate-400">{error}</p>
+            <p className="text-slate-600">{error}</p>
           </CardContent>
         </Card>
       </div>
@@ -150,10 +150,10 @@ export default function TilbudsvisningPage() {
   }
 
   const statusColor = 
-    quote.status === 'vunnet' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-    quote.status === 'tapt' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
-    quote.status === 'venter' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
-    'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200';
+    quote.status === 'vunnet' ? 'bg-green-100 text-green-800' :
+    quote.status === 'tapt' ? 'bg-red-100 text-red-800' :
+    quote.status === 'venter' ? 'bg-yellow-100 text-yellow-800' :
+    'bg-slate-100 text-slate-800';
 
   const statusText = 
     quote.status === 'vunnet' ? 'Godkjent' :
@@ -164,10 +164,10 @@ export default function TilbudsvisningPage() {
   const isCompleted = quote.status === 'vunnet' || quote.status === 'tapt';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 py-8 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-8 px-4">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <div className="bg-white dark:bg-slate-900 rounded-lg shadow-lg p-6 mb-6">
+        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
           <div className="flex items-start justify-between mb-4">
             <div>
               {businessSettings?.logoUrl && (
@@ -177,10 +177,10 @@ export default function TilbudsvisningPage() {
                   className="h-12 mb-4"
                 />
               )}
-              <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-50">
+              <h1 className="text-3xl font-bold text-slate-900">
                 {businessSettings?.companyName || 'Tilbud'}
               </h1>
-              <p className="text-slate-600 dark:text-slate-400 mt-1">
+              <p className="text-slate-600 mt-1">
                 {businessSettings?.organizationNumber && `Org.nr: ${businessSettings.organizationNumber}`}
               </p>
             </div>
@@ -193,19 +193,19 @@ export default function TilbudsvisningPage() {
           
           <div className="grid md:grid-cols-2 gap-4">
             <div>
-              <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-50 mb-2">
+              <h2 className="text-xl font-semibold text-slate-900 mb-2">
                 {quote.prosjekt}
               </h2>
               <div className="space-y-2 text-sm">
-                <div className="flex items-center text-slate-600 dark:text-slate-400">
+                <div className="flex items-center text-slate-600">
                   <Building2 className="w-4 h-4 mr-2" />
                   <span>{quote.kundenavn}</span>
                 </div>
-                <div className="flex items-center text-slate-600 dark:text-slate-400">
+                <div className="flex items-center text-slate-600">
                   <Calendar className="w-4 h-4 mr-2" />
                   <span>Dato: {new Date(quote.dato).toLocaleDateString('nb-NO')}</span>
                 </div>
-                <div className="flex items-center text-slate-600 dark:text-slate-400">
+                <div className="flex items-center text-slate-600">
                   <Calendar className="w-4 h-4 mr-2" />
                   <span>Svarfrist: {new Date(quote.svarfrist).toLocaleDateString('nb-NO')}</span>
                 </div>
@@ -214,21 +214,21 @@ export default function TilbudsvisningPage() {
             
             {businessSettings && (
               <div className="text-sm space-y-2">
-                <h3 className="font-semibold text-slate-900 dark:text-slate-50 mb-2">Kontaktinformasjon</h3>
+                <h3 className="font-semibold text-slate-900 mb-2">Kontaktinformasjon</h3>
                 {businessSettings.phone && (
-                  <div className="flex items-center text-slate-600 dark:text-slate-400">
+                  <div className="flex items-center text-slate-600">
                     <Phone className="w-4 h-4 mr-2" />
                     <span>{businessSettings.phone}</span>
                   </div>
                 )}
                 {businessSettings.email && (
-                  <div className="flex items-center text-slate-600 dark:text-slate-400">
+                  <div className="flex items-center text-slate-600">
                     <Mail className="w-4 h-4 mr-2" />
                     <span>{businessSettings.email}</span>
                   </div>
                 )}
                 {businessSettings.address && (
-                  <div className="text-slate-600 dark:text-slate-400">
+                  <div className="text-slate-600">
                     {businessSettings.address}, {businessSettings.postalCode} {businessSettings.city}
                   </div>
                 )}
@@ -247,7 +247,7 @@ export default function TilbudsvisningPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
+              <p className="text-slate-700 whitespace-pre-wrap">
                 {quote.beskrivelse}
               </p>
             </CardContent>
@@ -266,17 +266,17 @@ export default function TilbudsvisningPage() {
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
-                      <tr className="border-b border-slate-200 dark:border-slate-700">
-                        <th className="text-left py-3 px-1 text-xs sm:text-md font-semibold text-slate-700 dark:text-slate-300">
+                      <tr className="border-b border-slate-200">
+                        <th className="text-left py-3 px-1 text-xs sm:text-md font-semibold text-slate-700">
                           Beskrivelse
                         </th>
-                        <th className="text-center py-3 px-1 text-xs sm:text-md font-semibold text-slate-700 dark:text-slate-300">
+                        <th className="text-center py-3 px-1 text-xs sm:text-md font-semibold text-slate-700">
                           Antall
                         </th>
-                        <th className="text-center py-3 px-1 text-xs sm:text-md font-semibold text-slate-700 dark:text-slate-300">
+                        <th className="text-center py-3 px-1 text-xs sm:text-md font-semibold text-slate-700">
                           Enhetspris
                         </th>
-                        <th className="text-right py-3 px-1 text-xs sm:text-md font-semibold text-slate-700 dark:text-slate-300">
+                        <th className="text-right py-3 px-1 text-xs sm:text-md font-semibold text-slate-700">
                           Beløp
                         </th>
                       </tr>
@@ -285,38 +285,38 @@ export default function TilbudsvisningPage() {
                       {quote.prisgrunnlag.map((item: any, index: number) => (
                         <tr 
                           key={index}
-                          className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                          className="border-b border-slate-100 hover:bg-slate-50 transition-colors"
                         >
                           <td className="py-3 px-2">
                             <div>
-                              <div className="text-sm sm:text-md font-medium text-slate-900 dark:text-slate-50">
+                              <div className="text-sm sm:text-md font-medium text-slate-900">
                                 {item.name}
                               </div>
                               {item.description && (
-                                <div className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
+                                <div className="text-xs sm:text-sm text-slate-600">
                                   {item.description}
                                 </div>
                               )}
                             </div>
                           </td>
-                          <td className="text-center text-xs sm:text-sm py-3 px-2 text-slate-700 dark:text-slate-300">
+                          <td className="text-center text-xs sm:text-sm py-3 px-2 text-slate-700">
                             {item.quantity || 1} {item.unit || 'stk'}
                           </td>
-                          <td className="text-center text-xs sm:text-sm py-3 px-2 text-slate-700 dark:text-slate-300">
+                          <td className="text-center text-xs sm:text-sm py-3 px-2 text-slate-700">
                             {(item.unitPrice || 0).toLocaleString('nb-NO')} kr
                           </td>
-                          <td className="text-right text-xs sm:text-sm py-3 px-2 font-semibold text-slate-900 dark:text-slate-50">
+                          <td className="text-right text-xs sm:text-sm py-3 px-2 font-semibold text-slate-900">
                             {item.amount.toLocaleString('nb-NO')} kr
                           </td>
                         </tr>
                       ))}
                     </tbody>
                     <tfoot>
-                      <tr className="border-t-2 border-slate-300 dark:border-slate-600">
-                        <td colSpan={3} className="py-4 px-2 text-right font-bold text-slate-900 dark:text-slate-50">
+                      <tr className="border-t-2 border-slate-300">
+                        <td colSpan={3} className="py-4 px-2 text-right font-bold text-slate-900">
                           Total:
                         </td>
-                        <td className="py-4 px-2 text-nowrap text-right font-bold text-xl sm:text-2xl text-blue-600 dark:text-blue-400">
+                        <td className="py-4 px-2 text-nowrap text-right font-bold text-xl sm:text-2xl text-blue-600">
                           {quote.belop.toLocaleString('nb-NO')} kr
                         </td>
                       </tr>
@@ -325,7 +325,7 @@ export default function TilbudsvisningPage() {
                 </div>
               </div>
             ) : (
-              <p className="text-slate-600 dark:text-slate-400 text-center py-8">
+              <p className="text-slate-600 text-center py-8">
                 Ingen prisgrunnlag tilgjengelig
               </p>
             )}
@@ -343,7 +343,7 @@ export default function TilbudsvisningPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                <label className="block text-sm font-medium text-slate-700 mb-2">
                   Melding (valgfritt for godkjenning/avvisning)
                 </label>
                 <Textarea
@@ -404,9 +404,9 @@ export default function TilbudsvisningPage() {
 
         {/* Feedback Confirmation */}
         {feedbackSubmitted && (
-          <Card className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
+          <Card className="bg-green-50 border-green-200">
             <CardContent className="pt-6">
-              <div className="flex items-center text-green-800 dark:text-green-200">
+              <div className="flex items-center text-green-800">
                 <CheckCircle2 className="w-5 h-5 mr-2" />
                 <span className="font-medium">Din tilbakemelding er registrert!</span>
               </div>
@@ -415,7 +415,7 @@ export default function TilbudsvisningPage() {
         )}
 
         {/* Footer */}
-        <div className="text-center text-sm text-slate-600 dark:text-slate-400 mt-8">
+        <div className="text-center text-sm text-slate-600 mt-8">
           <p>Powered by Proanbud</p>
         </div>
       </div>

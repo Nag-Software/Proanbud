@@ -25,19 +25,19 @@ export const KpiCard: React.FC<KpiCardProps> = ({
   const isPositive = change && change.startsWith('+');
 
   return (
-    <Card className={`h-full hover:shadow-md transition-all duration-200 border-slate-200/60 dark:border-border flex flex-col ${className}`}>
+    <Card className={`h-full hover:shadow-md transition-all duration-200 border-slate-200/60 flex flex-col ${className}`}>
       <CardHeader className={`flex flex-row items-center justify-between ${compact ? 'pb-2' : 'pb-3'} flex-shrink-0`}>
-        <CardTitle className={`font-medium text-slate-600 dark:text-muted-foreground ${compact ? 'text-xs' : 'text-sm'} leading-tight`}>
+        <CardTitle className={`font-medium text-slate-600 ${compact ? 'text-xs' : 'text-sm'} leading-tight`}>
           {title}
         </CardTitle>
         {Icon && (
-          <div className={`bg-slate-100 dark:bg-secondary rounded-lg flex-shrink-0 ${compact ? 'p-1.5' : 'p-2'}`}>
-            <Icon className={`text-slate-600 dark:text-muted-foreground ${compact ? 'h-3 w-3' : 'h-4 w-4'}`} />
+          <div className={`bg-slate-100 rounded-lg flex-shrink-0 ${compact ? 'p-1.5' : 'p-2'}`}>
+            <Icon className={`text-slate-600 ${compact ? 'h-3 w-3' : 'h-4 w-4'}`} />
           </div>
         )}
       </CardHeader>
       <CardContent className="pt-0 flex-1 flex flex-col justify-between">
-        <div className={`font-bold text-slate-800 dark:text-foreground mb-1 ${compact ? 'text-xl' : 'text-3xl'} leading-tight`}>
+        <div className={`font-bold text-slate-800 mb-1 ${compact ? 'text-xl' : 'text-3xl'} leading-tight`}>
           {value}
         </div>
         {change && (
@@ -46,12 +46,12 @@ export const KpiCard: React.FC<KpiCardProps> = ({
               compact ? 'text-xs' : 'text-xs'
             } ${
               isPositive
-                ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800'
-                : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800'
+                ? 'bg-green-50 text-green-700 border border-green-200'
+                : 'bg-red-50 text-red-700 border border-red-200'
             }`}>
               {change}
             </div>
-            <span className={`text-slate-500 dark:text-muted-foreground ${compact ? 'text-xs' : 'text-xs'} leading-tight whitespace-nowrap`}>
+            <span className={`text-slate-500 ${compact ? 'text-xs' : 'text-xs'} leading-tight whitespace-nowrap`}>
               fra forrige måned
             </span>
           </div>

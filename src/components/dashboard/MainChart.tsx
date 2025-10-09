@@ -29,10 +29,10 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label })
     const tilbudtData = payload.find(p => p.dataKey === 'tilbudt');
     
     return (
-      <div className="bg-white dark:bg-card p-4 rounded-lg border border-gray-200 dark:border-border shadow-lg">
-        <p className="font-bold text-gray-800 dark:text-foreground">{`${label}`}</p>
-        <p className="text-sm text-green-600 dark:text-green-400">{`Omsatt: ${(omsattData?.value || 0).toLocaleString('nb-NO')} kr`}</p>
-        <p className="text-sm text-gray-500 dark:text-muted-foreground">{`Tilbudt: ${(tilbudtData?.value || 0).toLocaleString('nb-NO')} kr`}</p>
+      <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-lg">
+        <p className="font-bold text-gray-800">{`${label}`}</p>
+        <p className="text-sm text-green-600">{`Omsatt: ${(omsattData?.value || 0).toLocaleString('nb-NO')} kr`}</p>
+        <p className="text-sm text-gray-500">{`Tilbudt: ${(tilbudtData?.value || 0).toLocaleString('nb-NO')} kr`}</p>
       </div>
     );
   }
@@ -76,8 +76,8 @@ export const MainChart = () => {
           <CardTitle>Omsetning vs. Tilbudt Verdi</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="w-full h-[350px] bg-gray-200 dark:bg-secondary animate-pulse rounded-lg flex items-center justify-center">
-            <span className="text-gray-500 dark:text-muted-foreground">Laster diagram...</span>
+          <div className="w-full h-[350px] bg-gray-200 animate-pulse rounded-lg flex items-center justify-center">
+            <span className="text-gray-500">Laster diagram...</span>
           </div>
         </CardContent>
       </Card>

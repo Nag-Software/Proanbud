@@ -179,11 +179,17 @@ export default function Home() {
                 Funksjoner
               </a>
               <a 
-                href="#showcase" 
+                href="/#showcase"
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="block text-gray-700 hover:text-[#00b85b] transition-colors font-medium py-2"
               >
                 Plattform
+              </a>
+              <a href="/priser"
+              className='block text-gray-700 hover:text-[#00b85b] transition-colors font-medium py-2'
+              onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Priser
               </a>
               <a 
                 href="#faq" 
@@ -221,10 +227,10 @@ export default function Home() {
       </header>
 
       {/* Hero Section with Video */}
-      <section className="relative overflow-hidden py-15 lg:py-20 bg-white">
+      <section className="relative overflow-hidden py-10 lg:py-15 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <div className="text-center lg:text-left space-y-8">
+            <div className="text-center lg:text-left space-y-7">
               <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#82ffb2]/10 rounded-full border border-[#82ffb2]/20">
                 <Sparkles className="w-4 h-4 text-[#82ffb2]" />
                 <span className="text-sm font-medium text-gray-700">AI-drevet tilbudsplattform</span>
@@ -256,7 +262,7 @@ export default function Home() {
                 </Link>
               </div>
 
-              <div className="flex items-center gap-8 pt-4">
+              <div className="flex items-center gap-8 pt-0">
                 <div className="flex items-center gap-2">
                   <Check className="w-5 h-5 text-[#82ffb2]" />
                   <span className="text-sm text-gray-600">Gratis i 14 dager</span>
