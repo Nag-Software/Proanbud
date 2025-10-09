@@ -4,6 +4,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/shared/Card';
 import { 
@@ -31,17 +32,62 @@ import Logo from '@/components/shared/Logo';
 import { HeroCarousel } from '@/components/ui/hero-carousel';
 import { FaqSection } from '@/components/shared/FaqSection';
 import Footer from '@/components/shared/Footer';
+import { client, allPostsQuery, formatDate, urlForImage } from '@/lib/sanity';
+
+interface SanityPost {
+  _id: string;
+  title: string;
+  slug: {
+    current: string;
+  };
+  excerpt?: string;
+  publishedAt: string;
+  mainImage?: {
+    asset: any;
+    alt?: string;
+  };
+  author?: {
+    name: string;
+    slug: {
+      current: string;
+    };
+  };
+  categories?: Array<{
+    title: string;
+    slug: {
+      current: string;
+    };
+  }>;
+}
 
 export default function Home() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [blogPosts, setBlogPosts] = useState<SanityPost[]>([]);
 
   useEffect(() => {
     if (!loading && user) {
       router.push('/dashboard');
     }
   }, [user, loading, router]);
+
+  // Fetch latest blog posts from Sanity
+  useEffect(() => {
+    const fetchPosts = async () => {
+      try {
+        const posts = await client.fetch<SanityPost[]>(allPostsQuery, {}, {
+          next: { revalidate: 60 }
+        });
+        // Get only the latest 3 posts
+        setBlogPosts(posts.slice(0, 3));
+      } catch (error) {
+        console.error('Feil ved henting av blogginnlegg:', error);
+        setBlogPosts([]);
+      }
+    };
+    fetchPosts();
+  }, []);
 
   if (loading) {
     return (
@@ -90,30 +136,6 @@ export default function Home() {
     {
       question: "Hva koster Proanbud?",
       answer: "Vi tilbyr fleksible abonnementsplaner tilpasset bedriftens størrelse. Start med en gratis prøveperiode på 14 dager - ingen kredittkort påkrevd."
-    }
-  ];
-
-  const blogPosts = [
-    {
-      title: "5 tips for å vinne flere anbud i 2025",
-      excerpt: "Lær hvordan du kan øke sjansene dine for å vinne anbud med disse beprøvde strategiene.",
-      date: "15. sep 2024",
-      image: "/assets/1.jpg",
-      category: "Strategi"
-    },
-    {
-      title: "Slik prissetter du tjenester riktig",
-      excerpt: "En komplett guide til å sette konkurransedyktige priser som sikrer lønnsomhet.",
-      date: "8. sep 2024",
-      image: "/assets/2.jpg",
-      category: "Økonomi"
-    },
-    {
-      title: "Digitalisering i håndverksbransjen",
-      excerpt: "Hvorfor digitale verktøy er fremtiden for håndverksbedrifter.",
-      date: "1. sep 2024",
-      image: "/assets/1.jpg",
-      category: "Teknologi"
     }
   ];
 
@@ -456,39 +478,57 @@ export default function Home() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {blogPosts.map((post, index) => (
-              <article
-                key={index}
-                className="group bg-white rounded-2xl overflow-hidden border border-gray-200 hover:border-[#82ffb2]/50 hover:shadow-xl transition-all"
-              >
-                <div className="relative h-48 overflow-hidden">
-                  <img
-                    src={post.image}
-                    alt={post.title}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                  />
-                  <div className="absolute top-4 left-4">
-                    <span className="px-3 py-1 bg-[#82ffb2] text-gray-900 text-xs font-semibold rounded-full">
-                      {post.category}
-                    </span>
-                  </div>
-                </div>
-                <div className="p-6 space-y-4">
-                  <div className="text-sm text-gray-500">{post.date}</div>
-                  <h3 className="text-xl font-bold text-gray-900 group-hover:text-[#00b85b] transition-colors">
-                    {post.title}
-                  </h3>
-                  <p className="text-gray-600 leading-relaxed">{post.excerpt}</p>
-                  <Link
-                    href="#"
-                    className="inline-flex items-center gap-2 text-[#00b85b] hover:text-[#00a050] font-semibold group"
-                  >
-                    Les mer
-                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            {blogPosts.length > 0 ? (
+              blogPosts.map((post) => (
+                <article
+                  key={post._id}
+                  className="group bg-white rounded-2xl overflow-hidden border border-gray-200 hover:border-[#82ffb2]/50 hover:shadow-xl transition-all"
+                >
+                  <Link href={`/blogg/${post.slug.current}`} className="block">
+                    <div className="relative h-48 overflow-hidden">
+                      {post.mainImage?.asset ? (
+                        <Image
+                          src={urlForImage(post.mainImage.asset).width(400).height(300).url()}
+                          alt={post.mainImage.alt || post.title}
+                          fill
+                          className="object-cover group-hover:scale-110 transition-transform duration-500"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-[#82ffb2]/20 to-[#82b2ff]/20 flex items-center justify-center">
+                          <FileText className="w-12 h-12 text-gray-400" />
+                        </div>
+                      )}
+                      {post.categories && post.categories.length > 0 && (
+                        <div className="absolute top-4 left-4">
+                          <span className="px-3 py-1 bg-[#82ffb2] text-gray-900 text-xs font-semibold rounded-full">
+                            {post.categories[0].title}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-6 space-y-4">
+                      <div className="text-sm text-gray-500">
+                        {formatDate(post.publishedAt)}
+                      </div>
+                      <h3 className="text-xl font-bold text-gray-900 group-hover:text-[#00b85b] transition-colors">
+                        {post.title}
+                      </h3>
+                      <p className="text-gray-600 leading-relaxed">
+                        {post.excerpt || 'Les mer om dette blogginnlegget...'}
+                      </p>
+                      <div className="inline-flex items-center gap-2 text-[#00b85b] hover:text-[#00a050] font-semibold group">
+                        Les mer
+                        <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                      </div>
+                    </div>
                   </Link>
-                </div>
-              </article>
-            ))}
+                </article>
+              ))
+            ) : (
+              <div className="col-span-3 text-center py-12">
+                <p className="text-gray-500">Laster blogginnlegg...</p>
+              </div>
+            )}
           </div>
         </div>
       </section>
