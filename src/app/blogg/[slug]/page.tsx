@@ -7,6 +7,8 @@ import { PortableText } from '@portabletext/react'
 import { client, singlePostQuery, allPostSlugsQuery, formatDate, urlForImage, calculateReadingTime } from '@/lib/sanity'
 import * as Icons from 'lucide-react'
 import Logo from '@/components/shared/Logo'
+import ShareButton from '@/components/shared/ShareButton'
+import Footer from '@/components/shared/Footer'
 
 /**
  * TypeScript-grensesnitt for blogginnlegg
@@ -207,26 +209,37 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
 
   const readingTime = post.body ? calculateReadingTime(post.body) : 5
 
+  // ...existing code...
+
   return (
     <div className="min-h-screen bg-white">
-      {/* Header */}
+      {/* Header - server-compatible, no client hooks */}
       <header className="sticky top-0 z-50 backdrop-blur-lg bg-white/80 border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
             <Logo size="lg" />
             <nav className="hidden md:flex items-center gap-8">
-              <Link href="/" className="text-gray-700 hover:text-[#00b85b] transition-colors font-medium">
-                Hjem
-              </Link>
-              <Link href="/blogg" className="text-gray-700 hover:text-[#00b85b] transition-colors font-medium">
+              <a href="/#features" className="text-gray-700 hover:text-[#00b85b] transition-colors font-medium">
+                Funksjoner
+              </a>
+              <a href="/#showcase" className="text-gray-700 hover:text-[#00b85b] transition-colors font-medium">
+                Plattform
+              </a>
+              <a href="/priser" className='text-gray-700 hover:text-[#00b85b] transition-colors font-medium'>
+                Priser
+              </a>
+              <a href="/#faq" className="text-gray-700 hover:text-[#00b85b] transition-colors font-medium">
+                FAQ
+              </a>
+              <a href="/blogg" className="text-[#00b85b] font-semibold">
                 Blogg
-              </Link>
+              </a>
             </nav>
             <div className="hidden md:flex items-center gap-4">
               <Link href="/login" className="text-gray-700 hover:text-[#00b85b] transition-colors font-medium">
                 Logg inn
               </Link>
-              <Link href="/signup" className="bg-[#82ffb2] text-gray-900 px-6 py-2.5 rounded-xl font-semibold">
+              <Link href="/signup" className="bg-[#82ffb2] text-gray-900 px-6 py-2.5 rounded-xl transition-all font-semibold shadow-lg shadow-[#82ffb2]/20 hover:shadow-xl hover:shadow-[#82ffb2]/30">
                 Kom igang
               </Link>
             </div>
@@ -292,6 +305,11 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
             <Icons.Clock className="h-4 w-4" />
             <span>{readingTime} min lesing</span>
           </div>
+          <ShareButton
+            url={`/blogg/${post.slug.current}`}
+            title={post.title}
+            description={post.excerpt}
+          />
         </div>
 
         {/* Featured image */}
@@ -362,13 +380,8 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12 px-4">
-        <div className="container mx-auto max-w-6xl text-center">
-          <Logo size="lg" />
-          <p className="text-gray-400 mt-4">© 2025 Proanbud. Alle rettigheter reservert.</p>
-        </div>
-      </footer>
+      {/* Footer - shared component */}
+      <Footer />
     </div>
   )
 }

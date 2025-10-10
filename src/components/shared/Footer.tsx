@@ -19,19 +19,7 @@ export default function Footer() {
               </p>
               <div className="flex items-center gap-4">
                 <a
-                  href="#"
-                  className="w-10 h-10 rounded-lg bg-gray-800 hover:bg-[#82ffb2] flex items-center justify-center transition-colors group"
-                >
-                  <Linkedin className="w-5 h-5 group-hover:text-gray-900" />
-                </a>
-                <a
-                  href="#"
-                  className="w-10 h-10 rounded-lg bg-gray-800 hover:bg-[#82ffb2] flex items-center justify-center transition-colors group"
-                >
-                  <Twitter className="w-5 h-5 group-hover:text-gray-900" />
-                </a>
-                <a
-                  href="#"
+                  href="https://www.facebook.com/profile.php?id=61581813085081"
                   className="w-10 h-10 rounded-lg bg-gray-800 hover:bg-[#82ffb2] flex items-center justify-center transition-colors group"
                 >
                   <Facebook className="w-5 h-5 group-hover:text-gray-900" />
@@ -43,8 +31,8 @@ export default function Footer() {
             <div>
               <h3 className="text-white font-bold mb-4">Produkt</h3>
               <ul className="space-y-3">
-                <li><a href="#features" className="hover:text-[#82ffb2] transition-colors">Funksjoner</a></li>
-                <li><a href="#" className="hover:text-[#82ffb2] transition-colors">Priser</a></li>
+                <li><a href="/#features" className="hover:text-[#82ffb2] transition-colors">Funksjoner</a></li>
+                <li><a href="/priser" className="hover:text-[#82ffb2] transition-colors">Priser</a></li>
                 <li><a href="#" className="hover:text-[#82ffb2] transition-colors">Integrasjoner</a></li>
                 <li><a href="#" className="hover:text-[#82ffb2] transition-colors">API</a></li>
                 <li><a href="#" className="hover:text-[#82ffb2] transition-colors">Hva er nytt</a></li>
@@ -56,7 +44,7 @@ export default function Footer() {
               <h3 className="text-white font-bold mb-4">Selskap</h3>
               <ul className="space-y-3">
                 <li><a href="#" className="hover:text-[#82ffb2] transition-colors">Om oss</a></li>
-                <li><a href="#blog" className="hover:text-[#82ffb2] transition-colors">Blogg</a></li>
+                <li><a href="/blogg" className="hover:text-[#82ffb2] transition-colors">Blogg</a></li>
                 <li><a href="#" className="hover:text-[#82ffb2] transition-colors">Karriere</a></li>
                 <li><a href="#" className="hover:text-[#82ffb2] transition-colors">Presse</a></li>
                 <li><a href="#" className="hover:text-[#82ffb2] transition-colors">Partnere</a></li>
