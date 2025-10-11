@@ -12,6 +12,10 @@ import { db } from '@/lib/firebase';
 import { auth } from '@/lib/firebase';
 import { Kunde, ColumnDef, Tilbud } from '@/lib/types';
 import { PlusCircle } from 'lucide-react';
+import { useSubscriptionLimits } from '@/hooks/useSubscriptionLimits';
+import { useSubscriptionAccess } from '@/hooks/useSubscriptionAccess';
+import { useSubscription } from '@/contexts/SubscriptionContextNew';
+import { AccessRestrictedBanner } from '@/components/subscription/AccessRestrictedBanner';
 
 const columns: ColumnDef<any>[] = [
   {
@@ -41,6 +45,10 @@ const columns: ColumnDef<any>[] = [
 ];
 
 export default function KunderPage() {
+  const { checkCustomerLimit, showUpgradeDialog, loading: limitsLoading } = useSubscriptionLimits();
+  const { hasAccess, hasTrialAccess, isLimited } = useSubscriptionAccess();
+  const { refreshUsage } = useSubscription();
+  
   const [isNewCustomerOpen, setIsNewCustomerOpen] = useState(false);
   const [isCustomerDetailsOpen, setIsCustomerDetailsOpen] = useState(false);
   const [isQuoteDetailsOpen, setIsQuoteDetailsOpen] = useState(false);
@@ -169,8 +177,10 @@ export default function KunderPage() {
     };
   }, []);
 
-  const handleCustomerCreated = () => {
+  const handleCustomerCreated = async () => {
     // Data will automatically update via real-time listeners
+    // Refresh usage data to update subscription limits
+    await refreshUsage();
   };
 
   const handleCustomerClick = (customer: Kunde) => {
@@ -183,10 +193,31 @@ export default function KunderPage() {
     setIsQuoteDetailsOpen(true);
   };
 
+  const handleNewCustomer = () => {
+    // Check if user has access first (but allow trial users)
+    if (!hasTrialAccess) {
+      alert('Du har ikke lenger tilgang til å opprette nye kunder. Oppgrader abonnementet for å fortsette.');
+      return;
+    }
+
+    // Check subscription limits
+    const limitCheck = checkCustomerLimit();
+    if (!limitCheck.canProceed) {
+      if (limitCheck.upgradeRequired) {
+        showUpgradeDialog(limitCheck.message!);
+      } else {
+        alert(limitCheck.message);
+      }
+      return;
+    }
+    
+    setIsNewCustomerOpen(true);
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <p className="text-gray-500">Laster kunder...</p>
       </div>
     );
   }
@@ -206,15 +237,25 @@ export default function KunderPage() {
     <div>
       <PageHeader title="Alle Kunder">
         <div className="flex gap-2">
-          <button 
-            onClick={() => setIsNewCustomerOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+          <button   
+            onClick={handleNewCustomer}
+            disabled={(isLimited && !hasTrialAccess) || !checkCustomerLimit().canProceed || limitsLoading}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+              (isLimited && !hasTrialAccess) || !checkCustomerLimit().canProceed || limitsLoading
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+                : 'bg-primary text-primary-foreground hover:bg-primary/90'
+            }`}
           >
             <PlusCircle className="h-5 w-5" />
             Ny kunde
           </button>
         </div>
       </PageHeader>
+
+      <AccessRestrictedBanner 
+        title="Begrenset tilgang til kundefunksjon"
+        message="Du kan se eksisterende kunder, men kan ikke opprette nye uten aktiv abonnement."
+      />
       
       <DataTable 
         columns={columns} 

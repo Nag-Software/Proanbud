@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/shared/Card';
 import * as Icons from 'lucide-react';
 
-export const SubscriptionSettings = () => {
+export const AISettings = () => {
   const [aiSettings, setAiSettings] = useState({
     enabled: true,
     autoQuoteGeneration: false,

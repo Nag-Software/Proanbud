@@ -370,12 +370,43 @@ export default function DashboardPage() {
 
       try {
         const userSettings = await getUserSettings();
-        const desktop = userSettings?.dashboardLayout || defaultDesktop;
-        const mobile = userSettings?.dashboardLayoutMobile || defaultDesktop;
+        let desktop = userSettings?.dashboardLayout;
+        let mobile = userSettings?.dashboardLayoutMobile;
         
-        setDesktopLayout(desktop);
-        setMobileLayout(mobile);
-        console.log('📋 Layouts loaded from database - Desktop:', desktop, 'Mobile:', mobile);
+        // Check if user has no dashboard layout or invalid format
+        const needsMigration = !desktop || !Array.isArray(desktop) || desktop.length === 0 ||
+                               !mobile || !Array.isArray(mobile) || mobile.length === 0;
+        
+        if (needsMigration) {
+          console.log('🔄 Migrating user dashboard layout to default structure');
+          
+          // Use default layouts
+          desktop = defaultDesktop;
+          mobile = [
+            { i: 'kpi-cards', x: 0, y: 0, w: 12, h: 4, minH: 4 },
+            { i: 'main-chart', x: 0, y: 4, w: 12, h: 14, minH: 6 },
+            { i: 'activity-feed', x: 0, y: 18, w: 12, h: 10, minH: 4 },
+            { i: 'pie-chart', x: 0, y: 28, w: 12, h: 8, minH: 4 },
+            { i: 'quick-stats', x: 0, y: 36, w: 12, h: 8, minH: 4 },
+            { i: 'quotes-table', x: 0, y: 44, w: 12, h: 12, minH: 6 },
+            { i: 'customers-table', x: 0, y: 56, w: 12, h: 12, minH: 6 },
+          ];
+          
+          // Save the default layout to user settings
+          try {
+            await updateUserSettings({ 
+              dashboardLayout: desktop,
+              dashboardLayoutMobile: mobile
+            });
+            console.log('✅ Default dashboard layout saved for user');
+          } catch (saveError) {
+            console.warn('Could not save default dashboard layout:', saveError);
+          }
+        }
+        
+        setDesktopLayout(desktop || defaultDesktop);
+        setMobileLayout(mobile || defaultDesktop);
+        console.log('📋 Layouts loaded - Desktop:', desktop || defaultDesktop, 'Mobile:', mobile || defaultDesktop);
       } catch (error) {
         console.error('Failed to load dashboard layout:', error);
         // Fallback to localStorage if Firebase fails

@@ -12,7 +12,6 @@ Modern quotation and customer management system for Norwegian businesses.
 - **AI-Powered Pricing**: Intelligent pricing suggestions based on project details
 - **Inbox System**: Centralized message management for quote communications
 - **Business Settings**: Customizable company profiles and branding
-- **💳 Subscription Management**: Complete Stripe integration for Basic and Pro plans
 
 ## 📁 Project Structure
 

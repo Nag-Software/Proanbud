@@ -138,10 +138,21 @@ export const initializeUserSettings = async (userData: { name: string; email: st
       timezone: 'Europe/Oslo',
       dashboardLayout: [
         { i: 'kpi-cards', x: 0, y: 0, w: 12, h: 4, minH: 4 },
-        { i: 'main-chart', x: 0, y: 4, w: 8, h: 8, minH: 6 },
-        { i: 'quick-stats', x: 8, y: 4, w: 4, h: 4, minH: 4 },
-        { i: 'pie-chart', x: 8, y: 8, w: 4, h: 6, minH: 4 },
-        { i: 'activity-feed', x: 0, y: 12, w: 12, h: 6, minH: 4 },
+        { i: 'main-chart', x: 0, y: 4, w: 9, h: 14, minH: 6 },
+        { i: 'quick-stats', x: 3, y: 18, w: 6, h: 8, minH: 4 },
+        { i: 'activity-feed', x: 9, y: 4, w: 3, h: 22, minH: 4 },
+        { i: 'pie-chart', x: 0, y: 18, w: 3, h: 8, minH: 4 },
+        { i: 'quotes-table', x: 0, y: 26, w: 7, h: 12, minH: 6 },
+        { i: 'customers-table', x: 7, y: 26, w: 5, h: 12, minH: 6 },
+      ],
+      dashboardLayoutMobile: [
+        { i: 'kpi-cards', x: 0, y: 0, w: 12, h: 4, minH: 4 },
+        { i: 'main-chart', x: 0, y: 4, w: 12, h: 14, minH: 6 },
+        { i: 'activity-feed', x: 0, y: 18, w: 12, h: 10, minH: 4 },
+        { i: 'pie-chart', x: 0, y: 28, w: 12, h: 8, minH: 4 },
+        { i: 'quick-stats', x: 0, y: 36, w: 12, h: 8, minH: 4 },
+        { i: 'quotes-table', x: 0, y: 44, w: 12, h: 12, minH: 6 },
+        { i: 'customers-table', x: 0, y: 56, w: 12, h: 12, minH: 6 },
       ],
       lastUpdated: Date.now()
     };

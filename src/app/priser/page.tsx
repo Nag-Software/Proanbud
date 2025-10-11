@@ -34,21 +34,20 @@ export default function PricingPage() {
   const plans = [
     {
       id: 'free',
-      name: 'Gratis',
-      description: 'Perfekt for å komme i gang og teste ut plattformen',
+      name: 'Gratis prøveperiode',
+      description: 'Test alle funksjoner gratis i 14 dager – ingen kredittkort nødvendig',
       price: {
         monthly: 0,
         yearly: 0
       },
       features: [
-        'Inntil 5 tilbud per måned',
+        'Inntil 5 tilbud',
         'Inntil 3 kunder',
-        'Grunnleggende maler',
         'E-post support',
-        'Grunnleggende analyse'
+        'Grunnleggende statistikk'
       ],
       color: 'gray',
-      cta: 'Kom i gang gratis',
+      cta: 'Start prøveperiode',
       popular: false
     },
     {

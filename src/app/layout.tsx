@@ -3,7 +3,8 @@
 import type { Metadata } from "next";
 import { Space_Grotesk } from "next/font/google";
 import "./globals.css";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { AuthProvider } from '@/contexts/AuthContext';
+import { SubscriptionProvider } from '@/contexts/SubscriptionContextNew';
 import GoogleAnalytics from "@/components/GoogleAnalytics";
 
 const spaceGrotesk = Space_Grotesk({
@@ -30,10 +31,12 @@ export default function RootLayout({
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="description" content="AI-drevet tilbudssystem for håndverkere" />
       </head>
-      <body className={`${spaceGrotesk.variable} font-sans bg-background text-foreground`} suppressHydrationWarning>
+      <body className={`${spaceGrotesk.variable} font-sans bg-background text-foreground overflow-x-hidden`} suppressHydrationWarning>
         {gaId && <GoogleAnalytics gaId={gaId} />}
         <AuthProvider>
-          {children}
+          <SubscriptionProvider>
+            {children}
+          </SubscriptionProvider>
         </AuthProvider>
       </body>
     </html>

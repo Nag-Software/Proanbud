@@ -238,7 +238,7 @@ export default function BedriftPage() {
     <>
       <PageHeader title="Min Bedrift" />
       
-      <div className="space-y-6">
+      <div className="space-y-6 grid grid-cols-1 xl:grid-cols-2 gap-4">
         {/* Company Information */}
         <Card>
           <CardHeader>
@@ -758,14 +758,15 @@ export default function BedriftPage() {
             </div>
           </CardContent>
         </Card>
+      </div>
 
-        {/* Save Button */}
+      {/* Save Button */}
         <div className="flex justify-end pt-4 border-t border-gray-200">
           <button
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-8 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {saving ? (
               <Icons.Loader2 className="h-4 w-4 animate-spin" />
@@ -775,7 +776,6 @@ export default function BedriftPage() {
             {saving ? 'Lagrer...' : 'Lagre endringer'}
           </button>
         </div>
-      </div>
 
       {/* Success Dialog */}
       <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>

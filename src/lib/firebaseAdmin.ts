@@ -64,35 +64,6 @@ export { adminDb, adminAuth };
 // Helper function to check if admin SDK is available
 export const isAdminAvailable = () => adminDb !== null;
 
-// Helper function to safely write subscription data
-export async function updateUserSubscription(
-  userId: string,
-  subscriptionData: {
-    plan: 'free' | 'basic' | 'pro';
-    status: string;
-    stripeCustomerId?: string;
-    stripeSubscriptionId?: string;
-    stripePriceId?: string;
-    currentPeriodStart?: number;
-    currentPeriodEnd?: number;
-    cancelAtPeriodEnd?: boolean;
-    canceledAt?: number;
-    trialStart?: number;
-    trialEnd?: number;
-  }
-): Promise<void> {
-  if (!adminDb) {
-    throw new Error('Firebase Admin SDK not initialized');
-  }
-
-  const subscriptionRef = adminDb.ref(`users/${userId}/subscription`);
-  
-  await subscriptionRef.set({
-    ...subscriptionData,
-    updatedAt: Date.now(),
-  });
-}
-
 // Helper function to store invoice
 export async function storeInvoice(
   userId: string,

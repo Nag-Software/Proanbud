@@ -10,6 +10,7 @@ import * as Icons from 'lucide-react';
 import { LogOut } from 'lucide-react';
 import Logo from '../shared/Logo';
 import { NotificationButton } from '../shared/NotificationButton';
+import { LimitCounters } from '../subscription/LimitCounters';
 import { ref, onValue, off } from 'firebase/database';
 import { db } from '@/lib/firebase';
 
@@ -87,18 +88,6 @@ export const Sidebar = () => {
     return name.charAt(0).toUpperCase();
   };
 
-  const getPlanBadge = () => {
-    const plan = 'free'; // Hardcoded until subscription system is implemented
-    
-    const badges: Record<string, { label: string; color: string }> = {
-      free: { label: 'Gratis', color: 'bg-gray-100 text-gray-700' },
-      basic: { label: 'Basic', color: 'bg-blue-100 text-blue-700' },
-      pro: { label: 'Pro', color: 'bg-purple-100 text-purple-700' },
-    };
-
-    return badges[plan];
-  };
-
   return (
     <aside className="hidden lg:flex w-[280px] bg-card border-r border-border flex-col h-screen">
       <div className="h-20 flex items-center justify-between px-6 border-b border-border">
@@ -115,6 +104,9 @@ export const Sidebar = () => {
         ))}
       </nav>
 
+      {/* Limit Counters */}
+      <LimitCounters />
+
       {/* User Card */}
       <div className="p-4 border-t border-border">
         <div className="flex items-center justify-between">
@@ -123,12 +115,7 @@ export const Sidebar = () => {
               {getInitials()}
             </div>
             <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <p className="font-semibold text-sm text-text">{getDisplayName()}</p>
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${getPlanBadge().color}`}>
-                  {getPlanBadge().label}
-                </span>
-              </div>
+              <p className="font-semibold text-sm text-text">{getDisplayName()}</p>
               <p className="text-xs text-muted-text">{user?.email}</p>
             </div>
           </div>

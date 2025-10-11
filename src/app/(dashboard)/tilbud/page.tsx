@@ -15,6 +15,10 @@ import { PlusCircle } from 'lucide-react';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import {useRouter} from 'next/navigation';
+import { useSubscriptionLimits } from '@/hooks/useSubscriptionLimits';
+import { useSubscriptionAccess } from '@/hooks/useSubscriptionAccess';
+import { useSubscription } from '@/contexts/SubscriptionContextNew';
+import { AccessRestrictedBanner } from '@/components/subscription/AccessRestrictedBanner';
 
 const StatusPill: React.FC<{ status: TilbudStatus }> = ({ status }) => {
   const statusStyles = {
@@ -43,6 +47,9 @@ const StatusPill: React.FC<{ status: TilbudStatus }> = ({ status }) => {
 export default function TilbudPage() {
 
   const router = useRouter();
+  const { checkQuoteLimit, showUpgradeDialog, loading: limitsLoading } = useSubscriptionLimits();
+  const { hasAccess, hasTrialAccess, isLimited } = useSubscriptionAccess();
+  const { subscription, refreshUsage } = useSubscription();
 
   const [isNewQuoteOpen, setIsNewQuoteOpen] = useState(false);
   const [isQuoteDetailsOpen, setIsQuoteDetailsOpen] = useState(false);
@@ -58,6 +65,23 @@ export default function TilbudPage() {
   const [editingQuote, setEditingQuote] = useState<Tilbud | null>(null);
 
   function check_if_new_quote_ready() {
+    // Check if user has access first (but allow trial users)
+    if (!hasTrialAccess) {
+      alert('Du har ikke lenger tilgang til å opprette nye tilbud. Oppgrader abonnementet for å fortsette.');
+      return;
+    }
+
+    // Check subscription limits
+    const limitCheck = checkQuoteLimit();
+    if (!limitCheck.canProceed) {
+      if (limitCheck.upgradeRequired) {
+        showUpgradeDialog(limitCheck.message!);
+      } else {
+        alert(limitCheck.message);
+      }
+      return;
+    }
+
     console.log(customers.length)
     if(customers.length > 0) {
       setIsNewQuoteOpen(true);
@@ -176,8 +200,10 @@ export default function TilbudPage() {
     };
   }, []);
 
-  const handleTilbudCreated = () => {
+  const handleTilbudCreated = async () => {
     // Data will automatically update via real-time listeners
+    // Refresh usage data to update subscription limits
+    await refreshUsage();
   };
 
   const handleQuoteClick = (quote: Tilbud) => {
@@ -310,7 +336,7 @@ export default function TilbudPage() {
 
         return (
           <span className={`font-medium ${totalProfit >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-            {totalProfit.toFixed(1).toLocaleString('nb-NO')} kr {customerPrice > 0 && (
+            {totalProfit.toFixed(1)} kr {customerPrice > 0 && (
               <span className="text-xs text-gray-500">({profitMargin.toFixed(1)}%)</span>
             )}
           </span>
@@ -406,12 +432,22 @@ export default function TilbudPage() {
       <PageHeader title="Alle Tilbud">
         <button 
           onClick={() => check_if_new_quote_ready()}
-          className="flex items-center cursor-pointer gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+          disabled={(isLimited && !hasTrialAccess) || !checkQuoteLimit().canProceed || limitsLoading}
+          className={`flex items-center cursor-pointer gap-2 px-4 py-2 rounded-lg transition-colors ${
+            (isLimited && !hasTrialAccess) || !checkQuoteLimit().canProceed || limitsLoading
+              ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+              : 'bg-primary text-primary-foreground hover:bg-primary/90'
+          }`}
         >
           <PlusCircle className="h-5 w-5" />
           Nytt Tilbud
         </button>
       </PageHeader>
+
+      <AccessRestrictedBanner 
+        title="Begrenset tilgang til tilbudsfunksjon"
+        message="Du kan se eksisterende tilbud, men kan ikke opprette nye uten aktiv abonnement."
+      />
       
       <DataTable 
         columns={columns} 

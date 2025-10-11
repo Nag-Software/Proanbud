@@ -329,38 +329,38 @@ export default function Home() {
               {
                 icon: Sparkles,
                 title: "AI-prissetting",
-                description: "La kunstig intelligens foreslå konkurransedyktige priser basert på materialpriser og historisk data",
+                description: "La kunstig intelligens foreslå konkurransedyktige priser basert på materialpriser, historisk data og dine pristilbud hos leverandører",
                 color: "#82ffb2"
               },
               {
                 icon: Zap,
                 title: "Lynrask tilbudssending",
-                description: "Send profesjonelle tilbud på under 5 minutter med forhåndslagde maler",
+                description: "Send profesjonelle tilbud på under 5 minutter med autogenererte mengdeberegninger og AI-prisestimat",
                 color: "#ff82d0"
               },
               {
                 icon: Smartphone,
                 title: "Mobilvennlig",
-                description: "Full funksjonalitet på mobil, nettbrett og PC - send tilbud fra byggeplassen",
+                description: "Full funksjonalitet på mobil, nettbrett og PC - send tilbud direkte på befaring",
                 color: "#82b2ff"
               },
               {
                 icon: FileText,
-                title: "Profesjonelle maler",
-                description: "Velg blant moderne, tilpassbare maler som gir et profesjonelt førsteinntrykk",
-                color: "#82ffb2"
+                title: "Profesjonell kundehåndtering",
+                description: "Ha full oversikt over kundesamtaler og hendelser, samt automatisert kundeoppfølging via mail.",
+                color: "#ff82d0"
               },
               {
                 icon: BarChart3,
                 title: "Analyse & rapporter",
-                description: "Følg med på konverteringsrate, omsetning og andre nøkkeltall i sanntid",
-                color: "#ff82d0"
+                description: "Følg med på konverteringsrate, omsetning, profitt og andre nøkkeltall i sanntid",
+                color: "#82b2ff"
               },
               {
                 icon: Clock,
                 title: "Spar 80% tid",
-                description: "Automatiser repeterende oppgaver og fokuser på det som gir verdi",
-                color: "#82b2ff"
+                description: "Automatiser tunge og repetitive oppgaver og fokuser på det som gir verdi",
+                color: "#82ffb2"
               }
             ].map((feature, index) => (
               <div

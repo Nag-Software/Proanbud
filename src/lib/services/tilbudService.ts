@@ -224,6 +224,40 @@ export const createTilbud = async (tilbudData: TilbudFormData): Promise<string> 
     // Get current user ID
     const userId = getCurrentUserId();
     
+    // Check subscription limits before creating quote
+    try {
+      const userRef = ref(db, `users/${userId}`);
+      const userSnapshot = await get(userRef);
+      
+      if (userSnapshot.exists()) {
+        const userData = userSnapshot.val();
+        const subscription = userData.subscription;
+        
+        // Count existing quotes
+        const quotesData = userData.tilbud || {};
+        const quotesCount = Object.keys(quotesData).length;
+        
+        // Only enforce limits for non-pro plans
+        if (subscription?.plan !== 'pro') {
+          const plan = subscription?.status === 'trialing' ? 'trial' : (subscription?.plan || 'free');
+          const { SUBSCRIPTION_PLANS } = await import('@/lib/stripe');
+          const planDetails = SUBSCRIPTION_PLANS.find(p => p.id === plan);
+          const quotesLimit = planDetails?.limits.quotes || 5;
+          
+          if (quotesLimit !== -1 && quotesCount >= quotesLimit) {
+            const planName = plan === 'trial' ? 'prøveperiode' : plan === 'free' ? 'gratis prøveperiode' : plan + ' plan';
+            throw new Error(`Du har nådd grensen på ${quotesLimit} tilbud for din ${planName}. Oppgrader for å opprette flere tilbud.`);
+          }
+        }
+      }
+    } catch (limitError) {
+      console.warn('Could not verify subscription limits:', limitError);
+      // Only throw if it's a limit error, not a technical error
+      if (limitError instanceof Error && limitError.message.includes('grensen på')) {
+        throw limitError;
+      }
+    }
+    
     const now = serverTimestamp();
     const viewToken = generateViewToken(); // Generate unique token for customer access
     

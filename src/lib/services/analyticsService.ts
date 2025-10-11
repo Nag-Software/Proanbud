@@ -348,9 +348,17 @@ export const getUserAnalytics = async (): Promise<UserAnalytics | null> => {
       return newSnapshot.exists() ? newSnapshot.val() : null;
     }
     
-    const analytics = snapshot.val() as UserAnalytics;
-    
     const existingAnalytics = snapshot.val() as UserAnalytics;
+    
+    // Migrate old data structure: if monthlyData is an object, convert to array
+    if (existingAnalytics.monthlyData && !Array.isArray(existingAnalytics.monthlyData)) {
+      console.log('🔄 Migrating monthlyData from object to array structure');
+      existingAnalytics.monthlyData = [];
+      // Update the database with the corrected structure
+      await updateUserAnalytics();
+      const updatedSnapshot = await get(analyticsRef);
+      return updatedSnapshot.exists() ? updatedSnapshot.val() : existingAnalytics;
+    }
     
     // Check if analytics are older than 1 hour, or don't have dailyData, if so, update them
     const oneHourAgo = Date.now() - (60 * 60 * 1000);
@@ -795,7 +803,10 @@ export const filterAnalyticsByTimePeriod = (analytics: UserAnalytics, period: Ti
       const placeholderMonths = generatePlaceholderMonths(monthStartDate, now);
       const existingDataMap = new Map<string, MonthlyData>();
       
-      analytics.monthlyData.forEach(month => {
+      // Ensure monthlyData exists and is an array
+      const monthlyData = Array.isArray(analytics.monthlyData) ? analytics.monthlyData : [];
+      
+      monthlyData.forEach(month => {
         const key = `${month.year}-${month.month}`;
         existingDataMap.set(key, month);
       });
@@ -829,9 +840,11 @@ export const filterAnalyticsByTimePeriod = (analytics: UserAnalytics, period: Ti
     
     case 'frastart':
     default:
+      // Ensure monthlyData exists and is an array before calling fillMonthlyDataGaps
+      const safeMonthlyData = Array.isArray(analytics.monthlyData) ? analytics.monthlyData : [];
       return {
         ...analytics,
-        monthlyData: fillMonthlyDataGaps(analytics.monthlyData),
+        monthlyData: fillMonthlyDataGaps(safeMonthlyData),
         dailyData: undefined,
       };
   }
@@ -1000,12 +1013,15 @@ export const getDashboardKPIsWithChange = async () => {
     const previousMonth = currentMonth === 0 ? 11 : currentMonth - 1;
     const previousYear = currentMonth === 0 ? currentYear - 1 : currentYear;
 
+    // Ensure monthlyData exists and is an array
+    const monthlyData = Array.isArray(analytics.monthlyData) ? analytics.monthlyData : [];
+
     // Find current and previous month data
-    const currentMonthData = analytics.monthlyData.find(m => 
+    const currentMonthData = monthlyData.find(m => 
       m.month === new Date(currentYear, currentMonth).toLocaleDateString('nb-NO', { month: 'short' }) && 
       m.year === currentYear
     );
-    const previousMonthData = analytics.monthlyData.find(m => 
+    const previousMonthData = monthlyData.find(m => 
       m.month === new Date(previousYear, previousMonth).toLocaleDateString('nb-NO', { month: 'short' }) && 
       m.year === previousYear
     );
