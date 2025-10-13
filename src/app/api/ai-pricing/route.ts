@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const n8nWebhookUrl = "https://proanbud.app.n8n.cloud/webhook/f7666602-b37a-460f-a066-1dac1a92901c";
+    const n8nWebhookUrl = "https://feasible-troll-epic.ngrok-free.app/webhook/f7666602-b37a-460f-a066-1dac1a92901c";
 
     const n8nResponse = await fetch(n8nWebhookUrl, {
       method: 'POST',
@@ -13,6 +13,8 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify(body),
     });
+
+    console.log(n8nResponse)
 
     const data = await n8nResponse.json();
     console.log('N8N Response:', data);
