@@ -58,8 +58,8 @@ export const testFirebaseConnection = async (): Promise<boolean> => {
     // Import Firebase database functions
     const { ref, get } = await import('firebase/database');
     
-    // Simple test: try to read from the root (even if it's empty)
-    const testRef = ref(db, 'connectionTest');
+    // Simple test: try to read from katalog (which has public read access)
+    const testRef = ref(db, 'katalog');
     await get(testRef);
     
     return true;

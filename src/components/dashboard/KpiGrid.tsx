@@ -35,10 +35,14 @@ export const KpiGrid: React.FC<KpiGridProps> = ({ data, className = "", onHeight
     }
   }, [onHeightChange]);
 
-  // Defensive check for empty data
-  if (!data || data.length === 0) {
-    return null;
-  }
+  // Defensive check for empty data - show default cards if no data
+  const displayData = (!data || data.length === 0) ? [
+    { title: 'Total Omsetning', value: '0 kr', change: '+0%', icon: 'DollarSign' },
+    { title: 'Aktive Tilbud', value: '0', change: '+0%', icon: 'FileText' },
+    { title: 'Vunnede Tilbud', value: '0', change: '+0%', icon: 'Award' },
+    { title: 'Treffprosent', value: '0%', change: '+0%', icon: 'Target' },
+    { title: 'Total Profitt', value: '0 kr', change: '+0%', icon: 'TrendingUp' }
+  ] : data;
 
   return (
     <div className={`w-full ${className}`}>
@@ -51,7 +55,7 @@ export const KpiGrid: React.FC<KpiGridProps> = ({ data, className = "", onHeight
           gridAutoRows: 'minmax(130px, auto)',
         }}
       >
-        {data.map((kpi, index) => {
+        {displayData.map((kpi, index) => {
           return (
             <KpiCard
               key={`${kpi.title}-${index}`}
