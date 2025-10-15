@@ -3,12 +3,13 @@ import { toast } from "@/hooks/use-toast";
 
 import { PageHeader } from "@/components/shared/PageHeader";
 import { UserSettings, SubscriptionSettings } from "@/components/settings";
+import { LoadingRing } from "@/components/ui/loading-ring";
 import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { getUserSettings, UserSettingsData } from '@/lib/services/userSettingsService';
 import { getBusinessSettings } from '@/lib/services/businessService';
 import { BusinessSettings } from '@/lib/types';
-import { ref, onValue, off } from 'firebase/database';
+import { ref, onValue, off } from 'firebase/database'; 
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { getAuth } from 'firebase/auth';
@@ -157,15 +158,22 @@ export default function SettingsPage() {
                 <PageHeader title="Innstillinger" />
                 <div className="space-y-8">
                     {verifyingPayment && (
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                            <div className="flex items-center gap-3">
-                                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
-                                <p className="text-blue-800 font-medium">Verifiserer betaling...</p>
+                        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6 shadow-sm">
+                            <div className="flex items-center justify-center gap-4">
+                                <LoadingRing size="lg" color="blue" />
+                                <div className="text-center">
+                                    <p className="text-blue-800 font-semibold text-lg">Verifiserer betaling...</p>
+                                    <p className="text-blue-600 text-sm mt-1">Oppdaterer abonnement og aktiverer tjenester</p>
+                                </div>
                             </div>
                         </div>
                     )}
-                    <div className="animate-pulse bg-gray-200 h-64 rounded-lg"></div>
-                    <div className="animate-pulse bg-gray-200 h-96 rounded-lg"></div>
+                    {!verifyingPayment && (
+                        <>
+                            <div className="animate-pulse bg-gray-200 h-64 rounded-lg"></div>
+                            <div className="animate-pulse bg-gray-200 h-96 rounded-lg"></div>
+                        </>
+                    )}
                 </div>
             </div>
         );

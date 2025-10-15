@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { firestore, db } from '@/lib/firebase';
+import { getAuth } from 'firebase/auth';
 import { 
   collection, 
   doc, 
@@ -14,10 +15,9 @@ import {
   limit,
   getDocs 
 } from 'firebase/firestore';
-import { ref, get } from 'firebase/database';
+import { ref, get, set } from 'firebase/database';
 import { UserSubscription, SubscriptionUsage, UserSubscriptionContext, SubscriptionPlan } from '@/lib/subscription-types';
-import { SUBSCRIPTION_PLANS, calculateTrialEndDate, FREE_TRIAL_DAYS } from '@/lib/stripe';
-import { stripePayments } from '@/lib/stripe';
+import { SUBSCRIPTION_PLANS, calculateTrialEndDate, FREE_TRIAL_DAYS } from '@/lib/stripe-client';
 
 const SubscriptionContext = createContext<UserSubscriptionContext | null>(null);
 
@@ -32,10 +32,15 @@ export const useSubscription = () => {
       error: null,
       refetch: async () => {},
       refreshUsage: async () => {},
-      createCheckoutSession: async () => ({ id: '', url: '' }),
+      createCheckoutSession: async () => ({ id: '', url: 'https://proanbud.no/' }),
       createCustomerPortalSession: async () => '',
       cancelSubscription: async () => {},
       resumeSubscription: async () => {},
+      syncSubscriptions: async () => {},
+      autoSyncSubscriptions: async () => {},
+      // Debug features (development only)
+      debugTimeOffset: 0,
+      timetravelDebugTest: () => {},
     };
   }
   return context;
@@ -51,6 +56,14 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
   const [usage, setUsage] = useState<SubscriptionUsage | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Debug time travel state (development only)
+  const [debugTimeOffset, setDebugTimeOffset] = useState<number>(0);
+
+  // Get current time with debug offset (for testing)
+  const getCurrentTime = useCallback(() => {
+    return Math.floor(Date.now() / 1000) + debugTimeOffset;
+  }, [debugTimeOffset]);
 
   // Fetch usage data from Realtime Database (existing data structure)
   const fetchUsage = useCallback(async () => {
@@ -70,7 +83,7 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
       // Determine correct plan based on expiration
       let currentPlan = subscription?.status === 'trialing' ? 'trial' : (subscription?.plan || 'free');
       let planDetails = SUBSCRIPTION_PLANS.find(p => p.id === currentPlan);
-      const now = Math.floor(Date.now() / 1000);
+      const now = getCurrentTime();
 
       // If subscription is basic/pro and expired, downgrade to free
       if ((currentPlan === 'basic' || currentPlan === 'pro') && subscription) {
@@ -124,18 +137,25 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
       const unsubscribe = onSnapshot(
         subscriptionsQuery,
         (snapshot) => {
-          // Find the most recent active/trialing/past_due subscription
+          console.log('🔥 Firestore subscription snapshot received, docs count:', snapshot.docs.length);
+          snapshot.docs.forEach((doc, index) => {
+            console.log(`📄 Doc ${index}:`, doc.id, doc.data());
+          });
+          
+          // Find the most recent active/trialing/past_due/canceled subscription
           let selectedDoc = null;
           for (const doc of snapshot.docs) {
             const data = doc.data();
-            if (['active', 'trialing', 'past_due'].includes(data.status)) {
+            if (['active', 'trialing', 'past_due', 'canceled'].includes(data.status)) {
               selectedDoc = doc;
               break;
             }
           }
 
           if (selectedDoc) {
+            console.log('✅ Selected subscription doc:', selectedDoc.id);
             const subscriptionData = selectedDoc.data();
+            console.log('📋 Subscription data:', subscriptionData);
             let mappedSubscription: UserSubscription = {
               plan: mapStripePriceToPlan(subscriptionData.price?.id),
               status: subscriptionData.status,
@@ -150,7 +170,7 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
             };
 
             // Only downgrade if truly expired/canceled/unpaid
-            const now = Math.floor(Date.now() / 1000);
+            const now = getCurrentTime();
             if ((mappedSubscription.plan === 'basic' || mappedSubscription.plan === 'pro')) {
               if (mappedSubscription.status === 'canceled' || mappedSubscription.status === 'unpaid' || mappedSubscription.currentPeriodEnd < now) {
                 mappedSubscription = {
@@ -160,6 +180,7 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
                 };
               }
             }
+            console.log('📋 Mapped subscription:', mappedSubscription);
             setSubscription(mappedSubscription);
           } else {
             // No active subscription - create trial in memory only
@@ -181,6 +202,39 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
     return unsubscribe;
   }, [user?.uid]);
 
+  // Time travel debug function (development only)
+  const timetravelDebugTest = useCallback((daysOffset: number) => {
+    // Allow in development mode or when explicitly enabled for debugging
+    if (process.env.NODE_ENV !== 'development' && !process.env.NEXT_PUBLIC_ENABLE_DEBUG_TIME_TRAVEL) {
+      console.warn('timetravelDebugTest is only available in development mode or when NEXT_PUBLIC_ENABLE_DEBUG_TIME_TRAVEL is set');
+      return;
+    }
+    
+    console.log('🕐 Time travel function called with offset:', daysOffset, 'days');
+    
+    // Special case: reset to current time
+    if (daysOffset === 0) {
+      setDebugTimeOffset(0);
+      console.log('🕐 Time reset to current time');
+    } else {
+      // Convert days to seconds for the debug offset
+      const secondsOffset = daysOffset * 24 * 60 * 60;
+      
+      // Add to current offset instead of setting it
+      setDebugTimeOffset((currentOffset) => {
+        const newOffset = currentOffset + secondsOffset;
+        console.log(`🕐 Time travel: ${currentOffset / (24 * 60 * 60)}d → ${newOffset / (24 * 60 * 60)}d`);
+        console.log(`Current simulated time: ${new Date((Math.floor(Date.now() / 1000) + newOffset) * 1000).toISOString()}`);
+        return newOffset;
+      });
+    }
+    
+    // Force refresh usage data with new time
+    if (user?.uid) {
+      fetchUsage();
+    }
+  }, [user?.uid, fetchUsage]);
+
   // Map Stripe price ID to our plan names
   const mapStripePriceToPlan = (priceId?: string): SubscriptionPlan => {
     if (!priceId) return 'free';
@@ -199,24 +253,95 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
   const createTrialInMemory = useCallback(() => {
     if (!user?.uid) return;
 
-    console.log('createTrialInMemory - creating trial subscription in memory for user:', user.uid);
+    console.log('createTrialInMemory - checking trial eligibility for user:', user.uid);
 
-    const trialEnd = calculateTrialEndDate();
-    const now = Math.floor(Date.now() / 1000);
-    const trialSubscription: UserSubscription = {
-      plan: 'free',
-      status: 'trialing',
-      currentPeriodStart: now,
-      currentPeriodEnd: trialEnd,
-      trialEnd: trialEnd, // Also set trialEnd for consistency
-      cancelAtPeriodEnd: false,
-      createdAt: now,
-      updatedAt: now,
-    };
+    // Check if user has already used their trial
+    const trialUsedRef = ref(db, `users/${user.uid}/trialUsed`);
+    get(trialUsedRef).then((trialUsedSnapshot) => {
+      const hasUsedTrial = trialUsedSnapshot.exists() && trialUsedSnapshot.val() === true;
 
-    console.log('createTrialInMemory - setting trial subscription:', trialSubscription);
-    setSubscription(trialSubscription);
-  }, [user?.uid]);
+      if (hasUsedTrial) {
+        console.log('createTrialInMemory - user has already used trial, not creating new trial');
+        // Set to free plan without trial
+        const freeSubscription: UserSubscription = {
+          plan: 'free',
+          status: 'active',
+          currentPeriodStart: Math.floor(Date.now() / 1000),
+          currentPeriodEnd: Math.floor(Date.now() / 1000) + (365 * 24 * 60 * 60), // Far future
+          cancelAtPeriodEnd: false,
+          createdAt: Math.floor(Date.now() / 1000),
+          updatedAt: Math.floor(Date.now() / 1000),
+        };
+        setSubscription(freeSubscription);
+        return;
+      }
+
+      console.log('createTrialInMemory - user eligible for trial, creating trial subscription');
+
+      // Get user creation time from Firebase Auth metadata
+      const userCreatedAt = user.metadata?.creationTime ? Math.floor(new Date(user.metadata.creationTime).getTime() / 1000) : Math.floor(Date.now() / 1000);
+
+      // Calculate trial end as 14 days from user creation
+      const trialDays = 14;
+      const trialEnd = userCreatedAt + (trialDays * 24 * 60 * 60);
+      const now = getCurrentTime();
+
+      // Check if trial has already expired
+      if (trialEnd < now) {
+        console.log('createTrialInMemory - trial has expired, marking as used and setting free plan');
+        // Mark trial as used since it has expired
+        set(ref(db, `users/${user.uid}/trialUsed`), true).catch((error: any) => {
+          console.error('createTrialInMemory - failed to mark trial as used:', error);
+        });
+        
+        // Set to free plan without trial
+        const freeSubscription: UserSubscription = {
+          plan: 'free',
+          status: 'active',
+          currentPeriodStart: Math.floor(Date.now() / 1000),
+          currentPeriodEnd: Math.floor(Date.now() / 1000) + (365 * 24 * 60 * 60), // Far future
+          cancelAtPeriodEnd: false,
+          createdAt: Math.floor(Date.now() / 1000),
+          updatedAt: Math.floor(Date.now() / 1000),
+        };
+        setSubscription(freeSubscription);
+        return;
+      }
+
+      const trialSubscription: UserSubscription = {
+        plan: 'free',
+        status: 'trialing',
+        currentPeriodStart: userCreatedAt,
+        currentPeriodEnd: trialEnd,
+        trialEnd: trialEnd,
+        cancelAtPeriodEnd: false,
+        createdAt: userCreatedAt,
+        updatedAt: now,
+      };
+
+      console.log('createTrialInMemory - setting trial subscription:', trialSubscription);
+      setSubscription(trialSubscription);
+    }).catch((error) => {
+      console.error('createTrialInMemory - error checking trial usage:', error);
+      // Fallback to creating trial on error
+      const userCreatedAt = user.metadata?.creationTime ? Math.floor(new Date(user.metadata.creationTime).getTime() / 1000) : Math.floor(Date.now() / 1000);
+      const trialDays = 14;
+      const trialEnd = userCreatedAt + (trialDays * 24 * 60 * 60);
+      const now = getCurrentTime();
+
+      const trialSubscription: UserSubscription = {
+        plan: 'free',
+        status: 'trialing',
+        currentPeriodStart: userCreatedAt,
+        currentPeriodEnd: trialEnd,
+        trialEnd: trialEnd,
+        cancelAtPeriodEnd: false,
+        createdAt: userCreatedAt,
+        updatedAt: now,
+      };
+      setSubscription(trialSubscription);
+    });
+  }, [user?.uid, user?.metadata?.creationTime]);
 
   // Create checkout session using Firestore (with fallback to direct API)
   const createCheckoutSession = useCallback(async (priceId: string) => {
@@ -233,11 +358,12 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
       // Create the checkout session document with the required structure
       const sessionData = {
         price: priceId,
-        success_url: `${window.location.origin}/innstillinger?success=true`,
+        success_url: `${window.location.origin}/innstillinger?success=true&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${window.location.origin}/innstillinger?canceled=true`,
         allow_promotion_codes: true,
         mode: 'subscription',
         metadata: {
+          firebase_uid: user.uid,
           created_by: 'proanbud_app'
         }
       };
@@ -380,10 +506,97 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
     if (subscription) {
       fetchUsage();
     }
-  }, [subscription, fetchUsage]);
+  }, [subscription]);
+
+  const syncSubscriptions = useCallback(async () => {
+    if (!user?.uid) return;
+
+    try {
+      setLoading(true);
+      const auth = getAuth();
+      const idToken = await auth.currentUser?.getIdToken();
+
+      if (!idToken) {
+        throw new Error('No auth token available');
+      }
+
+      const response = await fetch('/api/stripe/sync-subscriptions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        if (error.code === 'NO_SUBSCRIPTION') {
+          throw new Error('No active subscription found. Please create a subscription first.');
+        }
+        throw new Error(error.error || 'Failed to sync subscriptions');
+      }
+
+      const result = await response.json();
+      console.log('✅ Subscriptions synced:', result);
+
+      // The Firestore listener should automatically update the UI
+      console.log('🔄 Firestore listener should update automatically');
+
+    } catch (error) {
+      console.error('❌ Failed to sync subscriptions:', error);
+      setError('Failed to sync subscription data');
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.uid]);
+
+  // Auto-sync subscription data on load and periodically
+  const autoSyncSubscriptions = useCallback(async (force = false) => {
+    if (!user?.uid) return;
+
+    // Only auto-sync if we have a subscription and it's been more than 5 minutes since last sync
+    // or if force is true
+    const lastSyncKey = `lastSubscriptionSync_${user.uid}`;
+    const lastSync = localStorage.getItem(lastSyncKey);
+    const now = Date.now();
+    const fiveMinutes = 5 * 60 * 1000;
+
+    if (!force && lastSync && (now - parseInt(lastSync)) < fiveMinutes) {
+      console.log('⏰ Skipping auto-sync, last sync was recent');
+      return;
+    }
+
+    try {
+      console.log('🔄 Auto-syncing subscription data...');
+      await syncSubscriptions();
+      localStorage.setItem(lastSyncKey, now.toString());
+      console.log('✅ Auto-sync completed');
+    } catch (error) {
+      console.error('❌ Auto-sync failed:', error);
+      // Don't show error to user for auto-sync failures
+    }
+  }, [user?.uid, syncSubscriptions]);
+
+  // Auto-sync subscription data on user authentication
+  useEffect(() => {
+    if (user?.uid) {
+      console.log('🔄 User authenticated, triggering auto-sync');
+      autoSyncSubscriptions();
+
+      // Set up periodic sync every 5 minutes
+      const intervalId = setInterval(() => {
+        console.log('🔄 Periodic auto-sync check');
+        autoSyncSubscriptions();
+      }, 5 * 60 * 1000); // 5 minutes
+
+      return () => clearInterval(intervalId);
+    }
+  }, [user?.uid]); // Removed autoSyncSubscriptions from dependencies
 
   const refetch = useCallback(async () => {
     if (user?.uid) {
+      // Force a refresh by temporarily clearing and re-setting up the listener
+      setSubscription(null);
       setupSubscriptionListener();
     }
   }, [user?.uid, setupSubscriptionListener]);
@@ -399,6 +612,11 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
     createCustomerPortalSession,
     cancelSubscription,
     resumeSubscription,
+    syncSubscriptions,
+    autoSyncSubscriptions,
+    // Debug features (development only)
+    debugTimeOffset,
+    timetravelDebugTest,
   };
 
   return (

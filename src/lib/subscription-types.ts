@@ -70,4 +70,9 @@ export interface UserSubscriptionContext {
   createCustomerPortalSession: () => Promise<string>;
   cancelSubscription: () => Promise<void>;
   resumeSubscription: () => Promise<void>;
+  syncSubscriptions: () => Promise<void>;
+  autoSyncSubscriptions?: (force?: boolean) => Promise<void>;
+  // Debug features (development only)
+  debugTimeOffset: number;
+  timetravelDebugTest: (daysOffset: number) => void;
 }

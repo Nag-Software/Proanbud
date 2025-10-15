@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { db } from '@/lib/firebase';
 import { ref, get } from 'firebase/database';
-import { SUBSCRIPTION_PLANS } from '@/lib/stripe';
+import { SUBSCRIPTION_PLANS } from '@/lib/stripe-client';
 import { UserSubscription } from '@/lib/subscription-types';
 
 interface SubscriptionData {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import { db } from '@/lib/firebase';
 import { ref, set } from 'firebase/database';
+import * as admin from 'firebase-admin';
 
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
@@ -29,39 +30,91 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
     }
 
-    console.log(`🔔 Received webhook: ${event.type}`);
+    console.log(`🔔 Received webhook: ${event.type} (ID: ${event.id})`);
+    console.log(`📋 Event data:`, JSON.stringify(event.data, null, 2));
 
-    // Handle different event types
-    switch (event.type) {
-      case 'checkout.session.completed':
-        await handleCheckoutSessionCompleted(event.data.object);
-        break;
-      
-      case 'customer.subscription.created':
-        await handleSubscriptionCreated(event.data.object);
-        break;
-      
-      case 'customer.subscription.updated':
-        await handleSubscriptionUpdated(event.data.object);
-        break;
-      
-      case 'customer.subscription.deleted':
-        await handleSubscriptionDeleted(event.data.object);
-        break;
-      
-      case 'invoice.payment_succeeded':
-        await handleInvoicePaymentSucceeded(event.data.object);
-        break;
-      
-      case 'invoice.payment_failed':
-        await handleInvoicePaymentFailed(event.data.object);
-        break;
-      
-      default:
-        console.log(`🔕 Unhandled event type: ${event.type}`);
+    // Check for duplicate events to prevent double processing
+    try {
+      const duplicateCheck = await db.ref(`webhook_events/${event.id}`).once('value');
+      if (duplicateCheck.exists()) {
+        console.log(`⚠️ Duplicate webhook event: ${event.id}, skipping`);
+        return NextResponse.json({ received: true, duplicate: true });
+      }
+
+      // Mark event as processed immediately
+      await set(ref(db, `webhook_events/${event.id}`), {
+        processedAt: new Date().toISOString(),
+        type: event.type,
+        stripeId: event.id
+      });
+      console.log(`✅ Marked webhook event ${event.id} as processed`);
+    } catch (error) {
+      console.error('❌ Failed to check/process duplicate webhook:', error);
+      // Continue processing even if duplicate check fails
     }
 
-    return NextResponse.json({ received: true });
+    // Handle different event types with better error handling
+    try {
+      switch (event.type) {
+        case 'checkout.session.completed':
+          console.log('💳 Processing checkout session completed');
+          await handleCheckoutSessionCompleted(event.data.object);
+          break;
+        
+        case 'customer.subscription.created':
+          console.log('📝 Processing subscription created');
+          await handleSubscriptionCreated(event.data.object);
+          break;
+        
+        case 'customer.subscription.updated':
+          console.log('🔄 Processing subscription updated');
+          await handleSubscriptionUpdated(event.data.object);
+          break;
+        
+        case 'customer.subscription.deleted':
+          console.log('🗑️ Processing subscription deleted');
+          await handleSubscriptionDeleted(event.data.object);
+          break;
+        
+        case 'invoice.payment_succeeded':
+          console.log('💰 Processing invoice payment succeeded');
+          await handleInvoicePaymentSucceeded(event.data.object);
+          break;
+        
+        case 'invoice.payment_failed':
+          console.log('❌ Processing invoice payment failed');
+          await handleInvoicePaymentFailed(event.data.object);
+          break;
+        
+        default:
+          console.log(`🔕 Unhandled event type: ${event.type}`);
+      }
+      
+      console.log(`✅ Successfully processed webhook: ${event.type}`);
+      return NextResponse.json({ received: true, processed: true });
+      
+    } catch (processingError) {
+      console.error(`❌ Error processing webhook ${event.type}:`, processingError);
+      
+      // Mark the event as failed for potential retry
+      try {
+        await set(ref(db, `webhook_events/${event.id}`), {
+          processedAt: new Date().toISOString(),
+          type: event.type,
+          stripeId: event.id,
+          error: processingError instanceof Error ? processingError.message : 'Unknown error',
+          failed: true
+        });
+      } catch (markError) {
+        console.error('❌ Failed to mark webhook as failed:', markError);
+      }
+      
+      return NextResponse.json({ 
+        error: 'Processing failed', 
+        eventId: event.id,
+        eventType: event.type 
+      }, { status: 500 });
+    }
 
   } catch (error: any) {
     console.error('❌ Webhook error:', error);
@@ -133,8 +186,44 @@ async function handleCheckoutSessionCompleted(session: any) {
 
     console.log('📋 Subscription details:', subscriptionData);
 
-    // Note: Subscription data is automatically managed by Stripe Firestore extension
-    // No need to manually store in Realtime Database
+    // Save subscription data to Firestore for client access
+    try {
+      const firestoreData = {
+        id: subscription.id,
+        customer: subscription.customer,
+        status: subscription.status,
+        price: {
+          id: priceId,
+        },
+        current_period_start: {
+          seconds: subscription.current_period_start || Math.floor(Date.now() / 1000),
+        },
+        current_period_end: {
+          seconds: subscription.current_period_end || Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60),
+        },
+        cancel_at_period_end: subscription.cancel_at_period_end || false,
+        created: {
+          seconds: subscription.created,
+        },
+        createdAt: subscription.created,
+        updated: {
+          seconds: Math.floor(Date.now() / 1000),
+        },
+      };
+
+      await admin.firestore().doc(`users/${firebaseUid}/subscriptions/${subscription.id}`).set(firestoreData);
+      console.log('✅ Subscription data written to Firestore');
+
+      // Mark trial as used since user has subscribed to a paid plan
+      try {
+        await set(ref(db, `users/${firebaseUid}/trialUsed`), true);
+        console.log('✅ Marked trial as used for user:', firebaseUid);
+      } catch (trialError) {
+        console.error('❌ Failed to mark trial as used:', trialError);
+      }
+    } catch (firestoreError) {
+      console.error('❌ Failed to write subscription to Firestore:', firestoreError);
+    }
 
     console.log(`✅ Subscription verified for user ${firebaseUid} - Plan: ${plan}`);
 
@@ -179,8 +268,36 @@ async function handleSubscriptionCreated(subscription: any) {
       updatedAt: Date.now(),
     };
 
-    // Note: Subscription data is automatically managed by Stripe Firestore extension
-    // No need to manually store in Realtime Database
+    // Save subscription data to Firestore for client access
+    try {
+      const firestoreData = {
+        id: subscription.id,
+        customer: subscription.customer,
+        status: subscription.status,
+        price: {
+          id: priceId,
+        },
+        current_period_start: {
+          seconds: subscription.current_period_start || Math.floor(Date.now() / 1000),
+        },
+        current_period_end: {
+          seconds: subscription.current_period_end || Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60),
+        },
+        cancel_at_period_end: subscription.cancel_at_period_end || false,
+        created: {
+          seconds: subscription.created,
+        },
+        createdAt: subscription.created,
+        updated: {
+          seconds: Math.floor(Date.now() / 1000),
+        },
+      };
+
+      await admin.firestore().doc(`users/${firebaseUid}/subscriptions/${subscription.id}`).set(firestoreData);
+      console.log('✅ Subscription data written to Firestore');
+    } catch (firestoreError) {
+      console.error('❌ Failed to write subscription to Firestore:', firestoreError);
+    }
 
     console.log(`✅ Subscription created for user ${firebaseUid} - Plan: ${plan}`);
 
@@ -192,6 +309,9 @@ async function handleSubscriptionCreated(subscription: any) {
 async function handleSubscriptionUpdated(subscription: any) {
   try {
     console.log('🔄 Handling subscription updated:', subscription.id);
+    console.log('📋 Subscription status:', subscription.status);
+    console.log('📋 Cancel at period end:', subscription.cancel_at_period_end);
+    console.log('📋 Current period end:', subscription.current_period_end);
     
     const customer = await stripe.customers.retrieve(subscription.customer);
     const firebaseUid = customer.metadata?.firebase_uid;
@@ -213,8 +333,35 @@ async function handleSubscriptionUpdated(subscription: any) {
       updatedAt: Date.now(),
     };
 
-    // Note: Subscription data is automatically managed by Stripe Firestore extension
-    // No need to manually store in Realtime Database
+    // Update subscription data in Realtime Database
+    try {
+      await set(ref(db, `users/${firebaseUid}/subscription`), subscriptionData);
+      console.log('✅ Subscription data updated in Realtime Database');
+    } catch (realtimeError) {
+      console.error('❌ Failed to update subscription in Realtime Database:', realtimeError);
+    }
+
+    // Save updated subscription data to Firestore
+    try {
+      const firestoreData = {
+        status: subscription.status,
+        current_period_start: {
+          seconds: subscription.current_period_start || Math.floor(Date.now() / 1000),
+        },
+        current_period_end: {
+          seconds: subscription.current_period_end || Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60),
+        },
+        cancel_at_period_end: subscription.cancel_at_period_end || false,
+        updated: {
+          seconds: Math.floor(Date.now() / 1000),
+        },
+      };
+
+      await admin.firestore().doc(`users/${firebaseUid}/subscriptions/${subscription.id}`).set(firestoreData);
+      console.log('✅ Subscription data updated in Firestore');
+    } catch (firestoreError) {
+      console.error('❌ Failed to update subscription in Firestore:', firestoreError);
+    }
 
     console.log(`✅ Subscription updated for user ${firebaseUid}`);
 
@@ -236,7 +383,6 @@ async function handleSubscriptionDeleted(subscription: any) {
     }
 
     // Update subscription to canceled status
-    const subscriptionRef = ref(db, `users/${firebaseUid}/subscription`);
     const subscriptionData = {
       plan: 'free',
       status: 'canceled',
@@ -244,8 +390,21 @@ async function handleSubscriptionDeleted(subscription: any) {
       updatedAt: Date.now(),
     };
 
-    // Note: Subscription data is automatically managed by Stripe Firestore extension
-    // No need to manually store in Realtime Database
+    // Update subscription data in Firestore
+    try {
+      const firestoreData = {
+        status: 'canceled',
+        cancel_at_period_end: true,
+        updated: {
+          seconds: Math.floor(Date.now() / 1000),
+        },
+      };
+
+      await admin.firestore().doc(`users/${firebaseUid}/subscriptions/${subscription.id}`).update(firestoreData);
+      console.log('✅ Subscription data updated in Firestore');
+    } catch (firestoreError) {
+      console.error('❌ Failed to update subscription in Firestore:', firestoreError);
+    }
 
     console.log(`✅ Subscription canceled for user ${firebaseUid}`);
 
@@ -273,7 +432,6 @@ async function handleInvoicePaymentSucceeded(invoice: any) {
     }
 
     // Update subscription status to ensure it's active
-    const subscriptionRef = ref(db, `users/${firebaseUid}/subscription`);
     const subscriptionData = {
       status: 'active',
       currentPeriodStart: subscription.current_period_start || Math.floor(Date.now() / 1000),
@@ -281,8 +439,26 @@ async function handleInvoicePaymentSucceeded(invoice: any) {
       updatedAt: Date.now(),
     };
 
-    // Note: Subscription data is automatically managed by Stripe Firestore extension
-    // No need to manually store in Realtime Database
+    // Update subscription data in Firestore
+    try {
+      const firestoreData = {
+        status: 'active',
+        current_period_start: {
+          seconds: subscription.current_period_start || Math.floor(Date.now() / 1000),
+        },
+        current_period_end: {
+          seconds: subscription.current_period_end || Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60),
+        },
+        updated: {
+          seconds: Math.floor(Date.now() / 1000),
+        },
+      };
+
+      await admin.firestore().doc(`users/${firebaseUid}/subscriptions/${subscription.id}`).update(firestoreData);
+      console.log('✅ Subscription data updated in Firestore');
+    } catch (firestoreError) {
+      console.error('❌ Failed to update subscription in Firestore:', firestoreError);
+    }
 
     console.log(`✅ Payment processed for user ${firebaseUid}`);
 
@@ -310,14 +486,25 @@ async function handleInvoicePaymentFailed(invoice: any) {
     }
 
     // Update subscription status
-    const subscriptionRef = ref(db, `users/${firebaseUid}/subscription`);
     const subscriptionData = {
       status: subscription.status, // Could be 'past_due' or other status
       updatedAt: Date.now(),
     };
 
-    // Note: Subscription data is automatically managed by Stripe Firestore extension
-    // No need to manually store in Realtime Database
+    // Update subscription data in Firestore
+    try {
+      const firestoreData = {
+        status: subscription.status,
+        updated: {
+          seconds: Math.floor(Date.now() / 1000),
+        },
+      };
+
+      await admin.firestore().doc(`users/${firebaseUid}/subscriptions/${subscription.id}`).update(firestoreData);
+      console.log('✅ Subscription data updated in Firestore');
+    } catch (firestoreError) {
+      console.error('❌ Failed to update subscription in Firestore:', firestoreError);
+    }
 
     console.log(`⚠️ Payment failed for user ${firebaseUid}, status: ${subscription.status}`);
 

@@ -41,8 +41,8 @@ export default function PricingPage() {
         yearly: 0
       },
       features: [
-        'Inntil 5 tilbud',
-        'Inntil 3 kunder',
+        'Inntil 3 tilbud',
+        'Inntil 1 kunder',
         'E-post support',
         'Grunnleggende statistikk'
       ],

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useSubscription } from '@/contexts/SubscriptionContextNew';
-import { SUBSCRIPTION_PLANS } from '@/lib/stripe';
+import { SUBSCRIPTION_PLANS } from '@/lib/stripe-client';
 
 export const useSubscriptionLimits = () => {
   const { subscription, usage, loading } = useSubscription();

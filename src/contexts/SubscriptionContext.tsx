@@ -5,8 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase';
 import { ref, get, onValue, off, set } from 'firebase/database';
 import { UserSubscription, SubscriptionUsage, UserSubscriptionContext, StripeCheckoutSession } from '@/lib/subscription-types';
-import { SUBSCRIPTION_PLANS, calculateTrialEndDate } from '@/lib/stripe';
-import { stripePayments, createCheckoutSession as createStripeCheckoutSession } from '@/lib/stripe';
+import { SUBSCRIPTION_PLANS, calculateTrialEndDate } from '@/lib/stripe-client';
 
 const SubscriptionContext = createContext<UserSubscriptionContext | null>(null);
 
@@ -90,24 +89,43 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
         const subscriptionData = subscriptionSnapshot.val() as UserSubscription;
         setSubscription(subscriptionData);
       } else {
-        // Initialize free trial for new users
-        const trialEnd = calculateTrialEndDate();
-        const newSubscription: UserSubscription = {
-          plan: 'free',
-          status: 'trialing',
-          currentPeriodStart: Math.floor(Date.now() / 1000),
-          currentPeriodEnd: trialEnd,
-          cancelAtPeriodEnd: false,
-          trialEnd: trialEnd,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        };
+        // Check if user has already used their trial
+        const trialUsedRef = ref(db, `users/${user.uid}/trialUsed`);
+        const trialUsedSnapshot = await get(trialUsedRef);
+        const hasUsedTrial = trialUsedSnapshot.exists() && trialUsedSnapshot.val() === true;
 
-        // Save to Firebase Realtime Database
-        const subscriptionRef = ref(db, `users/${user.uid}/subscription`);
-        await set(subscriptionRef, newSubscription);
+        if (hasUsedTrial) {
+          console.log('fetchSubscription - user has already used trial, setting free plan');
+          // Set to free plan without trial
+          const freeSubscription: UserSubscription = {
+            plan: 'free',
+            status: 'active',
+            currentPeriodStart: Math.floor(Date.now() / 1000),
+            currentPeriodEnd: Math.floor(Date.now() / 1000) + (365 * 24 * 60 * 60), // Far future
+            cancelAtPeriodEnd: false,
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+          };
+          setSubscription(freeSubscription);
+        } else {
+          // Initialize free trial for new users
+          const trialEndDate = calculateTrialEndDate();
+          const trialEnd = Math.floor(trialEndDate.getTime() / 1000);
+          const newSubscription: UserSubscription = {
+            plan: 'free',
+            status: 'trialing',
+            currentPeriodStart: Math.floor(Date.now() / 1000),
+            currentPeriodEnd: trialEnd,
+            cancelAtPeriodEnd: false,
+            trialEnd: trialEnd,
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+          };
 
-        setSubscription(newSubscription);
+          // Note: Database write removed to comply with read-only subscription rules
+          // Subscription initialization should be handled server-side
+          setSubscription(newSubscription);
+        }
       }
     } catch (err) {
       console.error('Error fetching subscription:', err);
@@ -123,11 +141,22 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
     }
 
     try {
-      const session = await createStripeCheckoutSession(priceId, user.uid);
+      const response = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ priceId, uid: user.uid }),
+      });
 
+      if (!response.ok) {
+        throw new Error('Failed to create checkout session');
+      }
+
+      const data = await response.json();
       return {
-        id: session.id,
-        url: session.url || '',
+        id: data.sessionId,
+        url: data.url || '',
       };
     } catch (err) {
       console.error('Error creating checkout session:', err);
@@ -149,9 +178,8 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
         updatedAt: Date.now(),
       };
       
-      const subscriptionRef = ref(db, `users/${user.uid}/subscription`);
-      await set(subscriptionRef, updatedSubscription);
-      
+      // Note: Database write removed to comply with read-only subscription rules
+      // Subscription updates should be handled server-side via Stripe webhooks
       setSubscription(updatedSubscription);
     } catch (err) {
       console.error('Error canceling subscription:', err);
@@ -173,9 +201,8 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
         updatedAt: Date.now(),
       };
       
-      const subscriptionRef = ref(db, `users/${user.uid}/subscription`);
-      await set(subscriptionRef, updatedSubscription);
-      
+      // Note: Database write removed to comply with read-only subscription rules
+      // Subscription updates should be handled server-side via Stripe webhooks
       setSubscription(updatedSubscription);
     } catch (err) {
       console.error('Error resuming subscription:', err);
@@ -228,8 +255,16 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
     refetch,
     refreshUsage,
     createCheckoutSession,
+    createCustomerPortalSession: async () => {
+      // TODO: Implement customer portal session creation
+      throw new Error('Not implemented');
+    },
     cancelSubscription,
     resumeSubscription,
+    debugTimeOffset: 0,
+    timetravelDebugTest: () => {
+      // Debug method - not implemented
+    },
   };
 
   return (

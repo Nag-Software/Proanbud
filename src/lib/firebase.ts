@@ -1,8 +1,8 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getDatabase, connectDatabaseEmulator } from 'firebase/database';
-import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
+import { getFirestore } from 'firebase/firestore';
 
 // Firebase configuration
 const firebaseConfig = {
@@ -34,10 +34,10 @@ const app = initializeApp(firebaseConfig);
 // Initialize Firebase Authentication and get a reference to the service
 export const auth = getAuth(app);
 
-// Initialize Realtime Database and get a reference to the service (for existing data)
+// Initialize Realtime Database and get a reference to the service
 export const db = getDatabase(app);
 
-// Initialize Firestore and get a reference to the service (for Stripe subscriptions)
+// Initialize Firestore and get a reference to the service
 export const firestore = getFirestore(app);
 
 // Initialize Firebase Storage and get a reference to the service
@@ -62,8 +62,8 @@ export const testFirebaseConnection = async (): Promise<boolean> => {
     // Import Firebase database functions
     const { ref, get } = await import('firebase/database');
     
-    // Simple test: try to read from the root (even if it's empty)
-    const testRef = ref(db, 'connectionTest');
+    // Simple test: try to read from katalog (which has public read access)
+    const testRef = ref(db, 'katalog');
     await get(testRef);
     
     return true;

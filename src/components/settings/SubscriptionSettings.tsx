@@ -6,13 +6,21 @@ import * as Icons from 'lucide-react';
 import { BusinessSettings } from '@/lib/types';
 import { useSubscription } from '@/contexts/SubscriptionContextNew';
 import { useSubscriptionAccess } from '@/hooks/useSubscriptionAccess';
-import { SUBSCRIPTION_PLANS, formatPrice, getDaysRemaining } from '@/lib/stripe';
+import { SUBSCRIPTION_PLANS, formatPrice, getDaysRemaining } from '@/lib/stripe-client';
 
 export const SubscriptionSettings = ({ businessSettings }: { businessSettings: BusinessSettings | null }) => {
-  const { subscription, usage, createCheckoutSession, createCustomerPortalSession, cancelSubscription, resumeSubscription } = useSubscription();
+  const { subscription, usage, createCheckoutSession, createCustomerPortalSession, cancelSubscription, resumeSubscription, syncSubscriptions, debugTimeOffset: contextDebugTimeOffset } = useSubscription();
   const { isLimited } = useSubscriptionAccess();
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly');
   const [isLoading, setIsLoading] = useState(false);
+
+  // Local state to ensure re-renders when debug offset changes
+  const [localDebugOffset, setLocalDebugOffset] = useState(contextDebugTimeOffset);
+
+  // Sync local state with context
+  React.useEffect(() => {
+    setLocalDebugOffset(contextDebugTimeOffset);
+  }, [contextDebugTimeOffset]);
 
   const handleUpgrade = async (priceId: string) => {
     if (!priceId) {
@@ -92,7 +100,8 @@ export const SubscriptionSettings = ({ businessSettings }: { businessSettings: B
       ? SUBSCRIPTION_PLANS.find(p => p.id === subscription.plan) 
       : SUBSCRIPTION_PLANS[0];
   const isTrial = subscription?.status === 'trialing';
-  const daysRemaining = subscription?.trialEnd ? getDaysRemaining(subscription.trialEnd) : 0;
+  const currentTime = Math.floor(Date.now() / 1000) + localDebugOffset;
+  const daysRemaining = subscription?.trialEnd ? getDaysRemaining(subscription.trialEnd, currentTime) : 0;
 
   return (
     <div className="space-y-6">
@@ -109,9 +118,13 @@ export const SubscriptionSettings = ({ businessSettings }: { businessSettings: B
             <div>
               <h3 className="font-semibold text-lg">{currentPlan?.name}</h3>
               <p className="text-sm text-muted-foreground">
-                {subscription?.status === 'active' && 'Aktivt abonnement'}
+                {subscription?.status === 'active' && subscription?.cancelAtPeriodEnd && subscription?.currentPeriodEnd && (
+                  `Avbrytes om ${getDaysRemaining(subscription.currentPeriodEnd, currentTime)} dager`
+                )}
+                {subscription?.status === 'active' && !subscription?.cancelAtPeriodEnd && 'Aktivt abonnement'}
                 {subscription?.status === 'canceled' && 'Avbrutt (aktiv til periode slutt)'}
                 {subscription?.status === 'past_due' && 'Betaling forsinket'}
+                {subscription?.status === 'trialing' && `Prøveperiode (${daysRemaining} dager igjen)`}
               </p>
             </div>
             <div className="text-right">
@@ -198,6 +211,7 @@ export const SubscriptionSettings = ({ businessSettings }: { businessSettings: B
       </Card>
 
       {/* Available Plans */}
+      <div id="/innstillinger#plans" hidden></div>
       <Card>
         <CardHeader>
           <CardTitle>Oppgrader abonnement</CardTitle>
@@ -206,11 +220,12 @@ export const SubscriptionSettings = ({ businessSettings }: { businessSettings: B
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {SUBSCRIPTION_PLANS.filter(plan => plan.id !== 'free' && plan.id !== 'trial').map((plan) => {
               const isCurrentPlan = subscription?.plan === plan.id && subscription?.status === 'active';
+              const canUpgrade = !isLoading && plan.stripePriceId?.[billingPeriod] && (subscription?.status !== 'active' || subscription?.plan !== plan.id);
               return (
                 <div
                   key={plan.id}
-                  className={`relative bg-white rounded-xl border overflow-hidden transition-all hover:shadow-lg ${
-                    plan.popular ? 'ring-2 ring-primary border-primary' : 'border-gray-200'
+                  className={`relative bg-white rounded-xl shadow-lg overflow-hidden transition-all hover:shadow-xl ${
+                    plan.popular ? 'ring-2 ring-primary' : 'border border-gray-200'
                   }`}
                 >
                   {plan.popular && (
@@ -218,10 +233,12 @@ export const SubscriptionSettings = ({ businessSettings }: { businessSettings: B
                       Mest populær
                     </div>
                   )}
+
                   <div className="p-6">
                     <h3 className="text-xl font-bold text-gray-900 mb-2">{plan.name}</h3>
                     <p className="text-gray-600 text-sm mb-4">{plan.description}</p>
-                    <div className="mb-6">
+
+                    <div className="mb-4">
                       <div className="flex items-baseline gap-1">
                         <span className="text-3xl font-bold text-gray-900">
                           {formatPrice(plan.price[billingPeriod])}
@@ -234,6 +251,7 @@ export const SubscriptionSettings = ({ businessSettings }: { businessSettings: B
                         </p>
                       )}
                     </div>
+
                     <button
                       onClick={() => {
                         const priceId = plan.stripePriceId?.[billingPeriod];
@@ -243,8 +261,8 @@ export const SubscriptionSettings = ({ businessSettings }: { businessSettings: B
                           alert(`Pris-ID for ${plan.name} (${billingPeriod}) er ikke konfigurert. Kontakt support.`);
                         }
                       }}
-                      disabled={isLoading || !plan.stripePriceId?.[billingPeriod] || isCurrentPlan}
-                      className={`w-full text-center py-3 px-4 rounded-lg font-medium transition-colors mb-4 ${
+                      disabled={!canUpgrade}
+                      className={`w-full text-center py-2.5 px-4 rounded-lg font-medium transition-colors mb-4 ${
                         plan.popular
                           ? 'bg-primary text-white hover:bg-primary/90'
                           : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
@@ -252,6 +270,7 @@ export const SubscriptionSettings = ({ businessSettings }: { businessSettings: B
                     >
                       {isCurrentPlan ? 'Plan aktivert' : isLoading ? 'Laster...' : plan.cta}
                     </button>
+
                     <ul className="space-y-2">
                       {plan.features.map((feature, index) => (
                         <li key={index} className="flex items-start gap-2">
@@ -265,6 +284,25 @@ export const SubscriptionSettings = ({ businessSettings }: { businessSettings: B
               );
             })}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Sync Subscription Data */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Synkroniser abonnement data</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-gray-600 mb-4">
+            Abonnementsdata synkroniseres automatisk hver 5. minutt. Bruk denne knappen for å tvinge en umiddelbar synkronisering hvis du opplever problemer.
+          </p>
+          <button
+            onClick={() => syncSubscriptions()}
+            disabled={isLoading}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm font-medium transition-colors"
+          >
+            {isLoading ? 'Synkroniserer...' : 'Synkroniser abonnement data'}
+          </button>
         </CardContent>
       </Card>
     </div>

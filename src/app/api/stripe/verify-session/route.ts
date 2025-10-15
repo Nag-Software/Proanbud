@@ -16,7 +16,10 @@ export async function POST(request: NextRequest) {
 
     const token = authHeader.substring(7);
     if (!adminAuth) {
-      return NextResponse.json({ error: 'Firebase Admin not initialized' }, { status: 500 });
+      console.error('❌ Firebase Admin auth not available');
+      return NextResponse.json({
+        error: 'Firebase Admin authentication not available. Please check server configuration.'
+      }, { status: 500 });
     }
 
     const decodedToken = await adminAuth.verifyIdToken(token);
@@ -51,7 +54,25 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify this session belongs to the authenticated user
-    const sessionUserId = session.metadata?.firebase_uid;
+    let sessionUserId = session.metadata?.firebase_uid;
+    console.log('📋 Session metadata firebase_uid:', sessionUserId);
+    console.log('📋 Authenticated userId:', userId);
+    
+    // If session metadata doesn't have firebase_uid, try to get it from customer metadata
+    if (!sessionUserId && session.customer) {
+      try {
+        const customer = await stripe.customers.retrieve(session.customer as string);
+        sessionUserId = customer.metadata?.firebaseUID;
+        console.log('📋 Customer metadata:', customer.metadata);
+        console.log('📋 Got firebase_uid from customer metadata:', sessionUserId);
+      } catch (error) {
+        console.error('❌ Failed to retrieve customer:', error);
+      }
+    }
+    
+    console.log('📋 Final sessionUserId:', sessionUserId);
+    console.log('📋 Comparison:', sessionUserId, '===', userId, '?', sessionUserId === userId);
+    
     if (sessionUserId !== userId) {
       return NextResponse.json({ 
         error: 'Session does not belong to authenticated user' 

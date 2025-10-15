@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/contexts/SubscriptionContext';
-import { SUBSCRIPTION_PLANS } from '@/lib/stripe';
+import { SUBSCRIPTION_PLANS } from '@/lib/stripe-client';
 import { db } from '@/lib/firebase';
 import { ref, get, set } from 'firebase/database';
 

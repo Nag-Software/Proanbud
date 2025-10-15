@@ -39,6 +39,18 @@ export async function POST(request: NextRequest) {
 
       if (customers.data.length > 0) {
         customer = customers.data[0];
+        console.log('📋 Found existing customer:', customer.id, 'metadata:', customer.metadata);
+        // Update customer metadata if firebase_uid is missing
+        if (!customer.metadata?.firebase_uid) {
+          console.log('📋 Updating customer metadata to add firebase_uid');
+          customer = await stripe.customers.update(customer.id, {
+            metadata: {
+              ...customer.metadata,
+              firebase_uid: userId,
+            },
+          });
+          console.log('📋 Updated customer metadata:', customer.metadata);
+        }
       } else {
         customer = await stripe.customers.create({
           email: decodedToken.email || undefined,
@@ -46,6 +58,7 @@ export async function POST(request: NextRequest) {
             firebase_uid: userId,
           },
         });
+        console.log('📋 Created new customer:', customer.id, 'metadata:', customer.metadata);
       }
     } catch (error) {
       console.error('Error creating/finding customer:', error);

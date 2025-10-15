@@ -3,22 +3,34 @@
 import React from 'react';
 import { useSubscription } from '@/contexts/SubscriptionContextNew';
 import { useSubscriptionAccess } from '@/hooks/useSubscriptionAccess';
-import { getDaysRemaining } from '@/lib/stripe';
+import { getDaysRemaining } from '@/lib/stripe-client';
 import { AlertTriangle, X, Lock } from 'lucide-react';
 import Link from 'next/link';
 
 export const TrialHeader = () => {
-  const { subscription, loading } = useSubscription();
+  const { subscription, loading, debugTimeOffset: contextDebugTimeOffset, timetravelDebugTest } = useSubscription();
   const { isTrialing, isFree, isExpired, hasActiveSubscription } = useSubscriptionAccess();
   const [isDismissed, setIsDismissed] = React.useState(false);
+
+  // Local state to ensure re-renders when debug offset changes
+  const [localDebugOffset, setLocalDebugOffset] = React.useState(contextDebugTimeOffset);
+
+  // Sync local state with context
+  React.useEffect(() => {
+    setLocalDebugOffset(contextDebugTimeOffset);
+  }, [contextDebugTimeOffset]);
+
+  // Convert seconds back to days for display
+  const displayOffsetDays = Math.round(localDebugOffset / (24 * 60 * 60));
 
   if (loading || isDismissed) {
     return null;
   }
 
   // Check if trial has expired (even if status is still 'trialing')
-  const daysRemaining = subscription?.trialEnd ? getDaysRemaining(subscription.trialEnd) : 
-                        subscription?.currentPeriodEnd ? getDaysRemaining(subscription.currentPeriodEnd) : 0;
+  const currentTime = Math.floor(Date.now() / 1000) + localDebugOffset;
+  const daysRemaining = subscription?.trialEnd ? getDaysRemaining(subscription.trialEnd, currentTime) :
+                        subscription?.currentPeriodEnd ? getDaysRemaining(subscription.currentPeriodEnd, currentTime) : 0;
   const isTrialExpired = isTrialing && daysRemaining <= 0;
 
   // Don't show header if user has active subscription
@@ -104,6 +116,51 @@ export const TrialHeader = () => {
           Oppgrader nå
         </Link>
       </div>
+      {/* Debug controls (development only) */}
+      {(process.env.NODE_ENV === 'development' || process.env.NEXT_PUBLIC_ENABLE_DEBUG_TIME_TRAVEL) && (
+        <div className="absolute left-4 top-1/2 transform -translate-y-1/2 flex gap-1">
+          <button
+            onClick={() => timetravelDebugTest(-7)}
+            className="bg-white/20 hover:bg-white/30 text-white text-xs px-2 py-1 rounded"
+            title="Subtract 7 days"
+          >
+            -7d
+          </button>
+          <button
+            onClick={() => timetravelDebugTest(-1)}
+            className="bg-white/20 hover:bg-white/30 text-white text-xs px-2 py-1 rounded"
+            title="Subtract 1 day"
+          >
+            -1d
+          </button>
+          <button
+            onClick={() => timetravelDebugTest(0)}
+            className="bg-white/20 hover:bg-white/30 text-white text-xs px-2 py-1 rounded"
+            title="Reset to current time"
+          >
+            Now
+          </button>
+          <button
+            onClick={() => timetravelDebugTest(1)}
+            className="bg-white/20 hover:bg-white/30 text-white text-xs px-2 py-1 rounded"
+            title="Add 1 day"
+          >
+            +1d
+          </button>
+          <button
+            onClick={() => timetravelDebugTest(7)}
+            className="bg-white/20 hover:bg-white/30 text-white text-xs px-2 py-1 rounded"
+            title="Add 7 days"
+          >
+            +7d
+          </button>
+          {displayOffsetDays !== 0 && (
+            <span className="text-white text-xs px-2 py-1 bg-white/20 rounded">
+              {displayOffsetDays > 0 ? '+' : ''}{displayOffsetDays}d
+            </span>
+          )}
+        </div>
+      )}
       <button
         onClick={() => setIsDismissed(true)}
         className="absolute right-4 top-1/2 transform -translate-y-1/2 hover:bg-white/20 rounded p-1"

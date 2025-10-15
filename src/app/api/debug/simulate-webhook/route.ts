@@ -44,7 +44,9 @@ export async function POST(request: NextRequest) {
             id: `sub_${Date.now()}`,
             customer: `cus_${Date.now()}`,
             status: 'active',
-            cancel_at_period_end: false
+            cancel_at_period_end: true,
+            current_period_start: Math.floor(Date.now() / 1000),
+            current_period_end: Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60)
           }
         },
         processed: true

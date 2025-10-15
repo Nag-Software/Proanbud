@@ -41,7 +41,8 @@ export const PaymentHistoryDebugger: React.FC = () => {
 
       const invoiceLocations = [
         `stripe_customers/${user.uid}/invoices`,
-        `invoices/${user.uid}`
+        `invoices/${user.uid}`,
+        `users/${user.uid}/invoices`
       ];
 
       const allPayments: PaymentRecord[] = [];

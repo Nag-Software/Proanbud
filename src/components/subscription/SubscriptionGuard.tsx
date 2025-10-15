@@ -3,7 +3,7 @@
 import React from 'react';
 import { useSubscription } from '@/contexts/SubscriptionContextNew';
 import { SubscriptionPlan } from '@/lib/subscription-types';
-import { SUBSCRIPTION_PLANS } from '@/lib/stripe';
+import { SUBSCRIPTION_PLANS } from '@/lib/stripe-client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Lock, CreditCard, Zap } from 'lucide-react';
@@ -64,11 +64,12 @@ function checkSubscriptionAccess(
   // Check if subscription is active
   if (subscription.status !== 'active') return false;
 
-  // Check plan hierarchy: free < basic < pro
+  // Check plan hierarchy: free < trial < basic < pro
   const planHierarchy: Record<SubscriptionPlan, number> = {
     free: 0,
-    basic: 1,
-    pro: 2
+    trial: 1,
+    basic: 2,
+    pro: 3
   };
 
   const userPlanLevel = planHierarchy[subscription.plan as SubscriptionPlan] || 0;
