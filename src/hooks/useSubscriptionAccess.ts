@@ -7,16 +7,16 @@ export const useSubscriptionAccess = () => {
 
   console.log(subscription);
 
-  const hasActiveSubscription = subscription?.status === 'active';
-  const isTrialing = subscription?.status === 'trialing';
-  const isFree = !subscription || (subscription.plan === 'free' && subscription.status !== 'trialing');
+  const isTrialing = subscription?.plan === 'free' && subscription?.status === 'active' && !!subscription?.trialEnd;
+  const hasActiveSubscription = subscription?.status === 'active' && subscription?.plan !== 'free';
+  const isFree = subscription?.plan === 'free' && subscription?.status === 'active' && !subscription?.trialEnd;
   const isExpired = subscription?.status === 'canceled' || subscription?.status === 'past_due';
 
   // User has access only if they have an active paid subscription
   // Trialing users are limited (can read but not create)
   const hasAccess = hasActiveSubscription;
   
-  // Trial-accessible content is available to active and trialing users
+  // Trial-accessible content is available to active free plan users (trials)
   const hasTrialAccess = hasActiveSubscription || isTrialing;
   
   // User is limited if they don't have an active paid subscription

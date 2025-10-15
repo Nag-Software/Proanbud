@@ -94,12 +94,12 @@ export const SubscriptionSettings = ({ businessSettings }: { businessSettings: B
     return '17%'; // (299*12 - 2990) / (299*12) * 100 ≈ 17%
   };
 
-  const currentPlan = subscription?.status === 'trialing' 
+  const currentPlan = (subscription?.plan === 'free' && subscription?.status === 'active' && !!subscription?.trialEnd)
     ? SUBSCRIPTION_PLANS.find(p => p.id === 'trial')
     : subscription 
       ? SUBSCRIPTION_PLANS.find(p => p.id === subscription.plan) 
       : SUBSCRIPTION_PLANS[0];
-  const isTrial = subscription?.status === 'trialing';
+  const isTrial = subscription?.plan === 'free' && subscription?.status === 'active' && !!subscription?.trialEnd;
   const currentTime = Math.floor(Date.now() / 1000) + localDebugOffset;
   const daysRemaining = subscription?.trialEnd ? getDaysRemaining(subscription.trialEnd, currentTime) : 0;
 
@@ -116,27 +116,40 @@ export const SubscriptionSettings = ({ businessSettings }: { businessSettings: B
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="font-semibold text-lg">{currentPlan?.name}</h3>
-              <p className="text-sm text-muted-foreground">
-                {subscription?.status === 'active' && subscription?.cancelAtPeriodEnd && subscription?.currentPeriodEnd && (
-                  `Avbrytes om ${getDaysRemaining(subscription.currentPeriodEnd, currentTime)} dager`
-                )}
-                {subscription?.status === 'active' && !subscription?.cancelAtPeriodEnd && 'Aktivt abonnement'}
-                {subscription?.status === 'canceled' && 'Avbrutt (aktiv til periode slutt)'}
-                {subscription?.status === 'past_due' && 'Betaling forsinket'}
-                {subscription?.status === 'trialing' && `Prøveperiode (${daysRemaining} dager igjen)`}
-              </p>
+              {subscription?.status === 'canceled' ? (
+                <>
+                  <h3 className="font-semibold text-lg text-red-600">Ingen aktiv abonnoment</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Ditt abonnement er avsluttet
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h3 className="font-semibold text-lg">{currentPlan?.name}
+                    {isTrial && `Gratis Prøveperiode`}
+                    </h3> 
+                  <p className="text-sm text-muted-foreground">
+                    {subscription?.status === 'active' && subscription?.cancelAtPeriodEnd && subscription?.currentPeriodEnd && (
+                      `Avbrytes om ${getDaysRemaining(subscription.currentPeriodEnd, currentTime)} dager`
+                    )}
+                    {subscription?.status === 'active' && !subscription?.cancelAtPeriodEnd && 'Aktivt abonnement'}
+                    {subscription?.status === 'past_due' && 'Betaling forsinket'}
+                  </p>
+                </>
+              )}
             </div>
             <div className="text-right">
               <div className="text-2xl font-bold">
-                {formatPrice(currentPlan?.price[billingPeriod] || 0)}
+                {subscription?.status === 'canceled' ? '0' : formatPrice(currentPlan?.price[billingPeriod] || 0)}
               </div>
-              <div className="text-sm text-muted-foreground">/{getPeriodText()}</div>
+              <div className="text-sm text-muted-foreground">
+                {subscription?.status === 'canceled' ? '' : `/${getPeriodText()}`}
+              </div>
             </div>
           </div>
 
           {/* Usage Stats */}
-          {usage && (
+          {usage && subscription?.status !== 'canceled' && (
             <div className="grid grid-cols-2 gap-4 pt-4 border-t">
               <div>
                 <div className="text-sm text-muted-foreground">Tilbud brukt</div>
@@ -161,7 +174,7 @@ export const SubscriptionSettings = ({ businessSettings }: { businessSettings: B
 
           {/* Subscription Actions */}
           <div className="flex gap-2 pt-4 border-t">
-            {/* Manage Subscription Button - Show for active subscriptions */}
+            {/* Manage Subscription Button - Show for active subscriptions only */}
             {subscription?.status === 'active' && subscription.stripeCustomerId && (
               <button
                 onClick={handleManageSubscription}
@@ -294,10 +307,17 @@ export const SubscriptionSettings = ({ businessSettings }: { businessSettings: B
         </CardHeader>
         <CardContent>
           <p className="text-sm text-gray-600 mb-4">
-            Abonnementsdata synkroniseres automatisk hver 5. minutt. Bruk denne knappen for å tvinge en umiddelbar synkronisering hvis du opplever problemer.
+            Abonnementsdata synkroniseres automatisk hver minutt. Bruk denne knappen for å tvinge en umiddelbar synkronisering hvis du opplever problemer.
           </p>
           <button
-            onClick={() => syncSubscriptions()}
+            onClick={async () => {
+              try {
+                await syncSubscriptions();
+              } catch (error) {
+                console.error('Sync failed:', error);
+                alert('Kunne ikke synkronisere abonnement data. Prøv igjen senere.');
+              }
+            }}
             disabled={isLoading}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm font-medium transition-colors"
           >

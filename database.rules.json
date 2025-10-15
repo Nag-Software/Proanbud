@@ -84,6 +84,14 @@
     "katalog": {
     	".read": true,
     	".write": true
-  	}
+  	},
+    "webhook_events": {
+      ".read": true,
+      ".write": true,
+      "$eventId": {
+        ".read": true,
+        ".write": true
+      }
+    }
   }
 }

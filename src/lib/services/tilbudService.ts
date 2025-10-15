@@ -239,13 +239,14 @@ export const createTilbud = async (tilbudData: TilbudFormData): Promise<string> 
         
         // Only enforce limits for non-pro plans
         if (subscription?.plan !== 'pro') {
-          const plan = subscription?.status === 'trialing' ? 'trial' : (subscription?.plan || 'free');
+          const plan = subscription?.plan || 'free';
           const { SUBSCRIPTION_PLANS } = await import('@/lib/stripe');
           const planDetails = SUBSCRIPTION_PLANS.find(p => p.id === plan);
           const quotesLimit = planDetails?.limits.quotes || 5;
           
           if (quotesLimit !== -1 && quotesCount >= quotesLimit) {
-            const planName = plan === 'trial' ? 'prøveperiode' : plan === 'free' ? 'gratis prøveperiode' : plan + ' plan';
+            const isTrialing = subscription?.plan === 'free' && subscription?.status === 'active' && !!subscription?.trialEnd;
+            const planName = isTrialing ? 'prøveperiode' : plan === 'free' ? 'gratis prøveperiode' : plan + ' plan';
             throw new Error(`Du har nådd grensen på ${quotesLimit} tilbud for din ${planName}. Oppgrader for å opprette flere tilbud.`);
           }
         }

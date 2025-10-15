@@ -59,7 +59,7 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlanDetails[] = [
     color: 'gray',
     cta: 'Start prøveperiode',
     popular: false,
-    limits: { quotes: 3, customers: 1, storage: 1 },
+    limits: { quotes: 3, customers: 1, storage: 0 },
   },
   {
     id: 'basic',

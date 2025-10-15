@@ -27,7 +27,7 @@ export const TrialHeader = () => {
     return null;
   }
 
-  // Check if trial has expired (even if status is still 'trialing')
+  // Check if trial has expired
   const currentTime = Math.floor(Date.now() / 1000) + localDebugOffset;
   const daysRemaining = subscription?.trialEnd ? getDaysRemaining(subscription.trialEnd, currentTime) :
                         subscription?.currentPeriodEnd ? getDaysRemaining(subscription.currentPeriodEnd, currentTime) : 0;
@@ -161,13 +161,16 @@ export const TrialHeader = () => {
           )}
         </div>
       )}
-      <button
-        onClick={() => setIsDismissed(true)}
-        className="absolute right-4 top-1/2 transform -translate-y-1/2 hover:bg-white/20 rounded p-1"
-        aria-label="Lukk varsel"
-      >
-        <X className="h-4 w-4" />
-      </button>
+      {/* Close button only for expired trials, not for active trials */}
+      {(!isTrialing || isTrialExpired) && (
+        <button
+          onClick={() => setIsDismissed(true)}
+          className="absolute right-4 top-1/2 transform -translate-y-1/2 hover:bg-white/20 rounded p-1"
+          aria-label="Lukk varsel"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      )}
     </div>
   );
 };

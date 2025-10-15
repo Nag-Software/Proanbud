@@ -7,7 +7,6 @@ export const useSubscriptionLimits = () => {
 
   const getCurrentPlan = () => {
     if (!subscription) return SUBSCRIPTION_PLANS[0]; // Default to free
-    if (subscription.status === 'trialing') return SUBSCRIPTION_PLANS.find(plan => plan.id === 'trial') || SUBSCRIPTION_PLANS[0];
     return SUBSCRIPTION_PLANS.find(plan => plan.id === subscription.plan) || SUBSCRIPTION_PLANS[0];
   };
 

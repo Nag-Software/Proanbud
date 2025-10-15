@@ -16,14 +16,14 @@ export const LimitCounters = () => {
   }
 
   const getProgressPercentage = (used: number, limit: number) => {
-    if (limit === -1) return 0; // Unlimited
+    //if (limit === -1) return 0; // Unlimited
     return Math.min((used / limit) * 100, 100);
   };
 
   const getProgressColor = (percentage: number) => {
-    if (percentage >= 90) return 'bg-red-500';
-    if (percentage >= 75) return 'bg-orange-500';
-    return 'bg-green-500';
+    if (percentage >= 90) return '#ef4444'; // red-500
+    if (percentage >= 75) return '#f97316'; // orange-500
+    return '#e1e1e1ff'; // green-500
   };
 
   return (
@@ -43,6 +43,7 @@ export const LimitCounters = () => {
         {usage.quotesLimit !== -1 && (
           <Progress 
             value={getProgressPercentage(usage.quotesUsed, usage.quotesLimit)} 
+            color={getProgressColor(getProgressPercentage(usage.quotesUsed, usage.quotesLimit))}
             className="h-1"
           />
         )}
@@ -59,6 +60,7 @@ export const LimitCounters = () => {
         {usage.customersLimit !== -1 && (
           <Progress 
             value={getProgressPercentage(usage.customersUsed, usage.customersLimit)} 
+            color={getProgressColor(getProgressPercentage(usage.customersUsed, usage.customersLimit))}
             className="h-1"
           />
         )}
@@ -75,6 +77,7 @@ export const LimitCounters = () => {
         {usage.storageLimit !== -1 && (
           <Progress 
             value={getProgressPercentage(usage.storageUsed, usage.storageLimit)} 
+            color={getProgressColor(getProgressPercentage(usage.storageUsed, usage.storageLimit))}
             className="h-1"
           />
         )}

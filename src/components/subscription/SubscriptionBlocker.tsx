@@ -57,7 +57,7 @@ const SubscriptionExpiredPrompt: React.FC<SubscriptionExpiredPromptProps> = ({ s
       };
     }
 
-    if (subscription.status === 'trialing') {
+    if (subscription.plan === 'free' && subscription.status === 'active') {
       return {
         icon: Clock,
         title: 'Prøveperioden er utløpt',

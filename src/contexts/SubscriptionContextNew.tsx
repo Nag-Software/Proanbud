@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { firestore, db } from '@/lib/firebase';
 import { getAuth } from 'firebase/auth';
@@ -57,6 +57,9 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
+  // Track sync operations to prevent concurrent requests
+  const syncInProgress = useRef(false);
+  
   // Debug time travel state (development only)
   const [debugTimeOffset, setDebugTimeOffset] = useState<number>(0);
 
@@ -81,26 +84,36 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
       const customersCount = customersSnapshot.exists() ? Object.keys(customersSnapshot.val()).length : 0;
 
       // Determine correct plan based on expiration
-      let currentPlan = subscription?.status === 'trialing' ? 'trial' : (subscription?.plan || 'free');
+      let currentPlan = subscription?.plan || 'free';
       let planDetails = SUBSCRIPTION_PLANS.find(p => p.id === currentPlan);
       const now = getCurrentTime();
 
       // If subscription is basic/pro and expired, downgrade to free
       if ((currentPlan === 'basic' || currentPlan === 'pro') && subscription) {
-        if (subscription.currentPeriodEnd < now || subscription.status === 'canceled' || subscription.status === 'unpaid') {
+        if (subscription.currentPeriodEnd < now || subscription.status === 'unpaid') {
           currentPlan = 'free';
           planDetails = SUBSCRIPTION_PLANS.find(p => p.id === currentPlan);
         }
       }
 
-      // If trial has expired, set limits to zero
+      // Set limits based on subscription status
       let quotesLimit = planDetails?.limits.quotes || 5;
       let customersLimit = planDetails?.limits.customers || 3;
       let storageLimit = (planDetails?.limits.storage || 1) * 1024;
-      if (currentPlan === 'trial' && typeof subscription?.currentPeriodEnd === 'number' && subscription.currentPeriodEnd < now) {
+
+      // If subscription is canceled, set limits to zero
+      if (subscription?.status === 'canceled') {
         quotesLimit = 0;
         customersLimit = 0;
         storageLimit = 0;
+      }
+      // If trial has expired, set limits to zero (and mark as canceled)
+      else if (currentPlan === 'free' && subscription?.trialEnd && subscription.trialEnd < now) {
+        quotesLimit = 0;
+        customersLimit = 0;
+        storageLimit = 0;
+        // Update subscription status to canceled for expired trials
+        setSubscription(prev => prev ? { ...prev, status: 'canceled' as const } : null);
       }
 
       const usageData: SubscriptionUsage = {
@@ -142,11 +155,11 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
             console.log(`📄 Doc ${index}:`, doc.id, doc.data());
           });
           
-          // Find the most recent active/trialing/past_due/canceled subscription
+          // Find the most recent active/past_due/canceled subscription
           let selectedDoc = null;
           for (const doc of snapshot.docs) {
             const data = doc.data();
-            if (['active', 'trialing', 'past_due', 'canceled'].includes(data.status)) {
+            if (['active', 'past_due', 'canceled'].includes(data.status)) {
               selectedDoc = doc;
               break;
             }
@@ -161,6 +174,7 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
               status: subscriptionData.status,
               currentPeriodStart: subscriptionData.current_period_start?.seconds || Math.floor(Date.now() / 1000),
               currentPeriodEnd: subscriptionData.current_period_end?.seconds || Math.floor(Date.now() / 1000),
+              trialEnd: subscriptionData.trial_end?.seconds,
               cancelAtPeriodEnd: subscriptionData.cancel_at_period_end || false,
               stripeSubscriptionId: subscriptionData.id,
               stripePriceId: subscriptionData.price?.id,
@@ -169,14 +183,15 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
               updatedAt: Math.floor(Date.now() / 1000),
             };
 
-            // Only downgrade if truly expired/canceled/unpaid
+            // Handle canceled subscriptions - keep canceled status
             const now = getCurrentTime();
             if ((mappedSubscription.plan === 'basic' || mappedSubscription.plan === 'pro')) {
               if (mappedSubscription.status === 'canceled' || mappedSubscription.status === 'unpaid' || mappedSubscription.currentPeriodEnd < now) {
                 mappedSubscription = {
                   ...mappedSubscription,
                   plan: 'free',
-                  status: 'trialing',
+                  // Keep the canceled status instead of changing to active
+                  currentPeriodEnd: Math.floor(Date.now() / 1000) + (365 * 24 * 60 * 60), // Far future for free plan
                 };
               }
             }
@@ -262,10 +277,10 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
 
       if (hasUsedTrial) {
         console.log('createTrialInMemory - user has already used trial, not creating new trial');
-        // Set to free plan without trial
+        // Set to free plan without trial (trial used up)
         const freeSubscription: UserSubscription = {
           plan: 'free',
-          status: 'active',
+          status: 'canceled', // Mark as canceled since trial was used
           currentPeriodStart: Math.floor(Date.now() / 1000),
           currentPeriodEnd: Math.floor(Date.now() / 1000) + (365 * 24 * 60 * 60), // Far future
           cancelAtPeriodEnd: false,
@@ -294,10 +309,10 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
           console.error('createTrialInMemory - failed to mark trial as used:', error);
         });
         
-        // Set to free plan without trial
+        // Set to free plan without trial (expired)
         const freeSubscription: UserSubscription = {
           plan: 'free',
-          status: 'active',
+          status: 'canceled', // Mark as canceled since trial expired
           currentPeriodStart: Math.floor(Date.now() / 1000),
           currentPeriodEnd: Math.floor(Date.now() / 1000) + (365 * 24 * 60 * 60), // Far future
           cancelAtPeriodEnd: false,
@@ -310,7 +325,7 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
 
       const trialSubscription: UserSubscription = {
         plan: 'free',
-        status: 'trialing',
+        status: 'active',
         currentPeriodStart: userCreatedAt,
         currentPeriodEnd: trialEnd,
         trialEnd: trialEnd,
@@ -331,7 +346,7 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
 
       const trialSubscription: UserSubscription = {
         plan: 'free',
-        status: 'trialing',
+        status: 'active',
         currentPeriodStart: userCreatedAt,
         currentPeriodEnd: trialEnd,
         trialEnd: trialEnd,
@@ -509,9 +524,10 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
   }, [subscription]);
 
   const syncSubscriptions = useCallback(async () => {
-    if (!user?.uid) return;
+    if (!user?.uid || syncInProgress.current) return;
 
     try {
+      syncInProgress.current = true;
       setLoading(true);
       const auth = getAuth();
       const idToken = await auth.currentUser?.getIdToken();
@@ -547,6 +563,7 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
       setError('Failed to sync subscription data');
     } finally {
       setLoading(false);
+      syncInProgress.current = false;
     }
   }, [user?.uid]);
 
@@ -559,9 +576,9 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
     const lastSyncKey = `lastSubscriptionSync_${user.uid}`;
     const lastSync = localStorage.getItem(lastSyncKey);
     const now = Date.now();
-    const fiveMinutes = 5 * 60 * 1000;
+    const oneMinute = 1 * 60 * 1000;
 
-    if (!force && lastSync && (now - parseInt(lastSync)) < fiveMinutes) {
+    if (!force && lastSync && (now - parseInt(lastSync)) < oneMinute) {
       console.log('⏰ Skipping auto-sync, last sync was recent');
       return;
     }

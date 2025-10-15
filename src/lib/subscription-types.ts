@@ -25,7 +25,7 @@ export interface SubscriptionPlanDetails {
 
 export interface UserSubscription {
   plan: SubscriptionPlan;
-  status: 'active' | 'canceled' | 'past_due' | 'trialing' | 'unpaid';
+  status: 'active' | 'canceled' | 'past_due' | 'unpaid';
   currentPeriodStart: number;
   currentPeriodEnd: number;
   cancelAtPeriodEnd: boolean;

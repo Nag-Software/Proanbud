@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import { db } from '@/lib/firebase';
-import { ref, set } from 'firebase/database';
+import { ref, set, get } from 'firebase/database';
 import * as admin from 'firebase-admin';
 
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
@@ -31,11 +31,11 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(`🔔 Received webhook: ${event.type} (ID: ${event.id})`);
-    console.log(`📋 Event data:`, JSON.stringify(event.data, null, 2));
+    // console.log(`📋 Event data:`, JSON.stringify(event.data, null, 2));
 
     // Check for duplicate events to prevent double processing
     try {
-      const duplicateCheck = await db.ref(`webhook_events/${event.id}`).once('value');
+      const duplicateCheck = await get(ref(db, `webhook_events/${event.id}`));
       if (duplicateCheck.exists()) {
         console.log(`⚠️ Duplicate webhook event: ${event.id}, skipping`);
         return NextResponse.json({ received: true, duplicate: true });

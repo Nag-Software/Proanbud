@@ -56,7 +56,7 @@ function checkSubscriptionAccess(
   if (!subscription) return false;
 
   // Always allow access during trial
-  if (subscription.status === 'trialing' && 
+  if (subscription.plan === 'free' && subscription.status === 'active' && 
       subscription.currentPeriodEnd > Math.floor(Date.now() / 1000)) {
     return true;
   }

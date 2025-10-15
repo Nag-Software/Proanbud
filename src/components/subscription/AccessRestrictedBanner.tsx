@@ -25,17 +25,17 @@ export const AccessRestrictedBanner: React.FC<AccessRestrictedBannerProps> = ({
   }
 
   const getIcon = () => {
+    if (!subscription || (subscription.plan === 'free' && subscription.status === 'active')) return Clock;
     if (!subscription || subscription.plan === 'free') return Lock;
-    if (subscription.status === 'trialing') return Clock;
     return AlertTriangle;
   };
 
   const getStatusMessage = () => {
+    if (!subscription || (subscription.plan === 'free' && subscription.status === 'active')) {
+      return "Prøveperioden er utløpt";
+    }
     if (!subscription || subscription.plan === 'free') {
       return "Ingen aktiv abonnement";
-    }
-    if (subscription.status === 'trialing') {
-      return "Prøveperioden er utløpt";
     }
     if (subscription.status === 'past_due') {
       return "Betalingsproblem";
