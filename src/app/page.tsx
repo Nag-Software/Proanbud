@@ -26,7 +26,11 @@ import {
   Users,
   Shield,
   Menu,
-  X
+  X,
+  PieChart,
+  Activity,
+  Target,
+  Award
 } from 'lucide-react';
 import Logo from '@/components/shared/Logo';
 import { HeroCarousel } from '@/components/ui/hero-carousel';
@@ -248,16 +252,24 @@ export default function Home() {
         )}
       </header>
 
-      {/* Hero Section with Video */}
-      <section className="relative overflow-hidden py-10 lg:py-15 bg-white mt-5">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <div className="text-center lg:text-left space-y-7">
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#82ffb2]/10 rounded-full border border-[#82ffb2]/20">
-                <Sparkles className="w-4 h-4 text-[#82ffb2]" />
-                <span className="text-sm font-medium text-gray-700">AI-drevet tilbudsplattform</span>
+      {/* Hero Section */}
+      <section className="relative min-h-screen flex items-center overflow-hidden bg-gradient-to-br from-slate-50 via-white to-slate-100">
+        {/* Background Effects */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_40%,rgba(130,255,178,0.08),transparent_50%)]"></div>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_60%,rgba(130,178,255,0.08),transparent_50%)]"></div>
+        <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-transparent via-transparent to-white/50"></div>
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+            {/* Left Column - Content */}
+            <div className="text-center lg:text-left space-y-8">
+              {/* Badge */}
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/80 backdrop-blur-sm rounded-full border border-slate-200/50 shadow-sm">
+                <Sparkles className="w-4 h-4 text-emerald-600" />
+                <span className="text-sm font-medium text-slate-700">AI-drevet tilbudsplattform</span>
               </div>
 
+<<<<<<< Updated upstream
               <h1 className="text-5xl md:text-7xl font-bold text-gray-900">
                 Send tilbud på
                 <span className="bg-gradient-to-r from-[#82ffb2] to-[#82b2ff] bg-clip-text text-transparent"> minutter</span>
@@ -266,50 +278,119 @@ export default function Home() {
               
               <p className="text-xl text-gray-600 leading-relaxed max-w-xl">
                 Din komplette tilbudsplattform for håndverkere. Bruk AI til å prissette riktig, send profesjonelle tilbud fra mobil eller PC, og vinn flere oppdrag.
+=======
+              {/* Main Heading */}
+              <div className="space-y-6">
+                <h1 className="text-6xl md:text-7xl lg:text-8xl font-bold text-slate-900 leading-[0.9] tracking-tight">
+                  Send tilbud på{' '}
+                  <span className="bg-gradient-to-r from-emerald-500 to-blue-500 bg-clip-text text-transparent">
+                    minutter
+                  </span>
+                  <br />
+                  <span className="text-slate-600 text-4xl md:text-5xl lg:text-6xl font-light">med AI</span>
+                </h1>
+              </div>
+
+              {/* Subtext */}
+              <p className="text-xl text-slate-600 leading-relaxed max-w-xl">
+                Den komplette plattformen for håndverkere. AI-prissetting, profesjonelle tilbud, og alt du trenger for å vinne flere oppdrag.
+>>>>>>> Stashed changes
               </p>
-              
-              <div className="flex flex-col sm:flex-row gap-4">
+
+              {/* CTA Buttons */}
+              <div className="flex flex-col sm:flex-row gap-4 pt-4">
                 <Link
+<<<<<<< Updated upstream
                   href="/signup"
                   className="group bg-[#82ffb2] text-gray-900 px-8 py-4 rounded-xl hover:bg-[#6ee69f] transition-all font-semibold text-lg shadow-xl shadow-[#82ffb2]/30 hover:shadow-2xl hover:shadow-[#82ffb2]/40 flex items-center justify-center gap-2"
                 >
                   Start gratis i dag
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+=======
+                  href="/pilot"
+                  className="group bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-8 py-4 rounded-xl hover:from-emerald-600 hover:to-emerald-700 transition-all duration-300 font-semibold text-lg shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/30 flex items-center justify-center gap-3 hover:scale-[1.02]"
+                >
+                  Start gratis prøveperiode
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" />
+>>>>>>> Stashed changes
                 </Link>
                 <Link
                   href="/login"
-                  className="bg-white text-gray-900 px-8 py-4 rounded-xl hover:bg-gray-50 transition-all font-semibold text-lg border-2 border-gray-200 flex items-center justify-center gap-2"
+                  className="bg-white/90 backdrop-blur-sm text-slate-900 px-8 py-4 rounded-xl hover:bg-white transition-all duration-300 font-semibold text-lg border border-slate-200/50 shadow-sm hover:shadow-md flex items-center justify-center gap-3 hover:scale-[1.02]"
                 >
                   Se demo
                 </Link>
               </div>
 
-              <div className="flex items-center gap-8 pt-0">
-                <div className="flex items-center gap-2">
-                  <Check className="w-5 h-5 text-[#82ffb2]" />
-                  <span className="text-sm text-gray-600">Gratis i 14 dager</span>
+              {/* Social Proof Metrics */}
+              <div className="flex items-center justify-center lg:justify-start gap-8 pt-8">
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-slate-900">500+</div>
+                  <div className="text-sm text-slate-500 uppercase tracking-wide">Aktive brukere</div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Check className="w-5 h-5 text-[#82ffb2]" />
-                  <span className="text-sm text-gray-600">Ingen kredittkort</span>
+                <div className="w-px h-12 bg-slate-300"></div>
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-slate-900">10k+</div>
+                  <div className="text-sm text-slate-500 uppercase tracking-wide">Tilbud sendt</div>
+                </div>
+                <div className="w-px h-12 bg-slate-300"></div>
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-slate-900">4.9/5</div>
+                  <div className="text-sm text-slate-500 uppercase tracking-wide">Kundetilfredshet</div>
                 </div>
               </div>
             </div>
 
-            {/* Hero Carousel */}
+            {/* Right Column - Visual */}
             <div className="relative">
-              <HeroCarousel
-                images={[
-                  '/assets/hero/Gemini_Generated_Image_6u0ggt6u0ggt6u0g.png',
-                  '/assets/hero/nice.png',
-                  '/assets/hero/nice2.png',
-                  '/assets/hero/nice3.png',
-                ]}
-                autoPlayInterval={4000}
-              />
+              <div className="relative max-w-lg mx-auto lg:mx-0">
+                {/* Main Hero Visual */}
+                <div className="relative">
+                  <div className="absolute -inset-4 bg-gradient-to-r from-emerald-500/10 to-blue-500/10 rounded-3xl blur-2xl"></div>
+                  <div className="relative bg-white/80 backdrop-blur-sm rounded-3xl p-8 border border-slate-200/50 shadow-2xl">
+                    <HeroCarousel
+                      images={[
+                        '/assets/hero/Gemini_Generated_Image_6u0ggt6u0ggt6u0g.png',
+                        '/assets/hero/nice.png',
+                        '/assets/hero/nice2.png',
+                        '/assets/hero/nice3.png',
+                      ]}
+                      autoPlayInterval={5000}
+                    />
+                  </div>
+                </div>
+
+                {/* Floating Elements */}
+                <div className="absolute -top-8 -right-8 bg-white/90 backdrop-blur-sm rounded-2xl p-4 shadow-xl border border-slate-200/50">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-emerald-100 rounded-lg">
+                      <TrendingUp className="w-5 h-5 text-emerald-600" />
+                    </div>
+                    <div>
+                      <div className="text-xl font-bold text-slate-900">85%</div>
+                      <div className="text-xs text-slate-500 uppercase tracking-wide">Tidsbesparelse</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="absolute -bottom-6 -left-6 bg-white/90 backdrop-blur-sm rounded-2xl p-4 shadow-xl border border-slate-200/50">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-blue-100 rounded-lg">
+                      <Users className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <div className="text-lg font-bold text-slate-900">Gratis</div>
+                      <div className="text-xs text-slate-500 uppercase tracking-wide">14 dager</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
+
+        {/* Bottom fade */}
+        <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-slate-100 to-transparent"></div>
       </section>
 
       {/* Features Section */}
