@@ -171,10 +171,10 @@ export default function Home() {
                 Logg inn
               </Link>
               <Link
-                href="/signup"
+                href="/pilot"
                 className="bg-[#82ffb2] text-gray-900 px-6 py-2.5 rounded-xl transition-all font-semibold shadow-lg shadow-[#82ffb2]/20 hover:shadow-xl hover:shadow-[#82ffb2]/30"
               >
-                Kom igang
+                Bli pilotkunde
               </Link>
             </div>
             
@@ -236,11 +236,11 @@ export default function Home() {
                   Logg inn
                 </Link>
                 <Link
-                  href="/signup"
+                  href="/pilot"
                   onClick={() => setIsMobileMenuOpen(false)}
                   className="block w-full text-center bg-[#82ffb2] text-gray-900 px-6 py-3 rounded-xl transition-all font-semibold shadow-lg shadow-[#82ffb2]/20 hover:shadow-xl hover:shadow-[#82ffb2]/30"
                 >
-                  Kom igang
+                  Bli pilot
                 </Link>
               </div>
             </nav>
@@ -263,17 +263,17 @@ export default function Home() {
                 <span className="bg-gradient-to-r from-[#82ffb2] to-[#82b2ff] bg-clip-text text-transparent"> minutter</span>
                 , ikke timer, <span className="italic">med AI</span>
               </h1>
-              
+
               <p className="text-xl text-gray-600 leading-relaxed max-w-xl">
-                Din komplette tilbudsplattform for håndverkere. Bruk AI til å prissette riktig, send profesjonelle tilbud fra mobil eller PC, og vinn flere oppdrag.
+                Din komplette tilbudsplattform for håndverkere. Bruk AI til å prissete riktig, send profesjonelle tilbud fra mobil eller PC, og vinn flere oppdrag.
               </p>
               
               <div className="flex flex-col sm:flex-row gap-4">
                 <Link
-                  href="/signup"
+                  href="/pilot"
                   className="group bg-[#82ffb2] text-gray-900 px-8 py-4 rounded-xl hover:bg-[#6ee69f] transition-all font-semibold text-lg shadow-xl shadow-[#82ffb2]/30 hover:shadow-2xl hover:shadow-[#82ffb2]/40 flex items-center justify-center gap-2"
                 >
-                  Start gratis i dag
+                  Bli Pilotkunde
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </Link>
                 <Link

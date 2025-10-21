@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ref, get, push, set, update } from 'firebase/database';
-import { db } from '@/lib/firebase';
+import { database as adminDatabase } from '@/lib/firebaseAdmin';
+import * as admin from 'firebase-admin';
 import { Resend } from 'resend';
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
@@ -10,6 +10,28 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    let db = adminDatabase;
+    if (!db) {
+      // Try to initialize database on demand
+      if (admin.apps.length > 0) {
+        try {
+          db = admin.database();
+          console.log('✅ Database initialized on demand');
+        } catch (error) {
+          console.error('❌ Failed to initialize database on demand:', error);
+          return NextResponse.json(
+            { error: 'Database ikke tilgjengelig' },
+            { status: 500 }
+          );
+        }
+      } else {
+        return NextResponse.json(
+          { error: 'Database ikke tilgjengelig' },
+          { status: 500 }
+        );
+      }
+    }
+
     const { id: messageId } = await params;
     const body = await request.json();
     const { userId, replyMessage, replySubject } = body;
@@ -29,8 +51,8 @@ export async function POST(
     }
 
     // Get the original message
-    const messageRef = ref(db, `users/${userId}/inbox/${messageId}`);
-    const messageSnapshot = await get(messageRef);
+    const messageRef = db.ref(`users/${userId}/inbox/${messageId}`);
+    const messageSnapshot = await messageRef.once('value');
 
     if (!messageSnapshot.exists()) {
       return NextResponse.json(
@@ -44,8 +66,8 @@ export async function POST(
     // Get customer email
     let customerEmail: string | null = null;
     if (originalMessage.customerId) {
-      const customerRef = ref(db, `users/${userId}/kunder/${originalMessage.customerId}`);
-      const customerSnapshot = await get(customerRef);
+      const customerRef = db.ref(`users/${userId}/kunder/${originalMessage.customerId}`);
+      const customerSnapshot = await customerRef.once('value');
       if (customerSnapshot.exists()) {
         customerEmail = customerSnapshot.val().epost;
       }
@@ -59,8 +81,8 @@ export async function POST(
     }
 
     // Get business settings for sender info
-    const businessRef = ref(db, `users/${userId}/businessSettings`);
-    const businessSnapshot = await get(businessRef);
+    const businessRef = db.ref(`users/${userId}/businessSettings`);
+    const businessSnapshot = await businessRef.once('value');
     const businessSettings = businessSnapshot.exists() ? businessSnapshot.val() : null;
 
     const fromEmail = businessSettings?.email || 'post@proanbud.no';
@@ -137,8 +159,8 @@ export async function POST(
     console.log('✅ Reply email sent:', emailData.data?.id);
 
     // Add reply to message thread/conversation log
-    const conversationRef = ref(db, `users/${userId}/inbox/${messageId}/conversation`);
-    const replyRef = push(conversationRef);
+    const conversationRef = db.ref(`users/${userId}/inbox/${messageId}/conversation`);
+    const replyRef = conversationRef.push();
     
     const replyLog = {
       message: replyMessage.split('\n\n--- Original melding ---')[0], // Only the new reply, not the original
@@ -149,10 +171,10 @@ export async function POST(
       type: 'reply' as const,
     };
 
-    await set(replyRef, replyLog);
+    await replyRef.set(replyLog);
 
     // Update original message as replied
-    await update(messageRef, {
+    await messageRef.update({
       hasReply: true,
       lastReplyAt: Date.now(),
       oppdatert: Date.now(),

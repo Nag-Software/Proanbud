@@ -1,12 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ref, get, push, set, serverTimestamp, update } from 'firebase/database';
-import { db } from '@/lib/firebase';
+import { database as adminDatabase } from '@/lib/firebaseAdmin';
+import * as admin from 'firebase-admin';
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    let db = adminDatabase;
+    if (!db) {
+      // Try to initialize database on demand
+      if (admin.apps.length > 0) {
+        try {
+          db = admin.database();
+          console.log('✅ Database initialized on demand');
+        } catch (error) {
+          console.error('❌ Failed to initialize database on demand:', error);
+          return NextResponse.json(
+            { error: 'Database ikke tilgjengelig' },
+            { status: 500 }
+          );
+        }
+      } else {
+        return NextResponse.json(
+          { error: 'Database ikke tilgjengelig' },
+          { status: 500 }
+        );
+      }
+    }
+
     const { id } = await params;
     const body = await request.json();
     const { token, message, type, customerName } = body;
@@ -19,8 +41,8 @@ export async function POST(
     }
 
     // Find the quote and verify token
-    const usersRef = ref(db, 'users');
-    const usersSnapshot = await get(usersRef);
+    const usersRef = db.ref('users');
+    const usersSnapshot = await usersRef.once('value');
 
     if (!usersSnapshot.exists()) {
       return NextResponse.json(
@@ -32,10 +54,9 @@ export async function POST(
     let foundUserId: string | null = null;
     let foundQuote: any = null;
 
-    usersSnapshot.forEach((userSnapshot) => {
-      const userId = userSnapshot.key;
-      const userData = userSnapshot.val();
-      
+    // Search through all users' quotes
+    const usersData = usersSnapshot.val();
+    Object.entries(usersData || {}).forEach(([userId, userData]: [string, any]) => {
       if (userData.tilbud && userData.tilbud[id]) {
         const quote = userData.tilbud[id];
         if (quote.viewToken === token) {
@@ -54,18 +75,18 @@ export async function POST(
 
     // Update quote status if approved or rejected
     if (type === 'approval' || type === 'rejection') {
-      const quoteRef = ref(db, `users/${foundUserId}/tilbud/${id}`);
-      await update(quoteRef, {
+      const quoteRef = db.ref(`users/${foundUserId}/tilbud/${id}`);
+      await quoteRef.update({
         status: type === 'approval' ? 'vunnet' : 'tapt',
-        oppdatert: serverTimestamp(),
+        oppdatert: Date.now(),
       });
     }
 
     // Try to find customerId by matching customer name
     let customerId: string | undefined = undefined;
     try {
-      const kundersRef = ref(db, `users/${foundUserId}/kunder`);
-      const kundersSnapshot = await get(kundersRef);
+      const kundersRef = db.ref(`users/${foundUserId}/kunder`);
+      const kundersSnapshot = await kundersRef.once('value');
       
       if (kundersSnapshot.exists()) {
         const kundersData = kundersSnapshot.val();
@@ -82,8 +103,8 @@ export async function POST(
     }
     
     // Check if there's already an inbox message for this quote
-    const inboxRef = ref(db, `users/${foundUserId}/inbox`);
-    const inboxSnapshot = await get(inboxRef);
+    const inboxRef = db.ref(`users/${foundUserId}/inbox`);
+    const inboxSnapshot = await inboxRef.once('value');
     
     let existingMessageId: string | null = null;
     let existingMessage: any = null;
@@ -113,13 +134,13 @@ export async function POST(
       // Add to existing conversation
       console.log('📨 Adding to existing conversation:', existingMessageId);
       
-      const conversationRef = ref(db, `users/${foundUserId}/inbox/${existingMessageId}/conversation`);
-      const newConversationEntryRef = push(conversationRef);
-      await set(newConversationEntryRef, conversationEntry);
+      const conversationRef = db.ref(`users/${foundUserId}/inbox/${existingMessageId}/conversation`);
+      const newConversationEntryRef = conversationRef.push();
+      await newConversationEntryRef.set(conversationEntry);
       
       // Update the main message timestamp and read status
-      const messageRef = ref(db, `users/${foundUserId}/inbox/${existingMessageId}`);
-      await update(messageRef, {
+      const messageRef = db.ref(`users/${foundUserId}/inbox/${existingMessageId}`);
+      await messageRef.update({
         oppdatert: Date.now(),
         lastMessageAt: Date.now(),
         isRead: false, // Mark as unread when customer sends new message
@@ -136,7 +157,7 @@ export async function POST(
       // Create new inbox message with first conversation entry
       console.log('📨 Creating new inbox message for quote:', id);
       
-      const newMessageRef = push(inboxRef);
+      const newMessageRef = inboxRef.push();
       
       const inboxMessage = {
         from: customerName || foundQuote.kundenavn || 'Kunde',
@@ -156,13 +177,13 @@ export async function POST(
         lastMessageAt: Date.now(),
       };
 
-      await set(newMessageRef, inboxMessage);
+      await newMessageRef.set(inboxMessage);
       console.log('✅ Inbox message created with ID:', newMessageRef.key);
       
       // Add first conversation entry
-      const conversationRef = ref(db, `users/${foundUserId}/inbox/${newMessageRef.key}/conversation`);
-      const firstConversationEntryRef = push(conversationRef);
-      await set(firstConversationEntryRef, conversationEntry);
+      const conversationRef = db.ref(`users/${foundUserId}/inbox/${newMessageRef.key}/conversation`);
+      const firstConversationEntryRef = conversationRef.push();
+      await firstConversationEntryRef.set(conversationEntry);
       
       console.log('✅ First conversation entry created:', firstConversationEntryRef.key);
 

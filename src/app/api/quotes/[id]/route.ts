@@ -1,12 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ref, get } from 'firebase/database';
-import { db } from '@/lib/firebase';
+import { database as adminDatabase } from '@/lib/firebaseAdmin';
+import * as admin from 'firebase-admin';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    let db = adminDatabase;
+    if (!db) {
+      // Try to initialize database on demand
+      if (admin.apps.length > 0) {
+        try {
+          db = admin.database();
+          console.log('✅ Database initialized on demand');
+        } catch (error) {
+          console.error('❌ Failed to initialize database on demand:', error);
+          return NextResponse.json(
+            { error: 'Database ikke tilgjengelig' },
+            { status: 500 }
+          );
+        }
+      } else {
+        return NextResponse.json(
+          { error: 'Database ikke tilgjengelig' },
+          { status: 500 }
+        );
+      }
+    }
+
     const { id } = await params;
     const { searchParams } = new URL(request.url);
     const token = searchParams.get('token');
@@ -19,8 +41,8 @@ export async function GET(
     }
 
     // Search for quote with matching ID and token across all users
-    const usersRef = ref(db, 'users');
-    const usersSnapshot = await get(usersRef);
+    const usersRef = db.ref('users');
+    const usersSnapshot = await usersRef.once('value');
 
     if (!usersSnapshot.exists()) {
       return NextResponse.json(
@@ -33,10 +55,8 @@ export async function GET(
     let foundUserId: string | null = null;
 
     // Search through all users' quotes
-    usersSnapshot.forEach((userSnapshot) => {
-      const userId = userSnapshot.key;
-      const userData = userSnapshot.val();
-      
+    const usersData = usersSnapshot.val();
+    Object.entries(usersData || {}).forEach(([userId, userData]: [string, any]) => {
       if (userData.tilbud && userData.tilbud[id]) {
         const quote = userData.tilbud[id];
         // Verify token matches
@@ -61,8 +81,8 @@ export async function GET(
     // Get business settings for the user
     let businessSettings = null;
     if (foundUserId) {
-      const settingsRef = ref(db, `users/${foundUserId}/innstillinger/bedrift`);
-      const settingsSnapshot = await get(settingsRef);
+      const settingsRef = db.ref(`users/${foundUserId}/innstillinger/bedrift`);
+      const settingsSnapshot = await settingsRef.once('value');
       if (settingsSnapshot.exists()) {
         businessSettings = settingsSnapshot.val();
       }
@@ -71,12 +91,12 @@ export async function GET(
     // Get customer info
     let customerInfo = null;
     if (foundUserId && foundQuote.kundenavn) {
-      const customersRef = ref(db, `users/${foundUserId}/kunder`);
-      const customersSnapshot = await get(customersRef);
+      const customersRef = db.ref(`users/${foundUserId}/kunder`);
+      const customersSnapshot = await customersRef.once('value');
       if (customersSnapshot.exists()) {
         const customers = customersSnapshot.val();
         // Find customer by name
-        Object.entries(customers).forEach(([customerId, customer]: [string, any]) => {
+        Object.entries(customers || {}).forEach(([customerId, customer]: [string, any]) => {
           if (customer.navn === foundQuote.kundenavn) {
             customerInfo = {
               id: customerId,

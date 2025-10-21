@@ -165,7 +165,7 @@ export function QuoteDetailsDrawer({
         console.log('✅ ViewToken generated:', viewToken);
       }
 
-      const baseUrl = "https://proanbud.no"; //window.location.origin
+      const baseUrl = window.location.origin; //window.location.origin
       const viewUrl = viewToken 
         ? `${baseUrl}/tilbudsvisning/${quote.id}?token=${viewToken}`
         : null;

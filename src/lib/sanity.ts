@@ -92,9 +92,49 @@ export const allPostSlugsQuery = `
   }
 `
 
-// Hent antall blogginnlegg (for paginering)
-export const postCountQuery = `
-  count(*[_type == "post" && publishedAt <= now()])
+// Hent pilot-side data
+export const pilotDataQuery = `
+  *[_type == "pilot"][0] {
+    _id,
+    title,
+    subtitle,
+    badgeText,
+    availableSpots,
+    usedSpots,
+    spotsText,
+    pricing {
+      amount,
+      currency,
+      period
+    },
+    heroDescription,
+    metrics[] {
+      label,
+      value,
+      description
+    },
+    aiCard {
+      title,
+      description,
+      spotsFilled,
+      spotsRemaining
+    },
+    trustIndicators[] {
+      text
+    },
+    secondaryCTA {
+      text,
+      url
+    },
+    processSteps[] {
+      title,
+      description
+    },
+    faq[] {
+      question,
+      answer
+    }
+  }
 `
 
 // Hent blogginnlegg per kategori

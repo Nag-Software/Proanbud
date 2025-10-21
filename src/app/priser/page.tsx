@@ -34,7 +34,7 @@ export default function PricingPage() {
   const plans = [
     {
       id: 'free',
-      name: 'Gratis prøveperiode',
+      name: 'Gratis',
       description: 'Test alle funksjoner gratis i 14 dager – ingen kredittkort nødvendig',
       price: {
         monthly: 0,

@@ -22,7 +22,7 @@ export const LimitCounters = () => {
 
   const getProgressColor = (percentage: number) => {
     if (percentage >= 90) return '#ef4444'; // red-500
-    if (percentage >= 75) return '#f97316'; // orange-500
+    else if (percentage >= 75) return '#f97316'; // orange-500
     return '#e1e1e1ff'; // green-500
   };
 
@@ -44,7 +44,7 @@ export const LimitCounters = () => {
           <Progress 
             value={getProgressPercentage(usage.quotesUsed, usage.quotesLimit)} 
             color={getProgressColor(getProgressPercentage(usage.quotesUsed, usage.quotesLimit))}
-            className="h-1"
+            className="h-1 bg-primary/20"
           />
         )}
       </div>

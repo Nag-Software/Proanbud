@@ -17,7 +17,7 @@ const config: Config = {
         primary: {
           DEFAULT: '#1A4314',
           foreground: '#FFFFFF',
-        },
+        }, 
         accent: '#82ffb2',
         background: '#F8F9FA',
         foreground: '#1C1C1E',
