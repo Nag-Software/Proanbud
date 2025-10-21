@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { PageHeader } from '@/components/shared/PageHeader';
-import { DataTable } from '@/components/shared/DataTable';
+import { DataTable } from '@/components/ui/data-table';
 import { NewCustomerDrawer, CustomerDetailsDrawer } from '@/components/kunder';
 import { QuoteDetailsDrawer } from '@/components/tilbud';
 import { getCustomers } from '@/lib/services/customerService';
@@ -10,39 +10,13 @@ import { getTilbud } from '@/lib/services/tilbudService';
 import { ref, onValue, off } from 'firebase/database';
 import { db } from '@/lib/firebase';
 import { auth } from '@/lib/firebase';
-import { Kunde, ColumnDef, Tilbud } from '@/lib/types';
+import { Kunde, Tilbud } from '@/lib/types';
 import { PlusCircle } from 'lucide-react';
 import { useSubscriptionLimits } from '@/hooks/useSubscriptionLimits';
 import { useSubscriptionAccess } from '@/hooks/useSubscriptionAccess';
 import { useSubscription } from '@/contexts/SubscriptionContextNew';
 import { AccessRestrictedBanner } from '@/components/subscription/AccessRestrictedBanner';
-
-const columns: ColumnDef<any>[] = [
-  {
-    accessorKey: 'navn',
-    header: 'Kunde',
-  },
-  {
-    accessorKey: 'epost',
-    header: 'E-post',
-  },
-  {
-    accessorKey: 'telefon',
-    header: 'Telefon',
-  },
-  {
-    accessorKey: 'antallTilbud',
-    header: 'Antall Tilbud',
-  },
-  {
-    accessorKey: 'antallVunnet',
-    header: 'Vunnet',
-  },
-  {
-    accessorKey: 'sistAktivitet',
-    header: 'Sist Aktivitet',
-  },
-];
+import { getCustomerColumns } from '@/lib/table-columns/customers-columns';
 
 export default function KunderPage() {
   const { checkCustomerLimit, showUpgradeDialog, loading: limitsLoading } = useSubscriptionLimits();
@@ -235,8 +209,20 @@ export default function KunderPage() {
 
   return (
     <div>
-      <PageHeader title="Alle Kunder">
-        <div className="flex gap-2">
+      <PageHeader title="Alle Kunder" />
+
+      <AccessRestrictedBanner 
+        title="Begrenset tilgang til kundefunksjon"
+        message="Du kan se eksisterende kunder, men kan ikke opprette nye uten aktiv abonnement."
+      />
+      
+      <DataTable
+        columns={getCustomerColumns()}
+        data={customers}
+        searchKey="navn"
+        searchPlaceholder="Søk kunder..."
+        onRowClick={handleCustomerClick}
+        rightContent={
           <button   
             onClick={handleNewCustomer}
             disabled={(isLimited && !hasTrialAccess) || !checkCustomerLimit().canProceed || limitsLoading}
@@ -249,20 +235,7 @@ export default function KunderPage() {
             <PlusCircle className="h-5 w-5" />
             Ny kunde
           </button>
-        </div>
-      </PageHeader>
-
-      <AccessRestrictedBanner 
-        title="Begrenset tilgang til kundefunksjon"
-        message="Du kan se eksisterende kunder, men kan ikke opprette nye uten aktiv abonnement."
-      />
-      
-      <DataTable 
-        columns={columns} 
-        data={customers} 
-        enableFiltering 
-        searchPlaceholder="Søk kunder..."
-        onRowClick={handleCustomerClick}
+        }
       />
       
       <NewCustomerDrawer 

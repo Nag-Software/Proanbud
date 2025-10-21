@@ -1,42 +1,14 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { DataTable } from '@/components/shared/DataTable';
+import { DataTable } from '@/components/ui/data-table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/shared/Card';
-import { Kunde, ColumnDef } from '@/lib/types';
+import { Kunde } from '@/lib/types';
 import { getCustomers } from '@/lib/services/customerService';
 import { ref, onValue } from 'firebase/database';
 import { db } from '@/lib/firebase';
 import { auth } from '@/lib/firebase';
-
-const customersColumns: ColumnDef<Kunde>[] = [
-  {
-    accessorKey: 'navn',
-    header: 'Navn',
-  },
-  {
-    accessorKey: 'epost',
-    header: 'E-post',
-  },
-  {
-    accessorKey: 'telefon',
-    header: 'Telefon',
-  },
-  {
-    accessorKey: 'antallTilbud',
-    header: 'Antall Tilbud',
-    cell: (info) => info.getValue() as number,
-  },
-  {
-    accessorKey: 'antallVunnet',
-    header: 'Vunnet',
-    cell: (info) => info.getValue() as number,
-  },
-  {
-    accessorKey: 'sistAktivitet',
-    header: 'Sist Aktivitet',
-  },
-];
+import { getCustomerColumns } from '@/lib/table-columns/customers-columns';
 
 export const CustomersDataTable = () => {
   const [customers, setCustomers] = useState<Kunde[]>([]);
@@ -128,13 +100,10 @@ export const CustomersDataTable = () => {
       </div>
       <div className="flex-1 min-h-0">
         <DataTable
-          columns={customersColumns}
+          columns={getCustomerColumns()}
           data={customers}
+          searchKey="navn"
           searchPlaceholder="Søk i kunder..."
-          enableFiltering={true}
-          responsive={true}
-          compactOnMobile={true}
-          maxHeight="100%"
         />
       </div>
     </div>

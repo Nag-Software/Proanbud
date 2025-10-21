@@ -24,14 +24,13 @@ import {
   Check,
   BarChart3,
   Users,
-  Shield,
-  Menu,
-  X
+  Shield
 } from 'lucide-react';
 import Logo from '@/components/shared/Logo';
 import { HeroCarousel } from '@/components/ui/hero-carousel';
 import { FaqSection } from '@/components/shared/FaqSection';
 import Footer from '@/components/shared/Footer';
+import Header from '@/components/shared/Header';
 import { client, allPostsQuery, formatDate, urlForImage } from '@/lib/sanity';
 
 interface SanityPost {
@@ -63,7 +62,6 @@ interface SanityPost {
 export default function Home() {
   const { user, loading } = useAuth();
   const router = useRouter();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [blogPosts, setBlogPosts] = useState<SanityPost[]>([]);
 
   useEffect(() => {
@@ -87,6 +85,20 @@ export default function Home() {
       }
     };
     fetchPosts();
+  }, []);
+
+  // Handle hash scrolling
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash) {
+      const element = document.getElementById(hash.substring(1));
+      if (element) {
+        // Small delay to ensure the page has rendered
+        setTimeout(() => {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+      }
+    }
   }, []);
 
   if (loading) {
@@ -141,112 +153,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-[#82ffb2]/5 to-[#82b2ff]/5">
-      {/* Header */}
-      <header className="sticky top-0 z-50 backdrop-blur-lg bg-white/80 border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-20">
-            <Logo size="lg" />
-            <nav className="hidden md:flex items-center gap-8">
-              <a href="/#features" className="text-gray-700 hover:text-[#00b85b] transition-colors font-medium">
-                Funksjoner
-              </a>
-              <a href="/#showcase" className="text-gray-700 hover:text-[#00b85b] transition-colors font-medium">
-                Plattform
-              </a>
-              <a href="/priser" className='text-gray-700 hover:text-[#00b85b] transition-colors font-medium'>
-                Priser
-              </a>
-              <a href="/#faq" className="text-gray-700 hover:text-[#00b85b] transition-colors font-medium">
-                FAQ
-              </a>
-              <a href="/blogg" className="text-gray-700 hover:text-[#00b85b] transition-colors font-medium">
-                Blogg
-              </a>
-            </nav>
-            <div className="hidden md:flex items-center gap-4">
-              <Link
-                href="/login"
-                className="text-gray-700 hover:text-[#00b85b] transition-colors font-medium"
-              >
-                Logg inn
-              </Link>
-              <Link
-                href="/pilot"
-                className="bg-[#82ffb2] text-gray-900 px-6 py-2.5 rounded-xl transition-all font-semibold shadow-lg shadow-[#82ffb2]/20 hover:shadow-xl hover:shadow-[#82ffb2]/30"
-              >
-                Bli pilotkunde
-              </Link>
-            </div>
-            
-            {/* Mobile Menu Toggle */}
-            <button
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="md:hidden p-2 text-gray-700 hover:text-[#00b85b] transition-colors"
-              aria-label="Toggle mobile menu"
-            >
-              {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile Menu */}
-        {isMobileMenuOpen && (
-          <div className="md:hidden border-t border-gray-200 bg-white">
-            <nav className="px-4 py-4 space-y-4">
-              <a 
-                href="#features" 
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="block text-gray-700 hover:text-[#00b85b] transition-colors font-medium py-2"
-              >
-                Funksjoner
-              </a>
-              <a 
-                href="/#showcase"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="block text-gray-700 hover:text-[#00b85b] transition-colors font-medium py-2"
-              >
-                Plattform
-              </a>
-              <a href="/priser"
-              className='block text-gray-700 hover:text-[#00b85b] transition-colors font-medium py-2'
-              onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Priser
-              </a>
-              <a 
-                href="#faq" 
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="block text-gray-700 hover:text-[#00b85b] transition-colors font-medium py-2"
-              >
-                FAQ
-              </a>
-              <a 
-                href="/blogg" 
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="block text-gray-700 hover:text-[#00b85b] transition-colors font-medium py-2"
-              >
-                Blogg
-              </a>
-              <div className="pt-4 border-t border-gray-200 space-y-3">
-                <Link
-                  href="/login"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="block w-full text-center text-gray-700 hover:text-[#00b85b] transition-colors font-medium py-3 border-2 border-gray-200 rounded-xl hover:border-[#00b85b]"
-                >
-                  Logg inn
-                </Link>
-                <Link
-                  href="/pilot"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="block w-full text-center bg-[#82ffb2] text-gray-900 px-6 py-3 rounded-xl transition-all font-semibold shadow-lg shadow-[#82ffb2]/20 hover:shadow-xl hover:shadow-[#82ffb2]/30"
-                >
-                  Bli pilot
-                </Link>
-              </div>
-            </nav>
-          </div>
-        )}
-      </header>
+      <Header currentPage="home" />
 
       {/* Hero Section with Video */}
       <section className="relative overflow-hidden py-10 lg:py-15 bg-white mt-5">
@@ -271,14 +178,14 @@ export default function Home() {
               <div className="flex flex-col sm:flex-row gap-4">
                 <Link
                   href="/pilot"
-                  className="group bg-[#82ffb2] text-gray-900 px-8 py-4 rounded-xl hover:bg-[#6ee69f] transition-all font-semibold text-lg shadow-xl shadow-[#82ffb2]/30 hover:shadow-2xl hover:shadow-[#82ffb2]/40 flex items-center justify-center gap-2"
+                  className="group bg-[#82ffb2] text-gray-900 px-8 py-2.5 rounded-xl hover:bg-[#6ee69f] transition-all font-semibold text-lg shadow-xl shadow-[#82ffb2]/20 hover:shadow-2xl hover:shadow-[#82ffb2]/40 flex items-center justify-center gap-2"
                 >
                   Bli Pilotkunde
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </Link>
                 <Link
                   href="/login"
-                  className="bg-white text-gray-900 px-8 py-4 rounded-xl hover:bg-gray-50 transition-all font-semibold text-lg border-2 border-gray-200 flex items-center justify-center gap-2"
+                  className="bg-white text-gray-900 px-8 py-2.5 rounded-xl hover:bg-gray-50 transition-all font-semibold text-md border-2 border-gray-200 flex items-center justify-center gap-2"
                 >
                   Se demo
                 </Link>
@@ -313,9 +220,9 @@ export default function Home() {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-24 bg-white">
+      <section id="features" className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16 space-y-4">
+          <div className="text-center mb-12 space-y-4">
             <h2 className="text-4xl md:text-5xl font-bold text-gray-900">
               Alt du trenger i én plattform
             </h2>
@@ -324,7 +231,7 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[
               {
                 icon: Sparkles,
@@ -363,19 +270,20 @@ export default function Home() {
                 color: "#82ffb2"
               }
             ].map((feature, index) => (
-              <div
-                key={index}
-                className="group p-8 rounded-2xl bg-gradient-to-br from-gray-50 to-white border border-gray-200 hover:border-gray-300 transition-all hover:shadow-xl hover:-translate-y-1"
-              >
-                <div
-                  className="w-14 h-14 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform"
-                  style={{ backgroundColor: `${feature.color}20` }}
-                >
-                  <feature.icon className="w-7 h-7" style={{ color: feature.color }} />
+              <Card key={index} className="p-6 hover:shadow-md shadow-xs transition-shadow">
+                <div className="flex flex-col space-y-4">
+                  <div
+                    className="w-12 h-12 rounded-lg flex items-center justify-center"
+                    style={{ backgroundColor: `${feature.color}20` }}
+                  >
+                    <feature.icon className="w-6 h-6" style={{ color: feature.color }} />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">{feature.title}</h3>
+                    <p className="text-gray-600 text-sm leading-relaxed">{feature.description}</p>
+                  </div>
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3">{feature.title}</h3>
-                <p className="text-gray-600 leading-relaxed">{feature.description}</p>
-              </div>
+              </Card>
             ))}
           </div>
         </div>
@@ -560,7 +468,7 @@ export default function Home() {
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </Link>
             <Link
-              href="/login"
+              href="mailto:casper@nagsoftware.no"
               className="bg-white text-gray-900 px-8 py-4 rounded-xl hover:bg-gray-50 transition-all font-semibold text-lg flex items-center justify-center gap-2"
             >
               Kontakt salg

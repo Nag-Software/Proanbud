@@ -49,7 +49,7 @@ const handleDatabaseError = (error: any, operation: string): Error => {
 export const getCategories = async (): Promise<Category[]> => {
   try {
     const userId = getCurrentUserId();
-    const categoriesRef = ref(db, 'katalog');
+    const categoriesRef = ref(db, `users/${userId}/katalog`);
     const snapshot = await get(categoriesRef);
 
     if (!snapshot.exists()) {
@@ -84,7 +84,7 @@ export const getCategories = async (): Promise<Category[]> => {
 export const getCategory = async (categoryId: string): Promise<Category> => {
   try {
     const userId = getCurrentUserId();
-    const categoryRef = ref(db, `katalog/${categoryId}`);
+    const categoryRef = ref(db, `users/${userId}/katalog/${categoryId}`);
     const snapshot = await get(categoryRef);
 
     if (!snapshot.exists()) {
@@ -111,7 +111,7 @@ export const getCategory = async (categoryId: string): Promise<Category> => {
 export const createCategory = async (formData: CategoryFormData): Promise<string> => {
   try {
     const userId = getCurrentUserId();
-    const categoriesRef = ref(db, 'katalog');
+    const categoriesRef = ref(db, `users/${userId}/katalog`);
     const newCategoryRef = push(categoriesRef);
 
     const categoryData = {
@@ -134,7 +134,7 @@ export const createCategory = async (formData: CategoryFormData): Promise<string
 export const updateCategory = async (categoryId: string, formData: Partial<CategoryFormData>): Promise<void> => {
   try {
     const userId = getCurrentUserId();
-    const categoryRef = ref(db, `katalog/${categoryId}`);
+    const categoryRef = ref(db, `users/${userId}/katalog/${categoryId}`);
 
     const updates: any = {
       oppdatert: Date.now(),
@@ -159,7 +159,7 @@ export const updateCategory = async (categoryId: string, formData: Partial<Categ
 export const deleteCategory = async (categoryId: string): Promise<void> => {
   try {
     const userId = getCurrentUserId();
-    const categoryRef = ref(db, `katalog/${categoryId}`);
+    const categoryRef = ref(db, `users/${userId}/katalog/${categoryId}`);
     await remove(categoryRef);
   } catch (error: any) {
     throw handleDatabaseError(error, 'sletting av kategori');
@@ -176,7 +176,7 @@ export const deleteCategory = async (categoryId: string): Promise<void> => {
 export const getSubcategories = async (): Promise<Subcategory[]> => {
   try {
     const userId = getCurrentUserId();
-    const catalogRef = ref(db, 'katalog');
+    const catalogRef = ref(db, `users/${userId}/katalog`);
     const snapshot = await get(catalogRef);
 
     if (!snapshot.exists()) {
@@ -219,7 +219,7 @@ export const getSubcategories = async (): Promise<Subcategory[]> => {
 export const getSubcategoriesByCategory = async (categoryId: string): Promise<Subcategory[]> => {
   try {
     const userId = getCurrentUserId();
-    const categoryRef = ref(db, `katalog/${categoryId}`);
+    const categoryRef = ref(db, `users/${userId}/katalog/${categoryId}`);
     const snapshot = await get(categoryRef);
 
     if (!snapshot.exists()) {
@@ -258,7 +258,7 @@ export const getSubcategoriesByCategory = async (categoryId: string): Promise<Su
 export const getSubcategory = async (subcategoryId: string): Promise<Subcategory | null> => {
   try {
     const userId = getCurrentUserId();
-    const catalogRef = ref(db, 'katalog');
+    const catalogRef = ref(db, `users/${userId}/katalog`);
     const snapshot = await get(catalogRef);
 
     if (!snapshot.exists()) {
@@ -299,7 +299,7 @@ export const getSubcategory = async (subcategoryId: string): Promise<Subcategory
 export const createSubcategory = async (formData: SubcategoryFormData): Promise<string> => {
   try {
     const userId = getCurrentUserId();
-    const categoryRef = ref(db, `katalog/${formData.kategoriId}`);
+    const categoryRef = ref(db, `users/${userId}/katalog/${formData.kategoriId}`);
     const newSubcategoryRef = push(categoryRef);
 
     const subcategoryData = {
@@ -327,7 +327,7 @@ export const updateSubcategory = async (
 ): Promise<void> => {
   try {
     const userId = getCurrentUserId();
-    const subcategoryRef = ref(db, `katalog/${categoryId}/${subcategoryId}`);
+    const subcategoryRef = ref(db, `users/${userId}/katalog/${categoryId}/${subcategoryId}`);
 
     const updates: any = {
       oppdatert: Date.now(),
@@ -352,7 +352,7 @@ export const updateSubcategory = async (
 export const deleteSubcategory = async (categoryId: string, subcategoryId: string): Promise<void> => {
   try {
     const userId = getCurrentUserId();
-    const subcategoryRef = ref(db, `katalog/${categoryId}/${subcategoryId}`);
+    const subcategoryRef = ref(db, `users/${userId}/katalog/${categoryId}/${subcategoryId}`);
     await remove(subcategoryRef);
   } catch (error: any) {
     throw handleDatabaseError(error, 'sletting av underkategori');
@@ -369,7 +369,7 @@ export const deleteSubcategory = async (categoryId: string, subcategoryId: strin
 export const getProducts = async (): Promise<Product[]> => {
   try {
     const userId = getCurrentUserId();
-    const catalogRef = ref(db, 'katalog');
+    const catalogRef = ref(db, `users/${userId}/katalog`);
     const snapshot = await get(catalogRef);
 
     if (!snapshot.exists()) {
@@ -417,7 +417,7 @@ export const getProducts = async (): Promise<Product[]> => {
 export const getProductsByCategory = async (categoryId: string): Promise<Product[]> => {
   try {
     const userId = getCurrentUserId();
-    const categoryRef = ref(db, `katalog/${categoryId}`);
+    const categoryRef = ref(db, `users/${userId}/katalog/${categoryId}`);
     const snapshot = await get(categoryRef);
 
     if (!snapshot.exists()) {
@@ -459,7 +459,7 @@ export const getProductsByCategory = async (categoryId: string): Promise<Product
 export const getProductsBySubcategory = async (categoryId: string, subcategoryId: string): Promise<Product[]> => {
   try {
     const userId = getCurrentUserId();
-    const categoryRef = ref(db, `katalog/${categoryId}`);
+    const categoryRef = ref(db, `users/${userId}/katalog/${categoryId}`);
     const snapshot = await get(categoryRef);
 
     if (!snapshot.exists()) {
@@ -501,7 +501,7 @@ export const getProductsBySubcategory = async (categoryId: string, subcategoryId
 export const getProduct = async (categoryId: string, productId: string): Promise<Product> => {
   try {
     const userId = getCurrentUserId();
-    const productRef = ref(db, `katalog/${categoryId}/${productId}`);
+    const productRef = ref(db, `users/${userId}/katalog/${categoryId}/${productId}`);
     const snapshot = await get(productRef);
 
     if (!snapshot.exists()) {
@@ -536,7 +536,7 @@ export const createProduct = async (formData: ProductFormData): Promise<string> 
     const userId = getCurrentUserId();
     
     // Products are stored under their category
-    const categoryRef = ref(db, `katalog/${formData.kategoriId}`);
+    const categoryRef = ref(db, `users/${userId}/katalog/${formData.kategoriId}`);
     const newProductRef = push(categoryRef);
 
     const productData = {
@@ -569,7 +569,7 @@ export const updateProduct = async (
 ): Promise<void> => {
   try {
     const userId = getCurrentUserId();
-    const productRef = ref(db, `katalog/${categoryId}/${productId}`);
+    const productRef = ref(db, `users/${userId}/katalog/${categoryId}/${productId}`);
 
     const updates: any = {
       oppdatert: Date.now(),
@@ -611,7 +611,7 @@ export const deleteProduct = async (productId: string): Promise<void> => {
     const userId = getCurrentUserId();
     
     // First, find which category the product belongs to
-    const catalogRef = ref(db, 'katalog');
+    const catalogRef = ref(db, `users/${userId}/katalog`);
     const snapshot = await get(catalogRef);
 
     if (!snapshot.exists()) {
@@ -633,7 +633,7 @@ export const deleteProduct = async (productId: string): Promise<void> => {
       throw new Error('Produkt ikke funnet');
     }
 
-    const productRef = ref(db, `katalog/${categoryId}/${productId}`);
+    const productRef = ref(db, `users/${userId}/katalog/${categoryId}/${productId}`);
     await remove(productRef);
   } catch (error: any) {
     throw handleDatabaseError(error, 'sletting av produkt');

@@ -20,6 +20,8 @@ import { ProductDetailsDrawer } from "@/components/katalog/ProductDetailsDrawer"
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { ErrorDialog } from "@/components/shared/ErrorDialog";
+import { DataTable } from "@/components/ui/data-table";
+import { getProductColumns } from "@/lib/table-columns/products-columns";
 
 interface CategoryWithSubcategories extends Category {
     subcategories: Subcategory[];
@@ -51,7 +53,7 @@ export default function KatalogPage() {
 
     useEffect(() => {
         filterProducts();
-    }, [products, searchTerm, selectedCategory, selectedSubcategory]);
+    }, [products, selectedCategory, selectedSubcategory]);
 
     const loadData = async () => {
         try {
@@ -79,15 +81,6 @@ export default function KatalogPage() {
 
     const filterProducts = () => {
         let filtered = [...products];
-
-        // Filter by search term
-        if (searchTerm) {
-            filtered = filtered.filter(p =>
-                p.produktnavn.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                p.produsent.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                p.beskrivelse?.toLowerCase().includes(searchTerm.toLowerCase())
-            );
-        }
 
         // Filter by category
         if (selectedCategory) {
@@ -330,20 +323,6 @@ export default function KatalogPage() {
                     {/* Right content - Products */}
                     <div className="lg:col-span-3">
                         <Card className="p-6">
-                            {/* Search bar */}
-                            <div className="mb-6">
-                                <div className="relative">
-                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                                    <input
-                                        type="text"
-                                        placeholder="Søk etter produkter..."
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    />
-                                </div>
-                            </div>
-
                             {/* Products table */}
                             {filteredProducts.length === 0 ? (
                                 <div className="text-center py-12">
@@ -364,54 +343,16 @@ export default function KatalogPage() {
                                     )}
                                 </div>
                             ) : (
-                                <div className="overflow-x-auto">
-                                    <table className="w-full">
-                                        <thead>
-                                            <tr className="border-b">
-                                                <th className="text-left py-3 px-4 font-medium text-gray-700">Produktnavn</th>
-                                                <th className="text-left py-3 px-4 font-medium text-gray-700">Produsent</th>
-                                                <th className="text-left py-3 px-4 font-medium text-gray-700">Enhet</th>
-                                                <th className="text-right py-3 px-4 font-medium text-gray-700">Enhetspris</th>
-                                                <th className="text-right py-3 px-4 font-medium text-gray-700">Påslag</th>
-                                                <th className="text-right py-3 px-4 font-medium text-gray-700">Pris m/påslag</th>
-                                                <th className="text-right py-3 px-4 font-medium text-gray-700">Handlinger</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {filteredProducts.map(product => (
-                                                <tr
-                                                    key={product.id}
-                                                    className="border-b hover:bg-gray-50 cursor-pointer transition-colors"
-                                                    onClick={() => handleProductClick(product)}
-                                                >
-                                                    <td className="py-3 px-4 font-medium">{product.produktnavn}</td>
-                                                    <td className="py-3 px-4 text-gray-600">{product.produsent}</td>
-                                                    <td className="py-3 px-4 text-gray-600">{product.enhet}</td>
-                                                    <td className="py-3 px-4 text-right text-gray-600">
-                                                        {product.enhetspris.toLocaleString('no-NO')} kr
-                                                    </td>
-                                                    <td className="py-3 px-4 text-right text-gray-600">
-                                                        {product.påslag}%
-                                                    </td>
-                                                    <td className="py-3 px-4 text-right font-medium">
-                                                        {calculateFinalPrice(product.enhetspris, product.påslag).toLocaleString('no-NO')} kr
-                                                    </td>
-                                                    <td className="py-3 px-4 text-right">
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleDeleteProduct(product.id);
-                                                            }}
-                                                            className="text-red-600 hover:text-red-800 p-2 rounded-md hover:bg-red-50 transition-colors"
-                                                        >
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
+                                <DataTable
+                                    columns={getProductColumns(
+                                        handleProductClick,
+                                        handleDeleteProduct,
+                                        calculateFinalPrice
+                                    )}
+                                    data={filteredProducts}
+                                    searchKey="produktnavn"
+                                    searchPlaceholder="Søk etter produkter..."
+                                />
                             )}
                         </Card>
                     </div>

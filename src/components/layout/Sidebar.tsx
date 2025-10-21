@@ -90,7 +90,7 @@ export const Sidebar = () => {
 
   return (
     <aside className="hidden lg:flex w-[280px] bg-card border-r border-border flex-col h-screen">
-      <div className="h-20 flex items-center justify-between px-6 border-b border-border">
+      <div className="h-16 flex items-center justify-between px-6 border-b border-border">
         <Logo size="md"/>
         <div className="flex items-center gap-2">
           <NotificationButton />
@@ -98,7 +98,7 @@ export const Sidebar = () => {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-4 py-6 space-y-2">
+      <nav className="flex-1 px-4 py-3 space-y-2">
         {navLinks.map((link) => (
           <NavLink key={link.href} {...link} />
         ))}
