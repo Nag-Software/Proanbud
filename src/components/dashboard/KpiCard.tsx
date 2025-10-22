@@ -36,7 +36,7 @@ export const KpiCard: React.FC<KpiCardProps> = ({
           </div>
         )}
       </CardHeader>
-      <CardContent className="pt-2 flex-1 flex flex-col justify-between">
+      <CardContent className="pt-2 !px-3 flex-1 flex flex-col justify-between">
         <div className={`font-bold text-slate-800 mb-1 ml-2 ${compact ? 'text-xl' : 'text-2xl'} leading-tight`}>
           {value}
         </div>

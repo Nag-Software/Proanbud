@@ -46,7 +46,7 @@ export const AccessRestrictedBanner: React.FC<AccessRestrictedBannerProps> = ({
   const Icon = getIcon();
 
   return (
-    <Card className={`border-red-200 bg-red-50 ${className}`}>
+    <Card className={`border-red-200 !rounded-lg bg-red-50 ${className}`}>
       <CardContent className="pt-6">
         <div className="flex items-start gap-4">
           <div className="flex-shrink-0">
