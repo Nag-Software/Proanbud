@@ -16,10 +16,10 @@ export default function DashboardLayout({
       <SubscriptionBlocker>
         <div className="flex flex-col lg:flex-row h-screen bg-background">
           <Sidebar />
-          <div className="flex-1 flex flex-col">
-            <TrialHeader />
-            <MobileBreadcrumb />
-            <main className="flex-1 p-4 lg:p-8 overflow-y-auto bg-background">
+          <div className="flex-1 flex flex-col bg-background p-4 lg:ml-[280px]">
+            <main className="flex-1 px-3 lg:px-6 pt-2 pb-3 lg:pb-6 shadow-md bg-white rounded-2xl">
+              <TrialHeader />
+              <MobileBreadcrumb />
               {children}
             </main>
           </div>

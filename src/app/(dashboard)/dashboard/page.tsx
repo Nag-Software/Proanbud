@@ -567,7 +567,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen rounded-xl">
       {/* Authentication Error Banner */}
       {authError && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 mx-4 mt-4">
@@ -685,7 +685,7 @@ export default function DashboardPage() {
       )}
 
       {/* Main Content - Always full width */}
-      <div className="w-full transition-all duration-300 ease-in-out">
+      <div className="w-full rounded-xl transition-all duration-300 ease-in-out">
         <div className="">
           <div className="flex justify-between items-center">
             <PageHeader title="Dashboard" />
