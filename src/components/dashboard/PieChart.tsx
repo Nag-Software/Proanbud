@@ -63,7 +63,7 @@ export const DashboardPieChart = () => {
   return (
     <Card className="h-full flex flex-col">
       <CardHeader className="flex-shrink-0">
-        <CardTitle className="text-base sm:text-lg text-center">Tilbud Status</CardTitle>
+        <CardTitle className="text-base sm:text-lg text-left">Tilbud Status</CardTitle>
       </CardHeader>
       <CardContent className="flex-1 flex flex-col justify-center">
         {pieData.length > 0 ? (

@@ -48,7 +48,7 @@ export const KpiGrid: React.FC<KpiGridProps> = ({ data, className = "", onHeight
         className="kpi-grid grid gap-4 w-full"
         style={{
           gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gridAutoRows: 'minmax(130px, auto)',
+          gridAutoRows: "164px"
         }}
       >
         {data.map((kpi, index) => {

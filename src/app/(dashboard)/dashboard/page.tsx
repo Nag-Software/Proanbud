@@ -124,7 +124,7 @@ export default function DashboardPage() {
   const handleKpiGridHeightChange = (height: number) => {
     const rowHeight = 30; // matches ResponsiveGridLayout rowHeight
     const margin = 20; // matches ResponsiveGridLayout margin
-    const padding = 32; // p-4 = 16px top + 16px bottom = 32px
+    const padding = 34; // p-4 = 16px top + 16px bottom = 32px
     const headerHeight = isEditMode ? 41 : 0; // drag handle height when in edit mode
     
     // Calculate required grid units (h) based on actual content height
@@ -354,7 +354,7 @@ export default function DashboardPage() {
         component: (
           <KpiGrid 
             data={kpiData}
-            className="p-4"
+            className="p-0 m-0"
             onHeightChange={handleKpiGridHeightChange}
           />
         ),
@@ -685,27 +685,29 @@ export default function DashboardPage() {
       )}
 
       {/* Main Content - Always full width */}
+      
       <div className="w-full rounded-xl transition-all duration-300 ease-in-out">
         <div className="">
-          <div className="flex justify-between items-center">
-            <PageHeader title="Dashboard" />
-            <Button
-              onClick={toggleEditMode}
-              variant="outline"
-              className="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl border-slate-200 hover:border-slate-300 transition-all duration-200"
-            >
-              <Settings className="h-4 w-4" />
-              {isEditMode ? 'Avslutt Tilpasning' : 'Tilpass Siden'}
-            </Button>
-          </div>
+
+            <div className="flex justify-between items-center">
+              <PageHeader title="Dashboard" />
+              <Button
+                onClick={toggleEditMode}
+                variant="outline"
+                className="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl border-slate-200 hover:border-slate-300 transition-all duration-200"
+              >
+                <Settings className="h-4 w-4" />
+                {isEditMode ? 'Avslutt Tilpasning' : 'Tilpass Siden'}
+              </Button>
+            </div>
 
           {/* Grid Background Pattern */}
           <div className="relative">
-            <div className="absolute inset-0 opacity-30">
+            <div className="absolute inset-0 opacity-30 z-5 left-[-25px] rounded-2xl top-[-84px] w-[calc(100%+50px)] h-[calc(100%+100px)] overflow-hidden pointer-events-none">
               <div className="absolute inset-0" style={{
                 backgroundImage: `
-                  linear-gradient(rgba(148, 163, 184, 0.1) 1px, transparent 1px),
-                  linear-gradient(90deg, rgba(148, 163, 184, 0.1) 1px, transparent 1px)
+                  linear-gradient(rgba(148, 163, 184, 0.15) 1px, transparent 1px),
+                  linear-gradient(90deg, rgba(148, 163, 184, 0.15) 1px, transparent 1px)
                 `,
                 backgroundSize: '60px 60px'
               }}></div>
@@ -735,7 +737,7 @@ export default function DashboardPage() {
               verticalCompact={true}
             >
               {getCurrentLayout().map((item) => (
-                <div key={item.i} className={`rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 flex flex-col h-full ${isEditMode ? 'ring-2 ring-blue-200 ring-opacity-50' : ''}`}>
+                <div key={item.i} className={`overflow-auto transition-all duration-200 flex flex-col h-full ${isEditMode ? 'ring-2 ring-blue-200 ring-opacity-50' : ''}`}>
                   {isEditMode && (
                     <div className="drag-handle bg-slate-50 px-4 py-2 border-b border-slate-200 cursor-move flex items-center gap-2 flex-shrink-0">
                       <div className="flex gap-1">
@@ -748,7 +750,7 @@ export default function DashboardPage() {
                       </span>
                     </div>
                   )}
-                  <div className={`flex-1 flex flex-col ${item.i === 'kpi-cards' ? '' : isEditMode ? '' : 'h-full'} ${item.i === 'kpi-cards' ? '' : 'p-4'}`}>
+                  <div className={`flex-1 flex flex-col ${item.i === 'kpi-cards' ? '' : isEditMode ? '' : 'h-full'} ${item.i === 'kpi-cards' ? '' : 'p-0'}`}>
                     {getComponentById(item.i)}
                   </div>
                 </div>

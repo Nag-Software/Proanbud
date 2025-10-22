@@ -25,7 +25,7 @@ export const KpiCard: React.FC<KpiCardProps> = ({
   const isPositive = change && change.startsWith('+');
 
   return (
-    <Card className={`h-full hover:shadow-md transition-all duration-200 border-slate-200/60 flex flex-col ${className}`}>
+    <Card className={`h-full px-2 py-0 hover:shadow-md transition-all duration-200 border-slate-200/60 flex flex-col ${className}`}>
       <CardHeader className={`flex flex-row items-center justify-between ${compact ? 'pb-2' : 'pb-3'} flex-shrink-0`}>
         <CardTitle className={`font-medium text-slate-600 ${compact ? 'text-xs' : 'text-sm'} leading-tight`}>
           {title}
@@ -36,8 +36,8 @@ export const KpiCard: React.FC<KpiCardProps> = ({
           </div>
         )}
       </CardHeader>
-      <CardContent className="pt-0 flex-1 flex flex-col justify-between">
-        <div className={`font-bold text-slate-800 mb-1 ${compact ? 'text-xl' : 'text-3xl'} leading-tight`}>
+      <CardContent className="pt-2 flex-1 flex flex-col justify-between">
+        <div className={`font-bold text-slate-800 mb-1 ml-2 ${compact ? 'text-xl' : 'text-2xl'} leading-tight`}>
           {value}
         </div>
         {change && (

@@ -75,7 +75,7 @@ export function DataTable<TData, TValue>({
   })
 
   return (
-    <div className="w-full overflow-x-auto">
+    <div className="w-full overflow-x-auto px-2">
       <div className="flex items-center py-4">
         {searchKey && (
           <Input
@@ -92,7 +92,7 @@ export function DataTable<TData, TValue>({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline">
-                Columns <ChevronDown className="ml-2 h-4 w-4" />
+                Filter <ChevronDown className="ml-2 h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">

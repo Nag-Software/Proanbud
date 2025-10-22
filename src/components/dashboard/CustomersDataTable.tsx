@@ -88,8 +88,8 @@ export const CustomersDataTable = ({
     return (
       <Card className="h-full flex flex-col">
         <CardHeader className="flex-shrink-0">
-          <CardTitle className="text-base sm:text-lg">Siste Kunder</CardTitle>
-        </CardHeader>
+        <CardTitle className="text-base m-auto md:text-md text-left">Dine Kunder</CardTitle>
+      </CardHeader>
         <CardContent className="flex-1 flex items-center justify-center">
           <div className="w-full h-full bg-gray-200 animate-pulse rounded-lg min-h-[200px] flex items-center justify-center">
             <span className="text-gray-500 text-sm">Laster kunder...</span>
@@ -100,18 +100,18 @@ export const CustomersDataTable = ({
   }
 
   return (
-    <div className="h-full flex flex-col min-w-[600px]">
-      <div className="flex-shrink-0 mb-4">
-        <h3 className="text-base sm:text-lg font-semibold text-slate-800">Siste Kunder</h3>
-      </div>
-      <div className="flex-1 min-h-0">
+    <Card className="h-full flex flex-col">
+      <CardHeader className="flex-shrink-0">
+        <CardTitle className="text-base m-auto md:text-md text-left">Dine Kunder</CardTitle>
+      </CardHeader>
+      <CardContent className="flex-1 flex justify-center">
         <DataTable
           columns={getCustomerColumns(onEditCustomer, onDeleteCustomer)}
           data={customers}
           searchKey="navn"
           searchPlaceholder="Søk i kunder..."
         />
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 };

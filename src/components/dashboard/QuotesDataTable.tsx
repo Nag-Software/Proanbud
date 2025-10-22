@@ -95,8 +95,8 @@ export const QuotesDataTable = ({
     return (
       <Card className="h-full flex flex-col">
         <CardHeader className="flex-shrink-0">
-          <CardTitle className="text-base sm:text-lg">Siste Tilbud</CardTitle>
-        </CardHeader>
+        <CardTitle className="text-base m-auto md:text-md text-left">Dine Tilbud</CardTitle>
+      </CardHeader>
         <CardContent className="flex-1 flex items-center justify-center">
           <div className="w-full h-full bg-gray-200 animate-pulse rounded-lg min-h-[200px] flex items-center justify-center">
             <span className="text-gray-500 text-sm">Laster tilbud...</span>
@@ -107,18 +107,18 @@ export const QuotesDataTable = ({
   }
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="flex-shrink-0 mb-4">
-        <h3 className="text-base sm:text-lg font-semibold text-slate-800">Siste Tilbud</h3>
-      </div>
-      <div className="flex-1 min-h-0 overflow-x-auto">
+    <Card className="h-full flex flex-col">
+      <CardHeader className="flex-shrink-0">
+        <CardTitle className="text-base m-auto md:text-md text-left">Dine Tilbud</CardTitle>
+      </CardHeader>
+      <CardContent className="flex-1 flex justify-center">
         <DataTable
           columns={quotesColumns}
           data={quotes}
           searchKey="kundenavn"
           searchPlaceholder="Søk i tilbud..."
         />
-      </div>
-    </div>
-  );
+      </CardContent>
+    </Card>
+  )
 };

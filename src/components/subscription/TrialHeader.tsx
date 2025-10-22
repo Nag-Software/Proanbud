@@ -100,7 +100,7 @@ export const TrialHeader = () => {
   const textColor = 'text-white';
 
   return (
-    <div className={`${bgColor} ${textColor} py-2 px-4 text-center relative rounded-lg mt-2 mb-4`}>
+    <div className={`${bgColor} ${textColor} py-2 px-4 text-center relative rounded-lg my-2`}>
       <div className="flex items-center justify-center gap-2">
         <AlertTriangle className="h-4 w-4" />
         <span className="text-sm font-medium">
