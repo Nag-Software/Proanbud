@@ -40,8 +40,10 @@ import { createTilbud, updateTilbud, getTilbudById, TilbudFormData, getUniqueCat
 import { getCustomers } from '@/lib/services/customerService';
 import { getBusinessContextForAI, getBusinessSettings } from '@/lib/services/businessService';
 import { getProducts, getCategories, getSubcategories } from '@/lib/services/catalogService';
-import { Kunde, PriceComponent, AIPriceSuggestion, BusinessSettings, Product, Category, Subcategory } from '@/lib/types';
+import { Kunde, PriceComponent, AIPriceSuggestion, BusinessSettings, Product, Category, Subcategory, Tilbud } from '@/lib/types';
 import { useBreakpoint } from '@/hooks/useResponsive';
+import { ref } from 'firebase/database';
+import { db } from '@/lib/firebase';
 
 import {
   Select,
@@ -52,6 +54,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { ProductDetailsDrawer } from '../katalog';
 
 async function downloadTemplate(templateName: string): Promise<string> {
   let url = "";
@@ -147,6 +150,7 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
   const [catalogViewMode, setCatalogViewMode] = useState<'grid' | 'list'>('list');
   const [catalogSortBy, setCatalogSortBy] = useState<'name' | 'price'>('name');
   const [selectedProducts, setSelectedProducts] = useState<Map<string, { product: Product; quantity: number }>>(new Map());
+  const [catalogLoaded, setCatalogLoaded] = useState(false);
   
   // Preview functions
   const handlePreview = async () => {
@@ -237,12 +241,15 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
     return html;
   };
 
-  // Load customers when drawer opens
+  // Load customers and catalog data when drawer opens
   useEffect(() => {
     if (open) {
       loadCustomers();
+      if (!catalogLoaded) {
+        loadCatalogData();
+      }
     }
-  }, [open]);
+  }, [open, catalogLoaded]);
 
   // Update component prices when markup changes
   useEffect(() => {
@@ -319,6 +326,7 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
       setCatalogProducts(products);
       setCatalogCategories(categories);
       setCatalogSubcategories(subcategories);
+      setCatalogLoaded(true);
     } catch (error) {
       console.error('Error loading catalog:', error);
     } finally {
@@ -327,7 +335,6 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
   };
 
   const openCatalogDialog = async () => {
-    await loadCatalogData();
     setSelectedProducts(new Map());
     setIsCatalogDialogOpen(true);
   };
@@ -413,6 +420,52 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
     onOpenChange(false);
   };
 
+  const generateNewCatalog = () => {
+    let newCatalog: any = {};
+
+    catalogCategories.forEach(cat => {
+      newCatalog[cat.id] = {
+        "category-name": cat.navn,
+        "category-description": cat.beskrivelse || '',
+        "subcategories": []
+      };
+    });
+
+    catalogSubcategories.forEach(subcat => {
+      if (newCatalog[subcat.kategoriId]) {
+        newCatalog[subcat.kategoriId].subcategories.push({
+          "subcategory-name": subcat.navn,
+          "subcategory-description": subcat.beskrivelse || '',
+          "products": []
+        });
+      }
+    });
+
+    // Add products to their respective subcategories
+    catalogProducts.forEach(product => {
+      const category = newCatalog[product.kategoriId];
+      if (category) {
+        const subcategory = category.subcategories.find((sub: any) => {
+          // Find the subcategory by matching the subcategory ID
+          const matchingSubcat = catalogSubcategories.find(s => s.id === product.underkategoriId);
+          return matchingSubcat && matchingSubcat.navn === sub["subcategory-name"];
+        });
+        if (subcategory) {
+          subcategory.products.push({
+            "produktnavn": product.produktnavn,
+            "produsent": product.produsent,
+            "enhet": product.enhet,
+            "enhetspris": product.enhetspris,
+            "påslag": product.påslag,
+            "beskrivelse": product.beskrivelse || ''
+          });
+        }
+      }
+    });
+
+    return newCatalog;
+  };
+
   const handleNext = async () => {
     if (currentStep === 1) {
       setIsAnalyzing(true);
@@ -425,8 +478,11 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
           body: JSON.stringify({
             prompt: quoteData.jobDescription,
             businessInfo,
+            catalog: generateNewCatalog()
           }),
         });
+
+        console.log(catalogProducts);
 
         if (!response.ok) throw new Error('AI-tjeneste feilet: ' + response.statusText);
 

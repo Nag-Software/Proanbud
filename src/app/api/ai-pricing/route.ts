@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const n8nWebhookUrl = "https://gawkiest-radiantly-belva.ngrok-free.dev/webhook/f7666602-b37a-460f-a066-1dac1a92901c";
+    const n8nWebhookUrl = "http://ec2-13-60-47-242.eu-north-1.compute.amazonaws.com:5678/webhook/f7666602-b37a-460f-a066-1dac1a92901c";
 
     const n8nResponse = await fetch(n8nWebhookUrl, {
       method: 'POST',

@@ -1,7 +1,18 @@
 import { ColumnDef } from "@tanstack/react-table"
 import { Kunde } from "@/lib/types"
+import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { MoreHorizontal, Edit, Trash2 } from "lucide-react"
 
-export const getCustomerColumns = (): ColumnDef<Kunde>[] => [
+export const getCustomerColumns = (
+  onEditCustomer?: (customer: Kunde) => void,
+  onDeleteCustomer?: (customer: Kunde) => void
+): ColumnDef<Kunde>[] => [
   {
     accessorKey: "navn",
     header: "Kunde",
@@ -43,5 +54,41 @@ export const getCustomerColumns = (): ColumnDef<Kunde>[] => [
     cell: ({ row }) => (
       <div className="text-gray-600">{row.getValue("sistAktivitet")}</div>
     ),
+  },
+  {
+    accessorKey: "actions",
+    header: "",
+    cell: ({ row }) => {
+      const customer = row.original
+      return (
+        <div className="relative">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                variant="ghost" 
+                className="h-8 w-8 p-0"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <span className="sr-only">Åpne meny</span>
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-40">
+              <DropdownMenuItem onClick={() => onEditCustomer?.(customer)}>
+                <Edit className="mr-2 h-4 w-4" />
+                Rediger
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => onDeleteCustomer?.(customer)}
+                className="text-red-600 focus:text-red-600"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Slett
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      )
+    },
   },
 ]

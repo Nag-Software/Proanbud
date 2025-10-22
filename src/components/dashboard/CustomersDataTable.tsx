@@ -10,7 +10,13 @@ import { db } from '@/lib/firebase';
 import { auth } from '@/lib/firebase';
 import { getCustomerColumns } from '@/lib/table-columns/customers-columns';
 
-export const CustomersDataTable = () => {
+export const CustomersDataTable = ({
+  onEditCustomer,
+  onDeleteCustomer
+}: {
+  onEditCustomer?: (customer: Kunde) => void;
+  onDeleteCustomer?: (customer: Kunde) => void;
+}) => {
   const [customers, setCustomers] = useState<Kunde[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -94,13 +100,13 @@ export const CustomersDataTable = () => {
   }
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col min-w-[600px]">
       <div className="flex-shrink-0 mb-4">
         <h3 className="text-base sm:text-lg font-semibold text-slate-800">Siste Kunder</h3>
       </div>
       <div className="flex-1 min-h-0">
         <DataTable
-          columns={getCustomerColumns()}
+          columns={getCustomerColumns(onEditCustomer, onDeleteCustomer)}
           data={customers}
           searchKey="navn"
           searchPlaceholder="Søk i kunder..."

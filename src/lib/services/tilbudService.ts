@@ -336,6 +336,13 @@ export const createTilbud = async (tilbudData: TilbudFormData): Promise<string> 
       console.warn('Could not create inbox message:', error);
     }
 
+    const tilbudCountRef = ref(db, `users/${userId}/tilbudCount`);
+    const tilbudSnapshot = await get(tilbudCountRef);
+    if(tilbudSnapshot.exists()) {
+      const currentCount = tilbudSnapshot.val() as number;
+      await set(tilbudCountRef, currentCount + 1);
+    }
+
     return newTilbudRef.key!;
   } catch (error) {
     throw handleDatabaseError(error, 'opprette tilbud');

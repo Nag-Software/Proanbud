@@ -74,14 +74,16 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
 
     try {
       // Get quotes count from Realtime Database
-      const quotesRef = ref(db, `users/${user.uid}/tilbud`);
+      const quotesRef = ref(db, `users/${user.uid}/tilbudCount`);
       const quotesSnapshot = await get(quotesRef);
-      const quotesCount = quotesSnapshot.exists() ? Object.keys(quotesSnapshot.val()).length : 0;
+      // const quotesCount = quotesSnapshot.exists() ? Object.keys(quotesSnapshot.val()).length : 0;
+      const quotesCount = quotesSnapshot.exists() ? quotesSnapshot.val() : NaN;
 
       // Get customers count from Realtime Database
-      const customersRef = ref(db, `users/${user.uid}/kunder`);
+      const customersRef = ref(db, `users/${user.uid}/kunderCount`);
       const customersSnapshot = await get(customersRef);
-      const customersCount = customersSnapshot.exists() ? Object.keys(customersSnapshot.val()).length : 0;
+      // const customersCount = customersSnapshot.exists() ? Object.keys(customersSnapshot.val()).length : 0;
+      const customersCount = customersSnapshot.exists() ? customersSnapshot.val() : NaN;
 
       // Determine correct plan based on expiration
       let currentPlan = subscription?.plan || 'free';
@@ -567,6 +569,49 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
     }
   }, [user?.uid]);
 
+  // Silent sync for background operations - doesn't affect UI state
+  const silentSyncSubscriptions = useCallback(async () => {
+    if (!user?.uid || syncInProgress.current) return;
+
+    try {
+      syncInProgress.current = true;
+      const auth = getAuth();
+      const idToken = await auth.currentUser?.getIdToken();
+
+      if (!idToken) {
+        console.log('No auth token available for silent sync');
+        return;
+      }
+
+      const response = await fetch('/api/stripe/sync-subscriptions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        if (error.code === 'NO_SUBSCRIPTION') {
+          console.log('ℹ️ No subscription found during silent sync - this is normal');
+          return; // Don't treat as error for silent sync
+        }
+        console.error('❌ Silent sync failed:', error.error || 'Unknown error');
+        return; // Don't throw, just log
+      }
+
+      const result = await response.json();
+      console.log('✅ Silent subscriptions sync completed:', result);
+
+    } catch (error) {
+      console.error('❌ Silent sync error:', error);
+      // Don't set error state for silent sync
+    } finally {
+      syncInProgress.current = false;
+    }
+  }, [user?.uid]);
+
   // Auto-sync subscription data on load and periodically
   const autoSyncSubscriptions = useCallback(async (force = false) => {
     if (!user?.uid) return;
@@ -585,14 +630,14 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
 
     try {
       console.log('🔄 Auto-syncing subscription data...');
-      await syncSubscriptions();
+      await silentSyncSubscriptions();
       localStorage.setItem(lastSyncKey, now.toString());
       console.log('✅ Auto-sync completed');
     } catch (error) {
       console.error('❌ Auto-sync failed:', error);
       // Don't show error to user for auto-sync failures
     }
-  }, [user?.uid, syncSubscriptions]);
+  }, [user?.uid, silentSyncSubscriptions]);
 
   // Auto-sync subscription data on user authentication
   useEffect(() => {

@@ -9,12 +9,16 @@ import { QuotesDataTable } from '@/components/dashboard/QuotesDataTable';
 import { CustomersDataTable } from '@/components/dashboard/CustomersDataTable';
 import { QuickStatsWidget } from '@/components/dashboard/QuickStatsWidget';
 import { getDashboardKPIsWithChange } from '@/lib/services/analyticsService';
-import { getUserSettings, updateUserSettings } from '@/lib/services/userSettingsService';
+import { getUserSettings, updateUserSettings, initializeUserSettings } from '@/lib/services/userSettingsService';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEffect, useState } from 'react';
 import { WidthProvider, Responsive } from 'react-grid-layout';
 import { Button } from '@/components/ui/button';
 import { Settings, Plus, X } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { deleteCustomer } from '@/lib/services/customerService';
+import { deleteTilbud, updateTilbud } from '@/lib/services/tilbudService';
+import { Kunde, Tilbud } from '@/lib/types';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 import '@/styles/dashboard.css';
@@ -36,6 +40,7 @@ const ResponsiveGridLayout = WidthProvider(Responsive);
 
 export default function DashboardPage() {
   const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
   const [kpiData, setKpiData] = useState<KpiData[]>([]);
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
@@ -44,7 +49,62 @@ export default function DashboardPage() {
   const [mobileLayout, setMobileLayout] = useState<any[]>([]);
   const [availableComponents, setAvailableComponents] = useState<DashboardComponent[]>([]);
 
+  const [updatingQuotes, setUpdatingQuotes] = useState<Set<string>>(new Set());
+
   const [currentBreakpoint, setCurrentBreakpoint] = useState('lg');
+
+  // Callback functions for table actions
+  const handleEditCustomer = (customer: Kunde) => {
+    router.push('/kunder');
+  };
+
+  const handleDeleteCustomer = async (customer: Kunde) => {
+    if (confirm(`Er du sikker på at du vil slette kunden "${customer.navn}"?`)) {
+      try {
+        await deleteCustomer(customer.id);
+        // The real-time listener will automatically update the UI
+      } catch (error) {
+        console.error('Error deleting customer:', error);
+        alert('Kunne ikke slette kunden. Prøv igjen.');
+      }
+    }
+  };
+
+  const handleSendQuote = (quote: Tilbud) => {
+    router.push('/tilbud');
+  };
+
+  const handleMarkAsWon = async (quote: Tilbud) => {
+    setUpdatingQuotes(prev => new Set(prev).add(quote.id));
+    try {
+      await updateTilbud(quote.id, { status: 'vunnet' });
+    } catch (error) {
+      console.error('Error updating quote:', error);
+      alert('Kunne ikke oppdatere tilbudet. Prøv igjen.');
+    } finally {
+      setUpdatingQuotes(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(quote.id);
+        return newSet;
+      });
+    }
+  };
+
+  const handleMarkAsLost = async (quote: Tilbud) => {
+    setUpdatingQuotes(prev => new Set(prev).add(quote.id));
+    try {
+      await updateTilbud(quote.id, { status: 'tapt' });
+    } catch (error) {
+      console.error('Error updating quote:', error);
+      alert('Kunne ikke oppdatere tilbudet. Prøv igjen.');
+    } finally {
+      setUpdatingQuotes(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(quote.id);
+        return newSet;
+      });
+    }
+  };
 
   // Get current layout based on breakpoint
   const getCurrentLayout = () => {
@@ -119,15 +179,16 @@ export default function DashboardPage() {
       console.log('📐 Layout changed (Edit Mode):', constrainedLayout, 'Breakpoint:', currentBreakpoint);
       setCurrentLayout(constrainedLayout);
       try {
-        const cleanedDesktop = cleanLayoutData(desktopLayout);
-        const cleanedMobile = cleanLayoutData(mobileLayout);
-        await updateUserSettings({ 
-          dashboardLayout: cleanedDesktop,
-          dashboardLayoutMobile: cleanedMobile
-        });
-        console.log('💾 Dashboard layouts saved:', { desktop: cleanedDesktop, mobile: cleanedMobile });
+        // Save the updated layout for the current breakpoint
+        const layoutsToSave = {
+          dashboardLayout: (currentBreakpoint === 'lg' || currentBreakpoint === 'md') ? cleanLayoutData(constrainedLayout) : cleanLayoutData(desktopLayout),
+          dashboardLayoutMobile: (currentBreakpoint === 'lg' || currentBreakpoint === 'md') ? cleanLayoutData(mobileLayout) : cleanLayoutData(constrainedLayout)
+        };
+        await updateUserSettings(layoutsToSave);
+        console.log('💾 Dashboard layouts saved:', layoutsToSave);
       } catch (error) {
         console.error('Failed to save dashboard layout:', error);
+        // Fallback: save current layouts to localStorage
         localStorage.setItem('dashboard-layout-desktop', JSON.stringify(desktopLayout));
         localStorage.setItem('dashboard-layout-mobile', JSON.stringify(mobileLayout));
       }
@@ -216,12 +277,12 @@ export default function DashboardPage() {
   const resetLayout = async () => {
     const defaultDesktop = [
       { i: 'kpi-cards', x: 0, y: 0, w: 12, h: 4, minH: 4 },
-      { i: 'main-chart', x: 0, y: 4, w: 9, h: 14, minH: 6 },
-      { i: 'quick-stats', x: 3, y: 18, w: 6, h: 8, minH: 4 },
-      { i: 'activity-feed', x: 9, y: 4, w: 3, h: 22, minH: 4 },
-      { i: 'pie-chart', x: 0, y: 18, w: 3, h: 8, minH: 4 },
-      { i: 'quotes-table', x: 0, y: 26, w: 7, h: 12, minH: 6 },
-      { i: 'customers-table', x: 7, y: 26, w: 5, h: 12, minH: 6 },
+      { i: 'main-chart', x: 0, y: 4, w: 8, h: 9, minH: 6 },
+      { i: 'quick-stats', x: 3, y: 6, w: 5, h: 8, minH: 4 },
+      { i: 'activity-feed', x: 9, y: 4, w: 4, h: 17, minH: 4 },
+      { i: 'pie-chart', x: 0, y: 6, w: 3, h: 8, minH: 4 },
+      { i: 'quotes-table', x: 0, y: 8, w: 12, h: 8, minH: 7 },
+      { i: 'customers-table', x: 0, y: 8, w: 12, h: 8, minH: 7 },
     ];
     console.log('🔄 Resetting layout to default:', defaultDesktop);
     setDesktopLayout(defaultDesktop);
@@ -322,7 +383,12 @@ export default function DashboardPage() {
         title: 'Tilbud Tabell',
         component: (
           <div className="h-full flex flex-col">
-            <QuotesDataTable />
+            <QuotesDataTable 
+              handleSendQuote={handleSendQuote}
+              handleMarkAsWon={handleMarkAsWon}
+              handleMarkAsLost={handleMarkAsLost}
+              updatingQuotes={updatingQuotes}
+            />
           </div>
         ),
       },
@@ -331,7 +397,10 @@ export default function DashboardPage() {
         title: 'Kunder Tabell',
         component: (
           <div className="h-full flex flex-col">
-            <CustomersDataTable />
+            <CustomersDataTable 
+              onEditCustomer={handleEditCustomer}
+              onDeleteCustomer={handleDeleteCustomer}
+            />
           </div>
         ),
       },
@@ -370,8 +439,22 @@ export default function DashboardPage() {
 
       try {
         const userSettings = await getUserSettings();
-        let desktop = userSettings?.dashboardLayout;
-        let mobile = userSettings?.dashboardLayoutMobile;
+        
+        if (!userSettings) {
+          // Initialize user settings for new users
+          console.log('🔄 Initializing user settings for new user');
+          await initializeUserSettings({ 
+            name: user?.displayName || '', 
+            email: user?.email || '' 
+          }, user?.uid);
+          // Reload settings after initialization
+          const newUserSettings = await getUserSettings();
+          var desktop = newUserSettings?.dashboardLayout;
+          var mobile = newUserSettings?.dashboardLayoutMobile;
+        } else {
+          var desktop = userSettings.dashboardLayout;
+          var mobile = userSettings.dashboardLayoutMobile;
+        }
         
         // Check if user has no dashboard layout or invalid format
         const needsMigration = !desktop || !Array.isArray(desktop) || desktop.length === 0 ||
@@ -608,7 +691,7 @@ export default function DashboardPage() {
             <PageHeader title="Dashboard" />
             <Button
               onClick={toggleEditMode}
-              variant={isEditMode ? "secondary" : "outline"}
+              variant="outline"
               className="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl border-slate-200 hover:border-slate-300 transition-all duration-200"
             >
               <Settings className="h-4 w-4" />
@@ -652,7 +735,7 @@ export default function DashboardPage() {
               verticalCompact={true}
             >
               {getCurrentLayout().map((item) => (
-                <div key={item.i} className={`bg-secondary/10 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 flex flex-col h-full ${isEditMode ? 'ring-2 ring-blue-200 ring-opacity-50' : ''}`}>
+                <div key={item.i} className={`rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 flex flex-col h-full ${isEditMode ? 'ring-2 ring-blue-200 ring-opacity-50' : ''}`}>
                   {isEditMode && (
                     <div className="drag-handle bg-slate-50 px-4 py-2 border-b border-slate-200 cursor-move flex items-center gap-2 flex-shrink-0">
                       <div className="flex gap-1">

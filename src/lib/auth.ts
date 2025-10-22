@@ -7,6 +7,9 @@ import {
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 
+import {ref, set} from 'firebase/database';
+import { db } from '@/lib/firebase';
+
 export const loginWithEmail = async (email: string, password: string) => {
   try {
     const result = await signInWithEmailAndPassword(auth, email, password);
@@ -25,6 +28,16 @@ export const signupWithEmail = async (email: string, password: string, displayNa
       await updateProfile(result.user, { displayName });
     }
     
+    // Save user data to Realtime Database
+    const userRef = ref(db, `users/${result.user.uid}`);
+    await set(userRef, {
+      email: result.user.email,
+      displayName,
+      createdAt: Date.now(),
+      kundeCount: 0,
+      tilbudCount: 0
+    });
+
     return { user: result.user, error: null };
   } catch (error: any) {
     return { user: null, error: error.message };

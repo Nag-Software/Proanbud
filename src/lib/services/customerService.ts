@@ -181,6 +181,13 @@ export const createCustomer = async (customerData: CustomerFormData): Promise<st
     const newCustomerRef = push(customersRef);
     await set(newCustomerRef, newCustomer);
 
+    const customerCountRef = ref(db, `users/${userId}/kunderCount`);
+    const snapshot = await get(customerCountRef);
+    if(snapshot.exists()) {
+      const currentCount = snapshot.val() as number;
+      await set(customerCountRef, currentCount + 1);
+    }
+
     return newCustomerRef.key!;
   } catch (error) {
     throw handleDatabaseError(error, 'opprette kunde');

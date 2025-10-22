@@ -18,6 +18,8 @@ export interface UserSettingsData {
   timezone: string;
   dashboardLayout?: any[];
   dashboardLayoutMobile?: any[];
+  kunderCount?: number;
+  tilbudCount?: number;
   lastUpdated?: number;
 }
 
@@ -99,12 +101,17 @@ export const updateUserSettings = async (updates: Partial<UserSettingsData>, use
     
     const settingsRef = ref(db, `users/${uid}/userSettings`);
     
-    const updateData = {
+    // Get current settings to merge with updates
+    const currentSnapshot = await get(settingsRef);
+    const currentData = currentSnapshot.exists() ? currentSnapshot.val() : {};
+    
+    const updatedData = {
+      ...currentData,
       ...updates,
       lastUpdated: serverTimestamp()
     };
     
-    await update(settingsRef, updateData);
+    await set(settingsRef, updatedData);
   } catch (error) {
     console.error('Failed to update user settings:', error);
     throw new Error('Kunne ikke oppdatere brukerinnstillinger');
@@ -154,6 +161,8 @@ export const initializeUserSettings = async (userData: { name: string; email: st
         { i: 'quotes-table', x: 0, y: 44, w: 12, h: 12, minH: 6 },
         { i: 'customers-table', x: 0, y: 56, w: 12, h: 12, minH: 6 },
       ],
+      kunderCount: 0,
+      tilbudCount: 0,
       lastUpdated: Date.now()
     };
     

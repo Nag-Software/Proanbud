@@ -48,7 +48,7 @@ interface ChartDataPoint {
 export const MainChart = () => {
   const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
   const [loading, setLoading] = useState(true);
-  const [timeRange, setTimeRange] = useState<'7d' | '30d' | '1y' | 'all'>('30d');
+  const [timeRange, setTimeRange] = useState<'7d' | '30d' | '1y' | 'all'>('7d');
 
   useEffect(() => {
     const loadChartData = async () => {

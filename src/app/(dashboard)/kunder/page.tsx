@@ -5,7 +5,7 @@ import { PageHeader } from '@/components/shared/PageHeader';
 import { DataTable } from '@/components/ui/data-table';
 import { NewCustomerDrawer, CustomerDetailsDrawer } from '@/components/kunder';
 import { QuoteDetailsDrawer } from '@/components/tilbud';
-import { getCustomers } from '@/lib/services/customerService';
+import { getCustomers, deleteCustomer } from '@/lib/services/customerService';
 import { getTilbud } from '@/lib/services/tilbudService';
 import { ref, onValue, off } from 'firebase/database';
 import { db } from '@/lib/firebase';
@@ -188,6 +188,23 @@ export default function KunderPage() {
     setIsNewCustomerOpen(true);
   };
 
+  const handleEditCustomer = (customer: Kunde) => {
+    setSelectedCustomer(customer);
+    setIsCustomerDetailsOpen(true);
+  };
+
+  const handleDeleteCustomer = async (customer: Kunde) => {
+    if (confirm(`Er du sikker på at du vil slette kunden "${customer.navn}"?`)) {
+      try {
+        await deleteCustomer(customer.id);
+        // The real-time listener will automatically update the UI
+      } catch (error) {
+        console.error('Error deleting customer:', error);
+        alert('Kunne ikke slette kunden. Prøv igjen.');
+      }
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -217,7 +234,7 @@ export default function KunderPage() {
       />
       
       <DataTable
-        columns={getCustomerColumns()}
+        columns={getCustomerColumns(handleEditCustomer, handleDeleteCustomer)}
         data={customers}
         searchKey="navn"
         searchPlaceholder="Søk kunder..."
