@@ -56,39 +56,39 @@ export const NAV_ITEMS: any[] = [
     children: [
       {
         title: "AI-prissetting",
-        href: "/funksjoner/ai-prissetting",
+        href: "/docs/funksjoner/ai-prissetting",
         description:
           "La kunstig intelligens foreslå konkurransedyktige priser basert på materialpriser, historisk data og dine leverandørpriser.",
         tag: "Beta",
       },
       {
         title: "Lynrask tilbudssending",
-        href: "/funksjoner/lynrask-tilbudssending",
+        href: "/docs/funksjoner/lynrask-tilbudssending",
         description:
           "Send profesjonelle tilbud på under 5 minutter med autogenererte mengdeberegninger og AI-prisestimat.",
       },
       {
         title: "Mobilvennlig",
-        href: "/funksjoner/mobilvennlig",
+        href: "/docs/funksjoner/mobilvennlig",
         description:
           "Full funksjonalitet på mobil, nettbrett og PC — send tilbud direkte fra befaring.",
       },
       {
         title: "Profesjonell kundehåndtering",
-        href: "/funksjoner/kundehandtering",
+        href: "/docs/funksjoner/kundehandtering",
         description:
           "Ha full oversikt over kundesamtaler og hendelser, samt automatisert oppfølging via e‑post.",
         tag: "Ny",
       },
       {
         title: "Analyse & rapporter",
-        href: "/funksjoner/analyse-rapporter",
+        href: "/docs/funksjoner/analyse-rapporter",
         description:
           "Følg konverteringsrate, omsetning, profitt og andre nøkkeltall i sanntid for bedre beslutninger.",
       },
       {
         title: "Spar 80% tid",
-        href: "/funksjoner/effektivisering",
+        href: "/docs/funksjoner/effektivisering",
         description:
           "Automatiser tunge og repetitive oppgaver — frigjør tid til det som skaper verdi.",
       },
@@ -110,9 +110,17 @@ export const NAV_ITEMS: any[] = [
     description: "Tips, guider og bransjenyheter for håndverkere.",
   },
   {
-    title: "FAQ",
-    href: "/faq",
-    description: "Vanlige spørsmål om bruk, priser og sikkerhet.",
+    title: "Ressurser",
+    href: "/docs",
+    description: "",
+    children: [
+      {
+        title: "Ressurssenter",
+        href: "/docs/",
+        description:
+          "Automatiser tunge og repetitive oppgaver — frigjør tid til det som skaper verdi.",
+      },
+    ],
   },
   {
     title: "Pilotavtale",
@@ -156,7 +164,7 @@ export default function Header({ currentPage }: HeaderProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
           <Logo size="lg" />
-          <NavigationMenu className="hidden md:flex mx-5">
+          <NavigationMenu className="hidden md:flex mx-5 !max-w-xl">
             <NavigationMenuList>
               <NavigationMenuItem>
                 {/* HJEM */}
@@ -217,18 +225,12 @@ export default function Header({ currentPage }: HeaderProps) {
                     Priser
                   </Link>
                 </NavigationMenuLink>
-              </NavigationMenuItem>
+              </NavigationMenuItem> 
               <NavigationMenuItem>
                 <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
-                  <a
-                    href={currentPage === 'home' ? '#faq' : '/#faq'}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleNavClick(currentPage === 'home' ? '#faq' : '/#faq');
-                    }}
-                  >
-                    FAQ
-                  </a>
+                  <Link href="/docs">
+                    Ressurser
+                  </Link>
                 </NavigationMenuLink>
               </NavigationMenuItem>
               <NavigationMenuItem>
