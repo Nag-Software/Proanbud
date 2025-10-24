@@ -52,7 +52,7 @@ export default function PilotPage() {
                       : 'text-gray-700 hover:bg-white/50'
                   }`}
                 >
-                  {index + 1}. {step.shortTitle}
+                  {index + 1}. {step.shortTitle || step.title}
                 </button>
               ))}
             </div>

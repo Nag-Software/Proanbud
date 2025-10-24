@@ -50,6 +50,12 @@ export default {
               type: 'string'
             },
             {
+              name: 'shortTitle',
+              title: 'Kort tittel',
+              type: 'string',
+              description: 'Valgfri kort versjon av tittelen for bruk i tabs'
+            },
+            {
               name: 'description',
               title: 'Beskrivelse',
               type: 'text',

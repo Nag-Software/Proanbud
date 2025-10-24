@@ -31,6 +31,7 @@ interface PilotSecondaryCTA {
 
 interface PilotProcessStep {
   title: string
+  shortTitle?: string
   description: string
 }
 

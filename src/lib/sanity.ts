@@ -102,6 +102,31 @@ export const aiConfigQuery = `
   }
 `
 
+// Hent pilot-data
+export const pilotDataQuery = `
+  *[_type == "pilot"][0] {
+    _id,
+    title,
+    subtitle,
+    badgeText,
+    availableSpots,
+    usedSpots,
+    spotsText,
+    pricing,
+    heroDescription,
+    metrics,
+    aiCard,
+    trustIndicators,
+    secondaryCTA,
+    processSteps[] {
+      title,
+      shortTitle,
+      description
+    },
+    faq
+  }
+`
+
 // Hent blogginnlegg per kategori
 export const postsByCategoryQuery = `
   *[_type == "post" && publishedAt <= now() && $categorySlug in categories[]->slug.current] | order(publishedAt desc) {
