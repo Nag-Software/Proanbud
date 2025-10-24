@@ -37,7 +37,7 @@ export function HeroCarousel({ images, autoPlayInterval = 5000, className = '' }
   return (
     <div className={`relative group ${className}`}>
       {/* Main Image Container */}
-      <div className="relative w-full aspect-[4/3] overflow-hidden rounded-3xl shadow-2xl shadow-[#82ffb2]/20 border-4 border-white">
+      <div className="relative w-[150%] h-[555px] aspect-[16/7.5] overflow-hidden rounded-xl shadow-2xl shadow-[#82ffb2]/20 border-white">
         {images.map((image, index) => (
           <div
             key={image}
@@ -51,7 +51,7 @@ export function HeroCarousel({ images, autoPlayInterval = 5000, className = '' }
               fill
               className="object-cover"
               priority={index === 0}
-              sizes="(max-width: 768px) 100vw, 50vw"
+              sizes="(max-width: 1920px) 100vw, 50vw"
             />
           </div>
         ))}

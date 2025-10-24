@@ -313,11 +313,27 @@ export default function TilbudsvisningPage() {
                     </tbody>
                     <tfoot>
                       <tr className="border-t-2 border-slate-300">
+                        <td colSpan={3} className="py-2 px-2 text-sm text-right font-regular text-slate-900">
+                          total:
+                        </td>
+                        <td className="py-2 !pt-4 px-2 text-nowrap text-right font-bold text-sm sm:text-md text-primary">
+                          {parseInt(quote.belop).toLocaleString('nb-NO')} kr
+                        </td>
+                      </tr>
+                      <tr className="">
+                        <td colSpan={3} className="py-2 !pb-4 px-2 text-sm text-right font-regular text-slate-900">
+                          mva (25%):
+                        </td>
+                        <td className="py-2 px-2 text-nowrap text-right font-bold text-sm sm:text-md text-primary">
+                          {parseInt(quote.belop * 0.25).toLocaleString('nb-NO')} kr
+                        </td>
+                      </tr>
+                      <tr className='border-t-2 border-slate-100'>
                         <td colSpan={3} className="py-4 px-2 text-right font-bold text-slate-900">
                           Total:
                         </td>
-                        <td className="py-4 px-2 text-nowrap text-right font-bold text-xl sm:text-2xl text-blue-600">
-                          {quote.belop.toLocaleString('nb-NO')} kr
+                        <td className="py-4 px-2 text-nowrap text-right font-bold underline text-xl sm:text-2xl text-primary">
+                          {parseInt(quote.belop * 1.25).toLocaleString('nb-NO')} kr
                         </td>
                       </tr>
                     </tfoot>

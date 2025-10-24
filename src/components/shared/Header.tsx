@@ -156,7 +156,7 @@ export default function Header({ currentPage }: HeaderProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
           <Logo size="lg" />
-          <NavigationMenu className="hidden md:flex">
+          <NavigationMenu className="hidden md:flex mx-5">
             <NavigationMenuList>
               <NavigationMenuItem>
                 {/* HJEM */}
@@ -243,13 +243,13 @@ export default function Header({ currentPage }: HeaderProps) {
           <div className="hidden md:flex items-center gap-4">
             <Link
               href="/login"
-              className="text-gray-700 hover:text-[#00b85b] transition-colors font-medium"
+              className="text-nowrap text-gray-700 !text-[15px] hover:text-[#00b85b] transition-colors font-medium"
             >
               Logg inn
             </Link>
             <Link
               href="/signup"
-              className="bg-[#82ffb2] text-gray-900 px-6 py-2 rounded-xl transition-all font-semibold shadow-lg shadow-[#82ffb2]/20 hover:shadow-xl hover:shadow-[#82ffb2]/30"
+              className="text-nowrap bg-[#82ffb2] !text-[15px] text-gray-900 px-6 py-2 rounded-xl transition-all font-semibold shadow-lg shadow-[#82ffb2]/20 hover:shadow-xl hover:shadow-[#82ffb2]/30"
             >
               Kom igang
             </Link>

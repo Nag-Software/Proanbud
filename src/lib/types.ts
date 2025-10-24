@@ -166,6 +166,7 @@ export interface BusinessSettings {
   industry: string;
   businessType: 'enkeltpersonforetak' | 'as' | 'asa' | 'da' | 'ans' | 'ba' | 'other';
   annualRevenue: number;
+  hourlyRateWithoutVat?: number;
   serviceAreas: string[];
   specializations: string[];
   

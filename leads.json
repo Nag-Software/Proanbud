@@ -20,5 +20,27 @@
     "startTidspunkt": "2026-10-17",
     "acceptAgreement": true,
     "timestamp": "2025-10-21T09:21:59.253Z"
+  },
+  {
+    "firma": "nag snekkerservice",
+    "navn": "casper nag",
+    "stilling": "Daglig leder",
+    "email": "casper_nag@outlook.com",
+    "telefon": "48338033",
+    "antallForslag": "1-10",
+    "startTidspunkt": "2004-10-17",
+    "acceptAgreement": true,
+    "timestamp": "2025-10-24T01:41:48.581Z"
+  },
+  {
+    "firma": "nag snekkerservice",
+    "navn": "casper nag",
+    "stilling": "Daglig leder",
+    "email": "casper_nag@outlook.com",
+    "telefon": "48338033",
+    "antallForslag": "1-10",
+    "startTidspunkt": "2004-10-17",
+    "acceptAgreement": true,
+    "timestamp": "2025-10-24T01:42:34.862Z"
   }
 ]

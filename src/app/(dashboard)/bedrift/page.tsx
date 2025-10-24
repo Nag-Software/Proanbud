@@ -12,7 +12,7 @@ import {
   saveBusinessSettings, 
   uploadBusinessLogo,
   deleteBusinessLogo,
-  initializeBusinessSettings 
+  initializeBusinessSettings
 } from '@/lib/services/businessService';
 import {
   Dialog,
@@ -71,6 +71,7 @@ export default function BedriftPage() {
     industry: '',
     businessType: 'as',
     annualRevenue: 0,
+    hourlyRateWithoutVat: 0,
     serviceAreas: [],
     specializations: [],
     
@@ -420,6 +421,20 @@ export default function BedriftPage() {
                   onChange={(e) => handleInputChange('annualRevenue', parseInt(e.target.value) || 0)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                   min="0"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Timepris (uten MVA)
+                </label>
+                <input
+                  type="number"
+                  value={businessSettings.hourlyRateWithoutVat || ''}
+                  onChange={(e) => handleInputChange('hourlyRateWithoutVat', parseInt(e.target.value) || 0)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  min="0"
+                  placeholder=""
                 />
               </div>
             </div>

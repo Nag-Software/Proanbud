@@ -8,6 +8,8 @@ import { DashboardPieChart } from '@/components/dashboard/PieChart';
 import { QuotesDataTable } from '@/components/dashboard/QuotesDataTable';
 import { CustomersDataTable } from '@/components/dashboard/CustomersDataTable';
 import { QuickStatsWidget } from '@/components/dashboard/QuickStatsWidget';
+import { CustomerDetailsDrawer } from '@/components/kunder';
+import { QuoteDetailsDrawer } from '@/components/tilbud';
 import { getDashboardKPIsWithChange } from '@/lib/services/analyticsService';
 import { getUserSettings, updateUserSettings, initializeUserSettings } from '@/lib/services/userSettingsService';
 import { useAuth } from '@/contexts/AuthContext';
@@ -52,6 +54,12 @@ export default function DashboardPage() {
   const [updatingQuotes, setUpdatingQuotes] = useState<Set<string>>(new Set());
 
   const [currentBreakpoint, setCurrentBreakpoint] = useState('lg');
+
+  // State for detail drawers
+  const [selectedCustomer, setSelectedCustomer] = useState<Kunde | null>(null);
+  const [selectedQuote, setSelectedQuote] = useState<Tilbud | null>(null);
+  const [isCustomerDetailsOpen, setIsCustomerDetailsOpen] = useState(false);
+  const [isQuoteDetailsOpen, setIsQuoteDetailsOpen] = useState(false);
 
   // Callback functions for table actions
   const handleEditCustomer = (customer: Kunde) => {
@@ -104,6 +112,17 @@ export default function DashboardPage() {
         return newSet;
       });
     }
+  };
+
+  // Row click handlers for opening detail drawers
+  const handleCustomerRowClick = (customer: Kunde) => {
+    setSelectedCustomer(customer);
+    setIsCustomerDetailsOpen(true);
+  };
+
+  const handleQuoteRowClick = (quote: Tilbud) => {
+    setSelectedQuote(quote);
+    setIsQuoteDetailsOpen(true);
   };
 
   // Get current layout based on breakpoint
@@ -278,9 +297,9 @@ export default function DashboardPage() {
     const defaultDesktop = [
       { i: 'kpi-cards', x: 0, y: 0, w: 12, h: 4, minH: 4 },
       { i: 'main-chart', x: 0, y: 4, w: 8, h: 9, minH: 6 },
-      { i: 'quick-stats', x: 3, y: 6, w: 5, h: 8, minH: 4 },
-      { i: 'activity-feed', x: 9, y: 4, w: 4, h: 17, minH: 4 },
-      { i: 'pie-chart', x: 0, y: 6, w: 3, h: 8, minH: 4 },
+      { i: 'quick-stats', x: 3, y: 6, w: 5, h: 7, minH: 4 },
+      { i: 'activity-feed', x: 9, y: 4, w: 4, h: 16, minH: 4 },
+      { i: 'pie-chart', x: 0, y: 6, w: 3, h: 7, minH: 4 },
       { i: 'quotes-table', x: 0, y: 8, w: 12, h: 8, minH: 7 },
       { i: 'customers-table', x: 0, y: 8, w: 12, h: 8, minH: 7 },
     ];
@@ -388,6 +407,7 @@ export default function DashboardPage() {
               handleMarkAsWon={handleMarkAsWon}
               handleMarkAsLost={handleMarkAsLost}
               updatingQuotes={updatingQuotes}
+              onRowClick={handleQuoteRowClick}
             />
           </div>
         ),
@@ -400,6 +420,7 @@ export default function DashboardPage() {
             <CustomersDataTable 
               onEditCustomer={handleEditCustomer}
               onDeleteCustomer={handleDeleteCustomer}
+              onRowClick={handleCustomerRowClick}
             />
           </div>
         ),
@@ -428,13 +449,13 @@ export default function DashboardPage() {
     // Load layout from user settings or use default
     const loadLayout = async () => {
       const defaultDesktop = [
-        { i: 'kpi-cards', x: 0, y: 0, w: 12, h: 4, minH: 4 },
-        { i: 'main-chart', x: 0, y: 4, w: 9, h: 14, minH: 6 },
-        { i: 'quick-stats', x: 3, y: 18, w: 6, h: 8, minH: 4 },
-        { i: 'activity-feed', x: 9, y: 4, w: 3, h: 22, minH: 4 },
-        { i: 'pie-chart', x: 0, y: 18, w: 3, h: 8, minH: 4 },
-        { i: 'quotes-table', x: 0, y: 26, w: 7, h: 12, minH: 6 },
-        { i: 'customers-table', x: 7, y: 26, w: 5, h: 12, minH: 6 },
+        { i: 'kpi-cards', x: 0, y: 0, w: 10, h: 4, minH: 4 },
+        { i: 'main-chart', x: 0, y: 4, w: 8, h: 9, minH: 6 },
+        { i: 'quick-stats', x: 3, y: 6, w: 5, h: 7, minH: 4 },
+        { i: 'activity-feed', x: 9, y: 4, w: 4, h: 16, minH: 4 },
+        { i: 'pie-chart', x: 0, y: 6, w: 3, h: 7, minH: 4 },
+        { i: 'quotes-table', x: 0, y: 8, w: 12, h: 8, minH: 7 },
+        { i: 'customers-table', x: 0, y: 8, w: 12, h: 8, minH: 7 },
       ];
 
       try {
@@ -466,13 +487,13 @@ export default function DashboardPage() {
           // Use default layouts
           desktop = defaultDesktop;
           mobile = [
-            { i: 'kpi-cards', x: 0, y: 0, w: 12, h: 4, minH: 4 },
-            { i: 'main-chart', x: 0, y: 4, w: 12, h: 14, minH: 6 },
-            { i: 'activity-feed', x: 0, y: 18, w: 12, h: 10, minH: 4 },
-            { i: 'pie-chart', x: 0, y: 28, w: 12, h: 8, minH: 4 },
-            { i: 'quick-stats', x: 0, y: 36, w: 12, h: 8, minH: 4 },
-            { i: 'quotes-table', x: 0, y: 44, w: 12, h: 12, minH: 6 },
-            { i: 'customers-table', x: 0, y: 56, w: 12, h: 12, minH: 6 },
+              { i: 'kpi-cards', x: 0, y: 0, w: 12, h: 4, minH: 4 },
+              { i: 'main-chart', x: 0, y: 4, w: 8, h: 9, minH: 6 },
+              { i: 'quick-stats', x: 3, y: 6, w: 5, h: 7, minH: 4 },
+              { i: 'activity-feed', x: 9, y: 4, w: 4, h: 16, minH: 4 },
+              { i: 'pie-chart', x: 0, y: 6, w: 3, h: 7, minH: 4 },
+              { i: 'quotes-table', x: 0, y: 8, w: 12, h: 8, minH: 7 },
+              { i: 'customers-table', x: 0, y: 8, w: 12, h: 8, minH: 7 },
           ];
           
           // Save the default layout to user settings
@@ -582,7 +603,7 @@ export default function DashboardPage() {
       
       {/* Edit Mode Sidebar */}
       {isEditMode && (
-        <div className="fixed inset-y-0 left-0 z-50 w-[280px] bg-white/95 backdrop-blur-sm border-r border-slate-200 shadow-xl transform transition-transform duration-300 ease-in-out overflow-y-auto">
+        <div className="absolute inset-y-0 left-0 w-[280px] bg-white border-r border-slate-200 shadow-xl overflow-y-auto" style={{ zIndex: 9999, position: 'fixed' }}>
           <div className="py-6">
             <div className="flex items-center justify-between mb-6 px-6">
               <h3 className="text-xl font-semibold text-slate-800">Tilpass Dashboard</h3>
@@ -686,11 +707,11 @@ export default function DashboardPage() {
 
       {/* Main Content - Always full width */}
       
-      <div className="w-full rounded-xl transition-all duration-300 ease-in-out">
+      <div className={`w-full rounded-xl transition-all duration-300 ease-in-out`}>
         <div className="">
 
-            <div className="flex justify-between items-center">
-              <PageHeader title="Dashboard" />
+            <div className="flex justify-between items-center mt-1">
+              <PageHeader title="Dashboard"/>
               <Button
                 onClick={toggleEditMode}
                 variant="outline"
@@ -706,10 +727,10 @@ export default function DashboardPage() {
             <div className="absolute inset-0 opacity-30 z-5 left-[-25px] rounded-2xl top-[-84px] w-[calc(100%+50px)] h-[calc(100%+100px)] overflow-hidden pointer-events-none">
               <div className="absolute inset-0" style={{
                 backgroundImage: `
-                  linear-gradient(rgba(148, 163, 184, 0.15) 1px, transparent 1px),
-                  linear-gradient(90deg, rgba(148, 163, 184, 0.15) 1px, transparent 1px)
+                  linear-gradient(rgba(148, 163, 184, 0.0) 1px, transparent 1px),
+                  linear-gradient(90deg, rgba(148, 163, 184, 0.0) 1px, transparent 1px)
                 `,
-                backgroundSize: '60px 60px'
+                backgroundSize: '40px 40px'
               }}></div>
             </div>
 
@@ -763,6 +784,29 @@ export default function DashboardPage() {
       {/* Overlay when edit mode is active on mobile */}
       {isEditMode && (
         <div className="fixed inset-0 bg-black/10 backdrop-blur-sm z-40 md:hidden" onClick={toggleEditMode}></div>
+      )}
+
+      {/* Detail Drawers */}
+      {selectedCustomer && (
+        <CustomerDetailsDrawer
+          customer={selectedCustomer}
+          open={isCustomerDetailsOpen}
+          onOpenChange={(open) => {
+            setIsCustomerDetailsOpen(open);
+            if (!open) setSelectedCustomer(null);
+          }}
+        />
+      )}
+
+      {selectedQuote && (
+        <QuoteDetailsDrawer
+          quote={selectedQuote}
+          open={isQuoteDetailsOpen}
+          onOpenChange={(open) => {
+            setIsQuoteDetailsOpen(open);
+            if (!open) setSelectedQuote(null);
+          }}
+        />
       )}
     </div>
   );

@@ -74,7 +74,7 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-end z-50">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-end">
       <div className="bg-white w-full max-w-md h-full p-6 overflow-y-auto">
         <button onClick={onClose} className="mb-4 text-red-500">Lukk</button>
         

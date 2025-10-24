@@ -14,12 +14,14 @@ export const QuotesDataTable = ({
   handleSendQuote,
   handleMarkAsWon,
   handleMarkAsLost,
-  updatingQuotes
+  updatingQuotes,
+  onRowClick
 }: {
   handleSendQuote: (quote: Tilbud) => void;
   handleMarkAsWon: (quote: Tilbud) => void;
   handleMarkAsLost: (quote: Tilbud) => void;
   updatingQuotes: Set<string>;
+  onRowClick?: (quote: Tilbud) => void;
 }) => {
   const [quotes, setQuotes] = useState<Tilbud[]>([]);
   const [loading, setLoading] = useState(true);
@@ -117,6 +119,7 @@ export const QuotesDataTable = ({
           data={quotes}
           searchKey="kundenavn"
           searchPlaceholder="Søk i tilbud..."
+          onRowClick={onRowClick}
         />
       </CardContent>
     </Card>

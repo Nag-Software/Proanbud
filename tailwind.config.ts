@@ -11,7 +11,7 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Space Grotesk', 'sans-serif'],
+        sans: ['var(--font-geist)', 'sans-serif'],
       },
       colors: {
         primary: {

@@ -12,10 +12,12 @@ import { getCustomerColumns } from '@/lib/table-columns/customers-columns';
 
 export const CustomersDataTable = ({
   onEditCustomer,
-  onDeleteCustomer
+  onDeleteCustomer,
+  onRowClick
 }: {
   onEditCustomer?: (customer: Kunde) => void;
   onDeleteCustomer?: (customer: Kunde) => void;
+  onRowClick?: (customer: Kunde) => void;
 }) => {
   const [customers, setCustomers] = useState<Kunde[]>([]);
   const [loading, setLoading] = useState(true);
@@ -110,6 +112,7 @@ export const CustomersDataTable = ({
           data={customers}
           searchKey="navn"
           searchPlaceholder="Søk i kunder..."
+          onRowClick={onRowClick}
         />
       </CardContent>
     </Card>

@@ -317,23 +317,25 @@ export const createTilbud = async (tilbudData: TilbudFormData): Promise<string> 
       console.warn('Could not update user analytics:', error);
     }
 
-    // Create inbox message for quote sent
-    try {
-      const customerId = await findCustomerIdByName(tilbudData.kundenavn);
-      await createInboxMessage({
-        from: tilbudData.kundenavn,
-        subject: `Tilbud sendt: ${tilbudData.prosjekt}`,
-        message: `Et nytt tilbud på ${tilbudData.belop.toLocaleString('nb-NO')} kr for prosjektet "${tilbudData.prosjekt}" har blitt sendt til ${tilbudData.kundenavn}.`,
-        timestamp: new Date().toISOString(),
-        isRead: false,
-        quoteId: newTilbudRef.key!,
-        customerId: customerId || undefined,
-        type: 'quote_sent',
-        customerName: tilbudData.kundenavn,
-        quoteTitle: tilbudData.prosjekt,
-      });
-    } catch (error) {
-      console.warn('Could not create inbox message:', error);
+    // Create inbox message for quote sent (only for non-draft quotes)
+    if (tilbudData.status !== 'draft') {
+      try {
+        const customerId = await findCustomerIdByName(tilbudData.kundenavn);
+        await createInboxMessage({
+          from: tilbudData.kundenavn,
+          subject: `Tilbud sendt: ${tilbudData.prosjekt}`,
+          message: `Et nytt tilbud på ${tilbudData.belop.toLocaleString('nb-NO')} kr for prosjektet "${tilbudData.prosjekt}" har blitt sendt til ${tilbudData.kundenavn}.`,
+          timestamp: new Date().toISOString(),
+          isRead: false,
+          quoteId: newTilbudRef.key!,
+          customerId: customerId || undefined,
+          type: 'quote_sent',
+          customerName: tilbudData.kundenavn,
+          quoteTitle: tilbudData.prosjekt,
+        });
+      } catch (error) {
+        console.warn('Could not create inbox message:', error);
+      }
     }
 
     const tilbudCountRef = ref(db, `users/${userId}/tilbudCount`);

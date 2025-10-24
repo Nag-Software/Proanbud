@@ -14,10 +14,10 @@ export default function DashboardLayout({
   return (
     <ProtectedRoute>
       <SubscriptionBlocker>
-        <div className="flex flex-col z-10 lg:flex-row h-screen bg-background">
+        <div className="flex flex-col z-1 lg:flex-row h-screen bg-background">
           <Sidebar />
           <div className="flex-1 flex flex-col bg-background p-4 overflow-y-auto lg:ml-[280px]">
-            <main className="flex-1 px-3 lg:px-6 pt-4 pb-3 lg:pb-6 shadow-md bg-white rounded-2xl">
+            <main className="flex-1 px-3 lg:px-6 pt-4 pb-3 lg:pb-6 shadow-sm border border-gray-100 bg-white rounded-2xl">
               <TrialHeader />
               <MobileBreadcrumb />
               {children}

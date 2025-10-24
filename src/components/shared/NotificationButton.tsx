@@ -160,9 +160,9 @@ export const NotificationButton = () => {
       </button>
 
       {isOpen && (
-        <>
+        <div className="!z-99999">
           {/* Mobile: Full screen overlay */}
-          <div className="lg:hidden fixed inset-0 bg-black/20 backdrop-blur-sm z-40" onClick={() => setIsOpen(false)} />
+          <div className="lg:hidden fixed inset-0 bg-black/20 backdrop-blur-sm" onClick={() => setIsOpen(false)} />
           
           {/* Notification dropdown */}
           <div className="fixed lg:absolute left-2 right-2 lg:left-0 lg:right-auto top-16 lg:top-auto mt-0 lg:mt-2 w-auto lg:w-80 max-w-md lg:max-w-none bg-white rounded-lg shadow-lg border border-gray-200 z-50">
@@ -231,7 +231,7 @@ export const NotificationButton = () => {
             </div>
           )}
           </div>
-        </>
+        </div>
       )}
     </div>
   );

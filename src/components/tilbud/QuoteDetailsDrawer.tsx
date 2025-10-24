@@ -575,14 +575,14 @@ export function QuoteDetailsDrawer({
     <>
       {/* Backdrop */}
       <div 
-        className={`fixed inset-0 bg-black/50 z-40 transition-opacity duration-300 ${
+        className={`fixed inset-0 bg-black/50 z-[200] transition-opacity duration-300 ${
           open ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
         onClick={() => onOpenChange(false)}
       />
       
       {/* Drawer */}
-      <div className={`fixed right-0 top-0 h-full w-full max-w-3xl bg-white shadow-2xl z-50 transform transition-all duration-300 ease-in-out ${
+      <div className={`fixed right-0 top-0 h-full w-full max-w-3xl bg-white shadow-2xl z-[250] transform transition-all duration-300 ease-in-out ${
         open ? 'translate-x-0' : 'translate-x-full'
       }`}>
         <div className="flex flex-col h-full">

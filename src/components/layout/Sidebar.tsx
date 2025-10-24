@@ -37,7 +37,7 @@ const NavLink: React.FC<NavLinkProps> = ({ href, label, icon }) => {
       }`}
     >
       {Icon && <Icon className="h-5 w-5" />}
-      <span className="font-medium">{label}</span>
+      <span className="font-medium text-md">{label}</span>
     </Link>
   );
 };
@@ -89,7 +89,7 @@ export const Sidebar = () => {
   };
 
   return (
-    <aside className="hidden lg:flex w-[280px] bg-background border-border flex-col h-screen fixed left-0 top-0">
+    <aside className="hidden lg:flex w-[280px] bg-background border-border flex-col h-screen fixed left-0 top-0 z-[100]">
       <div className="h-16 flex items-center justify-between px-6 border-b border-border">
         <Logo size="md"/>
         <div className="flex items-center gap-2">
