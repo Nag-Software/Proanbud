@@ -180,12 +180,35 @@ export async function POST(
       oppdatert: Date.now(),
     });
 
+    // Create a new inbox message for the outgoing reply
+    const inboxRef = db.ref(`users/${userId}/inbox`);
+    const newReplyRef = inboxRef.push();
+    
+    const replyInboxMessage = {
+      from: companyName,
+      subject: replySubject,
+      message: replyMessage.split('\n\n--- Original melding ---')[0], // Only the new reply
+      timestamp: Date.now(),
+      isRead: true, // Outgoing messages are automatically read
+      type: 'outgoing_reply',
+      folder: 'sendt',
+      sentTo: customerEmail,
+      relatedMessageId: messageId,
+      opprettet: Date.now(),
+      oppdatert: Date.now(),
+    };
+
+    await newReplyRef.set(replyInboxMessage);
+
+    console.log('✅ Reply inbox message created:', newReplyRef.key);
+
     console.log('✅ Reply added to conversation log under original message');
 
     return NextResponse.json({
       success: true,
       emailId: emailData.data?.id,
       replyId: replyRef.key,
+      inboxMessageId: newReplyRef.key,
     });
 
   } catch (error: any) {

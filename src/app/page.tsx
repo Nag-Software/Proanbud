@@ -31,6 +31,7 @@ import { FaqSection } from '@/components/shared/FaqSection';
 import Footer from '@/components/shared/Footer';
 import Header from '@/components/shared/Header';
 import { client, allPostsQuery, formatDate, urlForImage } from '@/lib/sanity';
+import { BlogSection1 } from '@/components/pro-blocks/landing-page/blog-sections/blog-section-1';
 
 interface SanityPost {
   _id: string;
@@ -157,24 +158,24 @@ export default function Home() {
       {/* Hero Section with Video */}
       <section className="relative overflow-hidden py-10 lg:py-15 bg-white mt-5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-[55%_45%] gap-12 items-center">
             <div className="text-center lg:text-left space-y-7">
               <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#82ffb2]/10 rounded-full border border-[#82ffb2]/20">
                 <Sparkles className="w-4 h-4 text-[#82ffb2]" />
                 <span className="text-sm font-medium text-gray-700">AI-drevet tilbudsplattform</span>
               </div>
 
-              <h1 className="text-5xl md:text-7xl font-bold text-gray-900">
+              <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold text-gray-900">
                 Send tilbud på
                 <span className="bg-gradient-to-r from-[#82ffb2] to-[#82b2ff] bg-clip-text text-transparent"> minutter</span>
                 , ikke timer, <span className="italic">med AI</span>
               </h1>
 
-              <p className="text-xl text-gray-600 leading-relaxed max-w-xl text-center mx-auto lg:text-left">
+              <p className="text-xl text-gray-600 leading-relaxed max-w-5xl px-10 lg:px-0">
                 Din komplette tilbudsplattform for håndverkere. Bruk AI til å prissete riktig, send profesjonelle tilbud fra mobil eller PC, og vinn flere oppdrag.
               </p>
               
-              <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+              <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start" id="bli-pilot">
                 <Link
                   href="/pilot"
                   className="group bg-primary text-primary-foreground px-8 py-2.5 rounded-xl hover:bg-primary/90 transition-all font-semibold text-md hover:shadow-md flex items-center justify-center gap-2"
@@ -372,7 +373,7 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:max-w-4xl xl:max-w-6xl mx-auto">
             {[
               {
                 icon: Sparkles,
@@ -434,7 +435,7 @@ export default function Home() {
       <section id="showcase" className="py-24 bg-gradient-to-br from-[#82ffb2]/5 to-[#82b2ff]/5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16 space-y-4">
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900">
+            <h2 className="text-4xl md:text-[45px] font-bold text-gray-900">
               Oppdag plattformen
             </h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
@@ -473,8 +474,8 @@ export default function Home() {
                     </div>
                   </div>
                   <div className="max-w-md">
-                    <h3 className="text-lg font-bold text-gray-900 mb-2">{item.title}</h3>
-                    <p className="text-gray-600 text-md">{item.description}</p>
+                    <h3 className="text-lg font-bold text-gray-900 mb-1">{item.title}</h3>
+                    <p className="text-gray-600 text-sm">{item.description}</p>
                   </div>
                 </div>
               ))}
@@ -505,82 +506,9 @@ export default function Home() {
       {/* FAQ Section */}
       <FaqSection faqs={faqs} />
 
-      {/* Blog Section */}
-      <section id="blog" className="py-24 bg-gradient-to-br from-gray-50 to-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-end justify-between mb-12">
-            <div className="space-y-4">
-              <h2 className="text-4xl md:text-5xl font-bold text-gray-900">
-                Siste fra bloggen
-              </h2>
-              <p className="text-xl text-gray-600">
-                Tips, trender og innsikt for håndverkere
-              </p>
-            </div>
-            <Link
-              href="/blogg"
-              className="hidden md:flex items-center gap-2 text-[#00b85b] hover:text-[#00a050] font-semibold group"
-            >
-              Se alle artikler
-              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </Link>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {blogPosts.length > 0 ? (
-              blogPosts.map((post) => (
-                <article
-                  key={post._id}
-                  className="group bg-white rounded-2xl overflow-hidden border border-gray-200 hover:shadow-sm transition-all"
-                >
-                  <Link href={`/blogg/${post.slug.current}`} className="block">
-                    <div className="relative h-48 overflow-hidden">
-                      {post.mainImage?.asset ? (
-                        <Image
-                          src={urlForImage(post.mainImage.asset).width(400).height(300).url()}
-                          alt={post.mainImage.alt || post.title}
-                          fill
-                          className="object-cover group-hover:scale-110 transition-transform duration-500"
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-[#82ffb2]/20 to-[#82b2ff]/20 flex items-center justify-center">
-                          <FileText className="w-12 h-12 text-gray-400" />
-                        </div>
-                      )}
-                      {post.categories && post.categories.length > 0 && (
-                        <div className="absolute top-4 left-4">
-                          <span className="px-3 py-1 bg-[#82ffb2] text-gray-900 text-xs font-semibold rounded-full">
-                            {post.categories[0].title}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="p-6 space-y-4">
-                      <div className="text-sm text-gray-500">
-                        {formatDate(post.publishedAt)}
-                      </div>
-                      <h3 className="text-xl font-bold text-gray-900 group-hover:text-[#00b85b] transition-colors">
-                        {post.title}
-                      </h3>
-                      <p className="text-gray-600 leading-relaxed">
-                        {post.excerpt || 'Les mer om dette blogginnlegget...'}
-                      </p>
-                      <div className="inline-flex items-center gap-2 text-[#00b85b] hover:text-[#00a050] font-semibold group">
-                        Les mer
-                        <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                      </div>
-                    </div>
-                  </Link>
-                </article>
-              ))
-            ) : (
-              <div className="col-span-3 text-center py-12">
-                <p className="text-gray-500">Laster blogginnlegg...</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </section>
+      {/* Blog Section */}
+      <BlogSection1 />
 
       {/* CTA Section */}
       <section className="py-24 bg-[#82ffb2] relative overflow-hidden">
@@ -597,20 +525,20 @@ export default function Home() {
           <h2 className="text-4xl md:text-5xl font-bold text-gray-900">
             Klar til å effektivisere tilbudsprosessen?
           </h2>
-          <p className="text-xl text-gray-800">
+          <p className="text-xl text-gray-800 mb-10">
             Bli med tusenvis av håndverkere som allerede bruker Proanbud
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
               href="/signup"
-              className="group bg-gray-900 text-white px-8 py-4 rounded-xl hover:bg-gray-800 transition-all font-semibold text-lg shadow-xl flex items-center justify-center gap-2"
+              className="group bg-gray-900 text-white px-8 py-2 rounded-lg hover:bg-gray-800 transition-all font-semibold text-md shadow-xl flex items-center justify-center gap-2"
             >
               Start gratis i dag
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </Link>
             <Link
               href="mailto:casper@nagsoftware.no"
-              className="bg-white text-gray-900 px-8 py-4 rounded-xl hover:bg-gray-50 transition-all font-semibold text-lg flex items-center justify-center gap-2"
+              className="bg-white text-gray-900 px-8 py-2 rounded-lg hover:bg-gray-50 transition-all font-semibold text-md flex items-center justify-center gap-2"
             >
               Kontakt salg
             </Link>

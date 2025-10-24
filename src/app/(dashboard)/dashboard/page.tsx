@@ -168,6 +168,64 @@ export default function DashboardPage() {
     }
   };
 
+  // Handler to dynamically adjust quotes table height
+  const handleQuotesTableHeightChange = (height: number) => {
+    const rowHeight = 30; // matches ResponsiveGridLayout rowHeight
+    const margin = 20; // matches ResponsiveGridLayout margin
+    const padding = 26; // CardContent vertical padding (py-4) + extra space
+    const headerHeight = isEditMode ? 41 : 0; // drag handle height when in edit mode
+
+    // Calculate required grid units (h) based on actual content height
+    const totalHeight = height + padding + headerHeight;
+    const requiredHeight = Math.ceil(totalHeight / (rowHeight + margin));
+
+    // Update layout if quotes table height needs to change (desktop only)
+    if (currentBreakpoint === 'lg' || currentBreakpoint === 'md') {
+      setDesktopLayout(prevLayout => {
+        const quotesTableItem = prevLayout.find(item => item.i === 'quotes-table');
+        if (quotesTableItem && quotesTableItem.h !== requiredHeight && requiredHeight >= 8) {
+          const updatedLayout = prevLayout.map(item => {
+            if (item.i === 'quotes-table') {
+              return { ...item, h: requiredHeight };
+            }
+            return item;
+          });
+          return updatedLayout;
+        }
+        return prevLayout;
+      });
+    }
+  };
+
+  // Handler to dynamically adjust customers table height
+  const handleCustomersTableHeightChange = (height: number) => {
+    const rowHeight = 30; // matches ResponsiveGridLayout rowHeight
+    const margin = 20; // matches ResponsiveGridLayout margin
+    const padding = 20; // CardContent vertical padding (py-4) + extra space
+    const headerHeight = isEditMode ? 41 : 0; // drag handle height when in edit mode
+
+    // Calculate required grid units (h) based on actual content height
+    const totalHeight = height + padding + headerHeight;
+    const requiredHeight = Math.ceil(totalHeight / (rowHeight + margin));
+
+    // Update layout if customers table height needs to change (desktop only)
+    if (currentBreakpoint === 'lg' || currentBreakpoint === 'md') {
+      setDesktopLayout(prevLayout => {
+        const customersTableItem = prevLayout.find(item => item.i === 'customers-table');
+        if (customersTableItem && customersTableItem.h !== requiredHeight && requiredHeight >= 8) {
+          const updatedLayout = prevLayout.map(item => {
+            if (item.i === 'customers-table') {
+              return { ...item, h: requiredHeight };
+            }
+            return item;
+          });
+          return updatedLayout;
+        }
+        return prevLayout;
+      });
+    }
+  };
+
   // Clean layout data to remove undefined properties before saving to Firebase
   const cleanLayoutData = (layout: any[]): any[] => {
     return layout.map(item => {
@@ -408,6 +466,7 @@ export default function DashboardPage() {
               handleMarkAsLost={handleMarkAsLost}
               updatingQuotes={updatingQuotes}
               onRowClick={handleQuoteRowClick}
+              onHeightChange={handleQuotesTableHeightChange}
             />
           </div>
         ),
@@ -421,6 +480,7 @@ export default function DashboardPage() {
               onEditCustomer={handleEditCustomer}
               onDeleteCustomer={handleDeleteCustomer}
               onRowClick={handleCustomerRowClick}
+              onHeightChange={handleCustomersTableHeightChange}
             />
           </div>
         ),

@@ -91,12 +91,12 @@ export default function BlogPage() {
               return (
                 <Link href={`/blogg/${post.slug.current}`} key={post._id} className="group">
                   <article className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all h-full flex flex-col">
-                    <div className="relative h-48 bg-gradient-to-br from-[#00b85b] to-[#00854a]">
+                    <div className="relative h-48 bg-gradient-to-br from-secondary to-cyan-100">
                       {imageUrl ? (
                         <Image src={imageUrl} alt={post.mainImage?.alt || post.title} fill className="object-cover" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
-                          <Icons.FileText className="h-16 w-16 text-white/50" />
+                          <Icons.FileText className="h-16 w-16 text-white/80" />
                         </div>
                       )}
                       <div className="absolute top-4 left-4">

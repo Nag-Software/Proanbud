@@ -15,7 +15,7 @@ import {
 } from 'firebase/database';
 import { db, testFirebaseConnection } from '@/lib/firebase';
 import { auth } from '@/lib/firebase';
-import { InboxMessage } from '@/lib/types';
+import { InboxMessage, Folder } from '@/lib/types';
 
 export interface RealtimeInboxMessage extends Omit<InboxMessage, 'id' | 'timestamp'> {
   timestamp: number; // Unix timestamp in milliseconds
@@ -337,17 +337,128 @@ export const getMessagesByFolder = async (folder: string): Promise<InboxMessage[
 };
 
 // Get all folders
-export const getFolders = async (): Promise<string[]> => {
+export const getFolders = async (): Promise<Folder[]> => {
   try {
-    const messages = await getInboxMessages();
-    const folders = new Set<string>(['innboks']);
-    messages.forEach(message => {
-      if (message.folder) {
-        folders.add(message.folder);
+    const userId = getCurrentUserId();
+    const foldersRef = ref(db, getUserPath(userId, 'folders'));
+    const snapshot = await get(foldersRef);
+    
+    // Always include default folders
+    const defaultFolders: Folder[] = [
+      { id: 'innboks', name: 'innboks' },
+      { id: 'tilbud', name: 'tilbud' },
+      { id: 'sendt', name: 'sendt' },
+      { id: 'arkiv', name: 'arkiv' }
+    ];
+    
+    let customFolders: Folder[] = [];
+    if (snapshot.exists()) {
+      const foldersData = snapshot.val();
+      if (foldersData && typeof foldersData === 'object') {
+        customFolders = (Object.values(foldersData) as any[]).filter((folder: any) => 
+          folder && typeof folder === 'object' && folder.id && folder.name
+        ) as Folder[];
+      }
+    }
+    
+    // Combine default and custom folders
+    const allFolders = [...defaultFolders, ...customFolders];
+    
+    // Build hierarchical structure
+    const folderMap = new Map<string, Folder>();
+    const rootFolders: Folder[] = [];
+    
+    allFolders.forEach(folder => {
+      folderMap.set(folder.id, { ...folder, children: [] });
+    });
+    
+    allFolders.forEach(folder => {
+      const folderWithChildren = folderMap.get(folder.id);
+      if (folderWithChildren) {
+        if (folder.parentId) {
+          const parent = folderMap.get(folder.parentId);
+          if (parent && parent.children) {
+            parent.children.push(folderWithChildren);
+          } else {
+            // Parent not found, add to root
+            rootFolders.push(folderWithChildren);
+          }
+        } else {
+          rootFolders.push(folderWithChildren);
+        }
       }
     });
-    return Array.from(folders).sort();
+    
+    return rootFolders;
   } catch (error) {
+    console.error('Error in getFolders:', error);
     throw handleDatabaseError(error, 'hente mapper');
+  }
+};
+
+// Create a new folder
+export const createFolder = async (name: string, parentId?: string): Promise<string> => {
+  try {
+    if (!name || !name.trim()) {
+      throw new Error('Mappenavn kan ikke være tomt');
+    }
+    
+    const userId = getCurrentUserId();
+    const foldersRef = ref(db, getUserPath(userId, 'folders'));
+    const newFolderRef = push(foldersRef);
+    
+    const folder: Folder = {
+      id: newFolderRef.key!,
+      name: name.trim(),
+      parentId
+    };
+    
+    await set(newFolderRef, folder);
+    return newFolderRef.key!;
+  } catch (error) {
+    throw handleDatabaseError(error, 'opprette mappe');
+  }
+};
+
+// Delete a folder
+export const deleteFolder = async (folderId: string): Promise<void> => {
+  try {
+    const userId = getCurrentUserId();
+    const folderRef = ref(db, getUserPath(userId, 'folders') + '/' + folderId);
+    
+    // First, move all messages in this folder to inbox
+    const messages = await getInboxMessages();
+    const messagesToMove = messages.filter(m => m.folder === folderId);
+    
+    for (const message of messagesToMove) {
+      await updateInboxMessage(message.id, { folder: 'innboks' });
+    }
+    
+    // Delete the folder
+    await remove(folderRef);
+  } catch (error) {
+    throw handleDatabaseError(error, 'slette mappe');
+  }
+};
+
+// Get flat list of folder names for backward compatibility
+export const getFolderNames = async (): Promise<string[]> => {
+  try {
+    const folders = await getFolders();
+    const names: string[] = [];
+    
+    const addNames = (folders: Folder[]) => {
+      folders.forEach(folder => {
+        names.push(folder.name);
+        if (folder.children) {
+          addNames(folder.children);
+        }
+      });
+    };
+    
+    addNames(folders);
+    return names;
+  } catch (error) {
+    throw handleDatabaseError(error, 'hente mappenavn');
   }
 };

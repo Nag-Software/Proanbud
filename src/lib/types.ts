@@ -29,6 +29,13 @@ export interface ConversationEntry {
   type?: 'quote_question' | 'quote_approved' | 'quote_rejected' | 'reply';
 }
 
+export interface Folder {
+  id: string;
+  name: string;
+  parentId?: string;
+  children?: Folder[];
+}
+
 export interface InboxMessage {
   id: string;
   from: string;

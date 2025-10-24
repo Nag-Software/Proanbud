@@ -84,7 +84,7 @@ export const NotificationButton = () => {
                 isFlagged: value.isFlagged || false,
                 folder: value.folder || 'innboks',
               }))
-              .filter(msg => !msg.isRead && msg.folder === 'innboks')
+              .filter(msg => !msg.isRead && (msg.folder === 'innboks' || msg.folder === 'tilbud'))
               .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
               .slice(0, 5); // Show only latest 5 unread messages
 

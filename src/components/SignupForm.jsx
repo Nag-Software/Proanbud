@@ -20,8 +20,6 @@ const SignupForm = () => {
 
     startTidspunkt: '',
 
-    acceptAgreement: false,
-
   });
 
   const [errors, setErrors] = useState({});
@@ -59,8 +57,6 @@ const SignupForm = () => {
     if (!formData.antallForslag) newErrors.antallForslag = 'Antall forslag er påkrevd';
 
     if (!formData.startTidspunkt) newErrors.startTidspunkt = 'Ønsket starttidspunkt er påkrevd';
-
-    if (!formData.acceptAgreement) newErrors.acceptAgreement = 'Du må akseptere å laste ned pilotavtalen';
 
     setErrors(newErrors);
 
@@ -131,8 +127,6 @@ const SignupForm = () => {
           <h2 className="text-2xl font-bold mb-4">Takk!</h2>
 
           <p className="mb-4">Vi har mottatt forespørselen. Du får en e-post med pilotavtalen og neste steg innen 24 timer.</p>
-
-          <a href="/proanbud-pilotavtale.pdf" download className="bg-[#82ffb2] text-gray-900 px-4 py-2 rounded">Last ned pilotavtale</a>
 
           <button onClick={() => setIsSubmitted(false)} className="ml-4 text-gray-600">Lukk</button>
 
@@ -310,7 +304,7 @@ const SignupForm = () => {
 
           <div>
 
-            <label htmlFor="startTidspunkt" className="block text-sm font-medium text-gray-700">Ønsket starttidspunkt</label>
+            <label htmlFor="startTidspunkt" className="block text-sm font-medium text-gray-700">Ønsket møtetidspunkt</label>
 
             <input
 
@@ -331,30 +325,6 @@ const SignupForm = () => {
             {errors.startTidspunkt && <p className="text-red-600 text-sm">{errors.startTidspunkt}</p>}
 
           </div>
-
-          <div className="flex items-center">
-
-            <input
-
-              type="checkbox"
-
-              id="acceptAgreement"
-
-              name="acceptAgreement"
-
-              checked={formData.acceptAgreement}
-
-              onChange={handleChange}
-
-              className="h-4 w-4 text-[#82ffb2] border-gray-300 rounded"
-
-            />
-
-            <label htmlFor="acceptAgreement" className="ml-2 text-sm text-gray-700">Ja, jeg vil laste ned pilotavtalen</label>
-
-          </div>
-
-          {errors.acceptAgreement && <p className="text-red-600 text-sm">{errors.acceptAgreement}</p>}
 
           <button type="submit" className="w-full bg-primary text-white py-3 rounded-lg font-semibold cursor-pointer hover:bg-primary/90">Send inn</button>
 

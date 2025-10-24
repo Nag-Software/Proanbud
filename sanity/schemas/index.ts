@@ -7,5 +7,6 @@ import category from './category'
 import post from './post'
 import author from './author'
 import pilot from './pilot'
+import aiConfig from './aiConfig'
 
-export const schemaTypes = [post, author, category, blockContent, pilot]
+export const schemaTypes = [post, author, category, blockContent, pilot, aiConfig]

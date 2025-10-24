@@ -2,6 +2,15 @@
 
 import React, { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { Tagline } from "@/components/pro-blocks/landing-page/tagline";
 
 export interface FaqItem {
   question: string;
@@ -17,52 +26,67 @@ interface FaqSectionProps {
 
 export const FaqSection: React.FC<FaqSectionProps> = ({
   title = 'Ofte stilte spørsmål',
-  subtitle = 'Alt du trenger å vite om Proanbud',
+  subtitle = 'Vi har samlet den viktigste informasjonen for å hjelpe deg med å få mest mulig ut av opplevelsen din.',
   faqs,
   className = ''
 }) => {
-  const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   return (
-    <section id="faq" className={`py-24 bg-white ${className}`}>
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16 space-y-4">
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-900">
+    <section
+      className="bg-background section-padding-y"
+      aria-labelledby="faq-heading"
+    >
+      <div className="container-padding-x mx-auto flex max-w-3xl flex-col gap-10 md:gap-12">
+        {/* Section Header */}
+        <div className="section-title-gap-lg flex flex-col items-center text-center">
+          {/* Category Tag */}
+          <Tagline>FAQ seksjon</Tagline>
+          {/* Main Title */}
+          <h1 id="faq-heading" className="heading-lg text-foreground">
             {title}
-          </h2>
-          {subtitle && (
-            <p className="text-xl text-gray-600">
-              {subtitle}
-            </p>
-          )}
+          </h1>
+          {/* Section Description */}
+          <p className="text-muted-foreground max-w-lg">
+            {subtitle}{"  "}
+            <Link href="mailto:post@proanbud.no" className="text-primary underline">
+              Kontakt oss.
+            </Link>
+          </p>
         </div>
 
-        <div className="space-y-4">
+        {/* FAQ Accordion */}
+        <Accordion type="single" defaultValue="item-1" aria-label="FAQ items">
           {faqs.map((faq, index) => (
-            <div
-              key={index}
-              className="border border-gray-200 rounded-2xl overflow-hidden hover:border-[#82ffb2]/50 transition-colors"
-            >
-              <button
-                onClick={() => setOpenFaq(openFaq === index ? null : index)}
-                className="w-full px-8 py-6 flex items-center justify-between text-left hover:bg-gray-50 transition-colors"
-              >
-                <span className="text-lg font-semibold text-gray-900">{faq.question}</span>
-                <ChevronDown
-                  className={`w-5 h-5 text-gray-500 transition-transform flex-shrink-0 ml-4 ${
-                    openFaq === index ? 'rotate-180' : ''
-                  }`}
-                />
-              </button>
-              {openFaq === index && (
-                <div className="px-8 pb-6">
-                  <p className="text-gray-600 leading-relaxed">{faq.answer}</p>
-                </div>
-              )}
-            </div>
+            <AccordionItem key={index} value={`item-${index + 1}`}>
+              <AccordionTrigger className="text-left text-base font-medium">
+                {faq.question}
+              </AccordionTrigger>
+            <AccordionContent className="text-muted-foreground text-sm">
+              {faq.answer}
+            </AccordionContent>
+          </AccordionItem>
           ))}
+        </Accordion>
+
+        {/* CTA Card */}
+        <div className="bg-muted/60 flex w-full flex-col items-center gap-6 rounded-xl p-6 md:p-8">
+          <div className="flex flex-col gap-2 text-center">
+            <h2 className="text-foreground text-2xl font-bold">
+              Fant du ikke svaret du lette etter?
+            </h2>
+            <p className="text-muted-foreground text-base">
+              Har du spørsmål eller trenger hjelp? Teamet vårt er her for å hjelpe!
+            </p>
+          </div>
+          <Button 
+            variant="default"
+            aria-label="Contact our support team">
+              <Link href="mailto:post@proanbud.no">
+                Kontakt oss
+              </Link>
+          </Button>
         </div>
       </div>
     </section>
   );
-};
+}

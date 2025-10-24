@@ -13,14 +13,26 @@ import { getCustomerColumns } from '@/lib/table-columns/customers-columns';
 export const CustomersDataTable = ({
   onEditCustomer,
   onDeleteCustomer,
-  onRowClick
+  onRowClick,
+  onHeightChange
 }: {
   onEditCustomer?: (customer: Kunde) => void;
   onDeleteCustomer?: (customer: Kunde) => void;
   onRowClick?: (customer: Kunde) => void;
+  onHeightChange?: (height: number) => void;
 }) => {
   const [customers, setCustomers] = useState<Kunde[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Handle height changes from DataTable
+  const handleDataTableHeightChange = (height: number) => {
+    if (onHeightChange) {
+      // Add header height only - padding is handled by dashboard
+      const headerHeight = 56; // CardHeader height
+      const totalHeight = height + headerHeight;
+      onHeightChange(totalHeight);
+    }
+  };
 
   useEffect(() => {
     let unsubscribe: (() => void) | null = null;
@@ -92,7 +104,7 @@ export const CustomersDataTable = ({
         <CardHeader className="flex-shrink-0">
         <CardTitle className="text-base m-auto md:text-md text-left">Dine Kunder</CardTitle>
       </CardHeader>
-        <CardContent className="flex-1 flex items-center justify-center">
+        <CardContent className="flex-1 overflow-hidden flex items-center justify-center">
           <div className="w-full h-full bg-gray-200 animate-pulse rounded-lg min-h-[200px] flex items-center justify-center">
             <span className="text-gray-500 text-sm">Laster kunder...</span>
           </div>
@@ -106,13 +118,14 @@ export const CustomersDataTable = ({
       <CardHeader className="flex-shrink-0">
         <CardTitle className="text-base m-auto md:text-md text-left">Dine Kunder</CardTitle>
       </CardHeader>
-      <CardContent className="flex-1 flex justify-center">
+      <CardContent className="flex-1 overflow-hidden">
         <DataTable
           columns={getCustomerColumns(onEditCustomer, onDeleteCustomer)}
           data={customers}
           searchKey="navn"
           searchPlaceholder="Søk i kunder..."
           onRowClick={onRowClick}
+          onHeightChange={handleDataTableHeightChange}
         />
       </CardContent>
     </Card>

@@ -15,18 +15,30 @@ export const QuotesDataTable = ({
   handleMarkAsWon,
   handleMarkAsLost,
   updatingQuotes,
-  onRowClick
+  onRowClick,
+  onHeightChange
 }: {
   handleSendQuote: (quote: Tilbud) => void;
   handleMarkAsWon: (quote: Tilbud) => void;
   handleMarkAsLost: (quote: Tilbud) => void;
   updatingQuotes: Set<string>;
   onRowClick?: (quote: Tilbud) => void;
+  onHeightChange?: (height: number) => void;
 }) => {
   const [quotes, setQuotes] = useState<Tilbud[]>([]);
   const [loading, setLoading] = useState(true);
 
   const quotesColumns = getQuoteColumns(handleSendQuote, handleMarkAsWon, handleMarkAsLost, updatingQuotes);
+
+  // Handle height changes from DataTable
+  const handleDataTableHeightChange = (height: number) => {
+    if (onHeightChange) {
+      // Add header height only - padding is handled by dashboard
+      const headerHeight = 56; // CardHeader height
+      const totalHeight = height + headerHeight;
+      onHeightChange(totalHeight);
+    }
+  };
 
   useEffect(() => {
     let unsubscribe: (() => void) | null = null;
@@ -99,7 +111,7 @@ export const QuotesDataTable = ({
         <CardHeader className="flex-shrink-0">
         <CardTitle className="text-base m-auto md:text-md text-left">Dine Tilbud</CardTitle>
       </CardHeader>
-        <CardContent className="flex-1 flex items-center justify-center">
+        <CardContent className="flex-1 overflow-hidden flex items-center justify-center">
           <div className="w-full h-full bg-gray-200 animate-pulse rounded-lg min-h-[200px] flex items-center justify-center">
             <span className="text-gray-500 text-sm">Laster tilbud...</span>
           </div>
@@ -113,13 +125,14 @@ export const QuotesDataTable = ({
       <CardHeader className="flex-shrink-0">
         <CardTitle className="text-base m-auto md:text-md text-left">Dine Tilbud</CardTitle>
       </CardHeader>
-      <CardContent className="flex-1 flex justify-center">
+      <CardContent className="flex-1 overflow-hidden">
         <DataTable
           columns={quotesColumns}
           data={quotes}
           searchKey="kundenavn"
           searchPlaceholder="Søk i tilbud..."
           onRowClick={onRowClick}
+          onHeightChange={handleDataTableHeightChange}
         />
       </CardContent>
     </Card>

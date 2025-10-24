@@ -37,6 +37,7 @@ interface DataTableProps<TData, TValue> {
   searchPlaceholder?: string
   onRowClick?: (row: TData) => void
   rightContent?: React.ReactNode
+  onHeightChange?: (height: number) => void
 }
 
 export function DataTable<TData, TValue>({
@@ -46,6 +47,7 @@ export function DataTable<TData, TValue>({
   searchPlaceholder = "Search...",
   onRowClick,
   rightContent,
+  onHeightChange,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
@@ -54,6 +56,19 @@ export function DataTable<TData, TValue>({
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = React.useState({})
+  const [tableHeight, setTableHeight] = React.useState(0);
+  const tableRef = React.useRef<HTMLDivElement>(null);
+
+  // Calculate table height and notify parent
+  React.useEffect(() => {
+    if (tableRef.current && onHeightChange) {
+      const height = tableRef.current.scrollHeight;
+      if (height !== tableHeight) {
+        setTableHeight(height);
+        onHeightChange(height);
+      }
+    }
+  }, [data, tableHeight, onHeightChange]);
 
   const table = useReactTable({
     data,
@@ -75,7 +90,7 @@ export function DataTable<TData, TValue>({
   })
 
   return (
-    <div className="w-full overflow-x-auto px-2">
+    <div className="w-full overflow-x-auto px-2" ref={tableRef}>
       <div className="flex items-center py-4">
         {searchKey && (
           <Input
@@ -117,9 +132,9 @@ export function DataTable<TData, TValue>({
           </DropdownMenu>
         </div>
       </div>
-      <div className="rounded-md border">
+      <div className="rounded-md border overflow-y-auto">
         <Table>
-          <TableHeader>
+          <TableHeader className="sticky top-0 bg-background z-10">
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
@@ -170,10 +185,6 @@ export function DataTable<TData, TValue>({
         </Table>
       </div>
       <div className="flex items-center justify-end space-x-2 py-4">
-        <div className="flex-1 text-sm text-muted-foreground">
-          {table.getFilteredSelectedRowModel().rows.length} of{" "}
-          {table.getFilteredRowModel().rows.length} row(s) selected.
-        </div>
         <div className="space-x-2">
           <Button
             variant="outline"

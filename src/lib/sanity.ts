@@ -92,48 +92,13 @@ export const allPostSlugsQuery = `
   }
 `
 
-// Hent pilot-side data
-export const pilotDataQuery = `
-  *[_type == "pilot"][0] {
-    _id,
-    title,
-    subtitle,
-    badgeText,
-    availableSpots,
-    usedSpots,
-    spotsText,
-    pricing {
-      amount,
-      currency,
-      period
-    },
-    heroDescription,
-    metrics[] {
-      label,
-      value,
-      description
-    },
-    aiCard {
-      title,
-      description,
-      spotsFilled,
-      spotsRemaining
-    },
-    trustIndicators[] {
-      text
-    },
-    secondaryCTA {
-      text,
-      url
-    },
-    processSteps[] {
-      title,
-      description
-    },
-    faq[] {
-      question,
-      answer
-    }
+// Hent AI-konfigurasjon
+export const aiConfigQuery = `
+  *[_type == "aiConfig"][0] {
+    komponentSKs,
+    model,
+    reasoningeffort,
+    allowWebsearch
   }
 `
 

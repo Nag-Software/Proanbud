@@ -243,13 +243,13 @@ export default function Header({ currentPage }: HeaderProps) {
           <div className="hidden md:flex items-center gap-4">
             <Link
               href="/login"
-              className="text-nowrap text-gray-700 !text-[15px] hover:text-[#00b85b] transition-colors font-medium"
+              className="text-nowrap text-gray-700 text-sm hover:text-[#00b85b] transition-colors font-medium"
             >
               Logg inn
             </Link>
             <Link
               href="/signup"
-              className="text-nowrap bg-[#82ffb2] !text-[15px] text-gray-900 px-6 py-2 rounded-xl transition-all font-semibold shadow-lg shadow-[#82ffb2]/20 hover:shadow-xl hover:shadow-[#82ffb2]/30"
+              className="text-nowrap bg-secondary-foreground text-sm text-gray-800 px-4 py-[7px] rounded-lg transition-all font-semibold border-1 border-secondary/30 shadow-sm shadow-secondary/20 hover:shadow-lg hover:shadow-secondary/30"
             >
               Kom igang
             </Link>
@@ -263,7 +263,7 @@ export default function Header({ currentPage }: HeaderProps) {
                   <Menu className="h-6 w-6" />
                 </button>
               </DrawerTrigger>
-              <DrawerContent>
+              <DrawerContent showOverlay={false}>
                 <div className="px-4 py-4 space-y-4">
                   <a
                     href={currentPage === 'home' ? '#features' : '/#features'}

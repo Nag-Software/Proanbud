@@ -28,11 +28,12 @@ export default function PilotavtalePage() {
   const [sigDialog, setSigDialog] = useState<null | "proanbudSign" | "kundeSign">(null);
   const [form, setForm] = useState({
     kundenavn: "",
+    firmanavn: "",
     proanbudNavn: "Casper Nag",
     proanbudSign: "",
-    kundeNavn: "",
     kundeSign: "",
     kundeDato: "",
+    orgnr: "",
   });
   const pdfRef = useRef<HTMLDivElement>(null);
   // Dynamisk import for å unngå SSR-feil
@@ -193,7 +194,8 @@ export default function PilotavtalePage() {
           <div className="text-xs uppercase text-gray-500 font-semibold mb-1">Partene</div>
           <ul className="text-base mb-2">
             <li><b>Leverandør:</b> Proanbud AS (org.nr ...)</li>
-            <li><b>Kunde:</b> <input name="kundenavn" value={form.kundenavn} onChange={handleChange} className="border-b border-gray-300 bg-transparent outline-none px-1" placeholder="Kundenavn" /></li>
+            <li><b>Kunde:</b> <input name="firmanavn" value={form.firmanavn} onChange={handleChange} className="border-b border-gray-300 bg-transparent outline-none px-1" placeholder="Kunde (firmanavn)" /></li>
+            <li><b>Org.nr:</b> <input name="orgnr" value={form.orgnr} onChange={handleChange} className="border-b border-gray-300 bg-transparent outline-none px-1" placeholder="Organisasjonsnummer" /></li>
           </ul>
         </div>
         <div className="mb-7 pb-5 border-b border-gray-200">
@@ -231,7 +233,7 @@ export default function PilotavtalePage() {
           </div>
           <div className="flex-1 flex flex-col gap-2">
             <div className="text-gray-500 text-sm">For kunde</div>
-            <input name="kundeNavn" value={form.kundeNavn} onChange={handleChange} className="sig-input border-b border-gray-300 bg-transparent outline-none px-1" placeholder="Navn" />
+            <input name="kundenavn" value={form.kundenavn} onChange={handleChange} className="sig-input border-b border-gray-300 bg-transparent outline-none px-1" placeholder="Navn (personlig)" />
             <div>
               <input
                 name="kundeSign"

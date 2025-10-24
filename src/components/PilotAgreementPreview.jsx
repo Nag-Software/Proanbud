@@ -2,11 +2,11 @@
 
 import React from 'react';
 
-const PilotAgreementPreview = () => {
+const PilotAgreementPreview = ({ id }) => {
 
   return (
 
-    <section className="bg-white py-20 px-4">
+    <section id={id} className="bg-white py-20 px-4">
 
       <div className="max-w-4xl mx-auto">
 
@@ -36,15 +36,13 @@ const PilotAgreementPreview = () => {
 
             href="/pilotavtale"
 
-            download
-
             className="bg-primary text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-primary/90 transition-colors inline-block"
 
             onClick={() => {
 
               if (window.posthog) {
 
-                window.posthog.capture('pilot_agreement_downloaded');
+                window.posthog.capture('pilot_agreement_signed');
 
               }
 
@@ -52,7 +50,7 @@ const PilotAgreementPreview = () => {
 
           >
 
-            Last ned pilotavtale (PDF)
+            Signèr pilotavtalen her
 
           </a>
 

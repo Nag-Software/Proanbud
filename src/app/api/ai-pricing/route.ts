@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { webSearchTool, RunContext, Agent, AgentInputItem, Runner, withTrace } from "@openai/agents";
 import { z } from "zod";
+import { client, aiConfigQuery } from '@/lib/sanity';
 
 
 // Tool definitions
@@ -130,6 +131,7 @@ Du skal løse oppgaven ved først å lese og tolke all input, deretter følge ar
 6. Returner KUN gyldig JSON; ingen tekst eller kommentarer.
 7. Priser oppgis uten mva.
 8. Kildedokumentasjon kreves i description og catalogSource.
+9. Sorter etter components etter kategorier: materialer, utstyr, arbeid, transport, annet.
 
 ## Forventet output (KUN JSON – ingen ekstra tekst):
 {
@@ -185,21 +187,52 @@ Returner kun én valid JSON i spesifisert format, ALDRI tekst eller kommentarer,
 
 *(Påminnelse: Grundig, sekvensiell behandling før output, presis katalogmatch og full kildedokumentasjon.)*`
 }
-const komponentSK = new Agent({
-  name: "Komponent-Søk",
-  instructions: komponentSKInstructions,
-  model: "gpt-5-nano",  // skal være gpt-5-mini når tilgjengelig
-  tools: [
-    webSearchPreview
-  ],
-  modelSettings: {
-    reasoning: {
-      effort: "low",  // skal være medium
-      summary: "auto"
-    },
-    store: false
+
+// Function to fetch AI config from Sanity
+async function getAIConfig() {
+  try {
+    const config = await client.fetch(aiConfigQuery);
+    return {
+      model: config?.model || "gpt-5-nano",
+      reasoningeffort: config?.reasoningeffort || "low",
+      komponentSKs: config?.komponentSKs || [],
+      allowWebsearch: config?.allowWebsearch ?? true
+    };
+  } catch (error) {
+    console.error('Failed to fetch AI config:', error);
+    // Fallback to defaults
+    return {
+      model: "gpt-5-nano",
+      reasoningeffort: "minimal",
+      komponentSKs: [],
+      allowWebsearch: false
+    };
   }
-});
+}
+
+// Create the Agent with dynamic config
+async function createKomponentSKAgent() {
+  const aiConfig = await getAIConfig();
+
+  const tools = [];
+  if (aiConfig.allowWebsearch) {
+    tools.push(webSearchPreview);
+  }
+
+  return new Agent({
+    name: "Komponent-Søk",
+    instructions: komponentSKInstructions,
+    model: aiConfig.model,
+    tools: tools,
+    modelSettings: {
+      reasoning: {
+        effort: aiConfig.reasoningeffort,
+        summary: "auto"
+      },
+      store: false
+    }
+  });
+}
 
 type WorkflowInput = { prompt: string, businessInfo: string, catalog: any };
 
@@ -225,6 +258,10 @@ export const runWorkflow = async (workflow: WorkflowInput) => {
       }
     });
     const transformResult = {catalog: JSON.stringify(workflow.catalog), jobbbeskrivelse: workflow.prompt, bedrift: workflow.businessInfo};
+    
+    // Create agent with dynamic config from Sanity
+    const komponentSK = await createKomponentSKAgent();
+    
     const komponentSKResultTemp = await runner.run(
       komponentSK,
       [
