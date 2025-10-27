@@ -48,18 +48,18 @@ const PilotHeroSanity = () => {
 
   return (
     <section
-      className="bg-background section-padding-y"
+      className="section-padding-y py-40"
       aria-labelledby="hero-heading"
     >
       <div className="container-padding-x max-w-7xl mx-auto container mx-auto flex flex-col items-center gap-12 lg:flex-row lg:gap-16">
         {/* Left Column */}
-        <div className="flex flex-1 flex-col gap-6 lg:gap-8 mx-auto">
+        <div className="flex flex-1 flex-col gap-6 lg:gap-8 mx-auto scale-120">
           {/* Section Title */}
-          <div className="section-title-gap-xl flex flex-col max-w-4xl mx-auto">
+          <div className="section-title-gap-xl flex flex-col max-w-4xl mx-auto px-10">
             {/* Tagline */}
             <Tagline variant="default" className="mx-auto text-center">{data.badgeText}</Tagline>
             {/* Main Heading */}
-            <h1 id="hero-heading" className="heading-xl mx-auto text-center">
+            <h1 id="hero-heading" className="heading-lg mx-auto text-center">
               {data.title.split(' ').map((word, index) => 
                 index === data.title.split(" ").length - 1 ? (
                   <span key={index} className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
@@ -71,7 +71,7 @@ const PilotHeroSanity = () => {
               )}
             </h1>
             {/* Description */}
-            <p className="text-muted-foreground text-base lg:text-lg mx-auto max-w-3xl text-center">
+            <p className="text-muted-foreground text-base lg:text-md mx-auto max-w-2xl text-center">
               {data.heroDescription}
             </p>
           </div>

@@ -365,10 +365,9 @@ export default function Home() {
         </div>
       </section>
 
-      <FeatureSection />
-
-
       <ShowcaseFeature />
+
+      <FeatureSection />
 
       {/* FAQ Section */}
       <FaqSection faqs={faqs} />
