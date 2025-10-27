@@ -78,7 +78,7 @@ export const FaqSection: React.FC<FaqSectionProps> = ({
               Har du spørsmål eller trenger hjelp? Teamet vårt er her for å hjelpe!
             </p>
           </div>
-          <Button 
+          <Button
             variant="default"
             aria-label="Contact our support team">
               <Link href="mailto:post@proanbud.no">

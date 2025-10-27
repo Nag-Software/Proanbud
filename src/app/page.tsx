@@ -7,6 +7,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/shared/Card';
+import { FeatureSection } from '@/components/shared/Features';
 import { 
   Zap, 
   Sparkles, 
@@ -24,7 +25,8 @@ import {
   Check,
   BarChart3,
   Users,
-  Shield
+  Shield,
+  Brain
 } from 'lucide-react';
 import Logo from '@/components/shared/Logo';
 import { FaqSection } from '@/components/shared/FaqSection';
@@ -32,6 +34,8 @@ import Footer from '@/components/shared/Footer';
 import Header from '@/components/shared/Header';
 import { client, allPostsQuery, formatDate, urlForImage } from '@/lib/sanity';
 import { BlogSection1 } from '@/components/pro-blocks/landing-page/blog-sections/blog-section-1';
+import { ShowcaseFeature } from '@/components/shared/ShowcaseFeature';
+
 
 interface SanityPost {
   _id: string;
@@ -156,13 +160,13 @@ export default function Home() {
       <Header currentPage="home" />
 
       {/* Hero Section with Video */}
-      <section className="relative overflow-hidden py-10 lg:py-15 bg-white mt-5">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+      <section className="relative overflow-hidden py-10 lg:py-15 bg-white mt-5 mx-auto">
+        <div className="mx-auto px-4 sm:px-6 lg:px-8 relative max-w-7xl">
           <div className="grid grid-cols-1 lg:grid-cols-[55%_45%] gap-12 items-center">
             <div className="text-center lg:text-left space-y-7">
               <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#82ffb2]/10 rounded-full border border-[#82ffb2]/20">
                 <Sparkles className="w-4 h-4 text-[#82ffb2]" />
-                <span className="text-sm font-medium text-gray-700">AI-drevet tilbudsplattform</span>
+                <span className="text-sm font-medium text-gray-700">Norges første AI-drevne tilbudsplattform</span>
               </div>
 
               <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold text-gray-900">
@@ -207,7 +211,7 @@ export default function Home() {
             <div className="relative hidden md:block ml-0 lg:ml-10">
               <div className="bg-white rounded-2xl shadow-2xl p-6 border border-gray-100 max-h-[28rem] overflow-hidden w-full lg:w-[120%] lg:-ml-[10%]">
                 {/* Platform Preview Tabs */}
-                <div className="flex space-x-1 mb-4 bg-gray-50 p-1 rounded-xl">
+                <div className="flex space-x-1 mb-4 bg-gray-50 p-1 rounded-xl !cursor-none">
                   <button className="flex-1 px-3 py-2 text-xs font-semibold text-white bg-primary rounded-lg transition-all shadow-sm">
                     Dashboard
                   </button>
@@ -361,147 +365,10 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Features Section */}
-      <section id="features" className="py-16 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12 space-y-4">
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900">
-              Alt du trenger i én plattform
-            </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Effektivisér hele anbudsprosessen med smarte verktøy designet for håndverkere
-            </p>
-          </div>
+      <FeatureSection />
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:max-w-4xl xl:max-w-6xl mx-auto">
-            {[
-              {
-                icon: Sparkles,
-                title: "AI-prissetting",
-                description: "La kunstig intelligens foreslå konkurransedyktige priser basert på materialpriser, historisk data og dine pristilbud hos leverandører",
-                color: "#82ffb2"
-              },
-              {
-                icon: Zap,
-                title: "Lynrask tilbudssending",
-                description: "Send profesjonelle tilbud på under 5 minutter med autogenererte mengdeberegninger og AI-prisestimat",
-                color: "#ff82d0"
-              },
-              {
-                icon: Smartphone,
-                title: "Mobilvennlig",
-                description: "Full funksjonalitet på mobil, nettbrett og PC - send tilbud direkte på befaring",
-                color: "#82b2ff"
-              },
-              {
-                icon: FileText,
-                title: "Profesjonell kundehåndtering",
-                description: "Ha full oversikt over kundesamtaler og hendelser, samt automatisert kundeoppfølging via mail.",
-                color: "#ff82d0"
-              },
-              {
-                icon: BarChart3,
-                title: "Analyse & rapporter",
-                description: "Følg med på konverteringsrate, omsetning, profitt og andre nøkkeltall i sanntid",
-                color: "#82b2ff"
-              },
-              {
-                icon: Clock,
-                title: "Spar 80% tid",
-                description: "Automatiser tunge og repetitive oppgaver og fokuser på det som gir verdi",
-                color: "#82ffb2"
-              }
-            ].map((feature, index) => (
-              <Card key={index} className="p-6 hover:shadow-md shadow-xs transition-shadow">
-                <div className="flex flex-col space-y-4">
-                  <div
-                    className="w-12 h-12 rounded-lg flex items-center justify-center"
-                    style={{ backgroundColor: `${feature.color}20` }}
-                  >
-                    <feature.icon className="w-6 h-6" style={{ color: feature.color }} />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">{feature.title}</h3>
-                    <p className="text-gray-600 text-sm leading-relaxed">{feature.description}</p>
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
 
-      {/* Platform Showcase - Interactive */}
-      <section id="showcase" className="py-24 bg-gradient-to-br from-[#82ffb2]/5 to-[#82b2ff]/5">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16 space-y-4">
-            <h2 className="text-4xl md:text-[45px] font-bold text-gray-900">
-              Oppdag plattformen
-            </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Intuitiv, kraftig og designet for å gjøre jobben din enklere
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <div className="space-y-8">
-              {[
-                {
-                  icon: Users,
-                  title: "Kundeadministrasjon",
-                  description: "Hold oversikt over alle kunder, prosjekter og kommunikasjon på ett sted"
-                },
-                {
-                  icon: FileText,
-                  title: "Tilbudshåndtering",
-                  description: "Opprett, send og spor tilbud med automatiske påminnelser og oppfølging"
-                },
-                {
-                  icon: BarChart3,
-                  title: "Sanntidsanalyse",
-                  description: "Visualiser bedriftens ytelse med interaktive dashboards og rapporter"
-                },
-                {
-                  icon: Shield,
-                  title: "Sikker & GDPR-compliant",
-                  description: "All data krypteres og lagres sikkert i henhold til norske lover"
-                }
-              ].map((item, index) => (
-                <div key={index} className="flex gap-4 group">
-                  <div className="flex-shrink-0">
-                    <div className="w-12 h-12 rounded-lg bg-[#82ffb2]/10 flex items-center justify-center group-hover:bg-[#82ffb2]/20 transition-colors">
-                      <item.icon className="w-6 h-6 text-[#00b85b]" />
-                    </div>
-                  </div>
-                  <div className="max-w-md">
-                    <h3 className="text-lg font-bold text-gray-900 mb-1">{item.title}</h3>
-                    <p className="text-gray-600 text-sm">{item.description}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="relative">
-              <div className="relative rounded-2xl overflow-hidden shadow-2xl border-4 border-white">
-                <img
-                  src="/assets/3.png"
-                  alt="Platform dashboard"
-                  className="w-full h-auto"
-                />
-                {/* Floating cards */}
-                <div className="absolute top-8 right-8 bg-white rounded-xl p-4 shadow-xl animate-float">
-                  <div className="flex items-center gap-3">
-                    <div className="w-3 h-3 bg-[#82ffb2] rounded-full animate-pulse"></div>
-                    <span className="text-sm font-semibold">+23% konvertering</span>
-                  </div>
-                </div>
-              </div>
-              <div className="absolute -top-8 -left-8 w-32 h-32 bg-[#ff82d0]/20 rounded-full blur-3xl"></div>
-              <div className="absolute -bottom-8 -right-8 w-40 h-40 bg-[#82b2ff]/20 rounded-full blur-3xl"></div>
-            </div>
-          </div>
-        </div>
-      </section>
+      <ShowcaseFeature />
 
       {/* FAQ Section */}
       <FaqSection faqs={faqs} />
@@ -531,14 +398,14 @@ export default function Home() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
               href="/signup"
-              className="group bg-gray-900 text-white px-8 py-2 rounded-lg hover:bg-gray-800 transition-all font-semibold text-md shadow-xl flex items-center justify-center gap-2"
+              className="group bg-gray-900 text-white px-6 py-2 rounded-lg hover:bg-gray-800 transition-all font-semibold text-md shadow-xl flex items-center justify-center gap-2"
             >
               Start gratis i dag
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </Link>
             <Link
               href="mailto:casper@nagsoftware.no"
-              className="bg-white text-gray-900 px-8 py-2 rounded-lg hover:bg-gray-50 transition-all font-semibold text-md flex items-center justify-center gap-2"
+              className="bg-white text-gray-900 px-6 py-2 rounded-lg hover:bg-gray-50 transition-all font-semibold text-md flex items-center justify-center gap-2"
             >
               Kontakt salg
             </Link>
