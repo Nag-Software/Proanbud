@@ -2,7 +2,6 @@ import {
   ref,
   set,
   get,
-  update,
   serverTimestamp,
 } from 'firebase/database';
 import { db } from '@/lib/firebase';

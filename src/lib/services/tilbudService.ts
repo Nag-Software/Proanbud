@@ -5,13 +5,8 @@ import {
   get,
   update,
   remove,
-  query,
-  orderByChild,
-  limitToLast,
-  equalTo,
   DataSnapshot,
-  serverTimestamp,
-  Database
+  serverTimestamp
 } from 'firebase/database';
 import { db, testFirebaseConnection } from '@/lib/firebase';
 import { auth } from '@/lib/firebase';
@@ -125,27 +120,6 @@ const convertRealtimeTilbud = (key: string, data: RealtimeTilbud): Tilbud => {
     prisgrunnlag: (data as any).prisgrunnlag,
     viewToken: (data as any).viewToken, // Include viewToken for customer access
     userId: (data as any).userId, // Include userId for ownership
-  };
-};
-
-// Convert single snapshot to Tilbud type
-const convertSingleRealtimeTilbud = (snapshot: DataSnapshot): Tilbud => {
-  const data = snapshot.val() as RealtimeTilbud;
-  
-  if (!data || !snapshot.exists()) {
-    throw new Error('Invalid tilbud data');
-  }
-
-  return {
-    id: snapshot.key!,
-    kundenavn: data.kundenavn,
-    prosjekt: data.jobbtype,
-    jobbtype: data.jobbtype,
-    belop: data.belop,
-    status: data.status,
-    dato: data.dato,
-    svarfrist: data.svarfrist,
-    prisgrunnlag: (data as any).prisgrunnlag,
   };
 };
 

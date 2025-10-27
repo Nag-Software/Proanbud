@@ -5,13 +5,8 @@ import {
   get,
   update,
   remove,
-  query,
-  orderByChild,
-  limitToLast,
-  equalTo,
   DataSnapshot,
-  serverTimestamp,
-  Database
+  serverTimestamp
 } from 'firebase/database';
 import { db, testFirebaseConnection } from '@/lib/firebase';
 import { auth } from '@/lib/firebase';

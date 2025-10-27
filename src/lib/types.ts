@@ -150,7 +150,7 @@ export interface User {
 
 export type TilbudStatus = 'draft' | 'venter' | 'vunnet' | 'tapt';
 
-export interface ColumnDef<T> {
+export interface ColumnDef {
   accessorKey: string;
   header: string;
   cell?: (info: any) => React.ReactNode;
