@@ -424,7 +424,7 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
   };
 
   const generateNewCatalog = () => {
-    let newCatalog: any = {};
+    const newCatalog: any = {};
 
     catalogCategories.forEach(cat => {
       newCatalog[cat.id] = {

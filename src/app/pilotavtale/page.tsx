@@ -118,7 +118,7 @@ export default function PilotavtalePage() {
 
   const handleSend = async () => {
     setSending(true);
-    let pdfBase64 = await getPdfBase64();
+    const pdfBase64 = await getPdfBase64();
     if (!pdfBase64) {
       setSending(false);
       alert("Kunne ikke generere PDF. Prøv igjen.");

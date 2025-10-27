@@ -31,8 +31,8 @@ export default function Footer() {
             <div>
               <h3 className="text-white font-bold mb-4">Produkt</h3>
               <ul className="space-y-3">
-                <li><a href="/#features" className="hover:text-[#82ffb2] transition-colors">Funksjoner</a></li>
-                <li><a href="/priser" className="hover:text-[#82ffb2] transition-colors">Priser</a></li>
+                <li><Link href="/#features" className="hover:text-[#82ffb2] transition-colors">Funksjoner</Link></li>
+                <li><Link href="/priser" className="hover:text-[#82ffb2] transition-colors">Priser</Link></li>
                 <li><a href="#" className="hover:text-[#82ffb2] transition-colors">Integrasjoner</a></li>
                 <li><a href="#" className="hover:text-[#82ffb2] transition-colors">API</a></li>
                 <li><a href="#" className="hover:text-[#82ffb2] transition-colors">Hva er nytt</a></li>
@@ -44,7 +44,7 @@ export default function Footer() {
               <h3 className="text-white font-bold mb-4">Selskap</h3>
               <ul className="space-y-3">
                 <li><a href="#" className="hover:text-[#82ffb2] transition-colors">Om oss</a></li>
-                <li><a href="/blogg" className="hover:text-[#82ffb2] transition-colors">Blogg</a></li>
+                <li><Link href="/blogg" className="hover:text-[#82ffb2] transition-colors">Blogg</Link></li>
                 <li><a href="#" className="hover:text-[#82ffb2] transition-colors">Karriere</a></li>
                 <li><a href="#" className="hover:text-[#82ffb2] transition-colors">Presse</a></li>
                 <li><a href="#" className="hover:text-[#82ffb2] transition-colors">Partnere</a></li>

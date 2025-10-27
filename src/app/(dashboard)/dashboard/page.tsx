@@ -521,6 +521,9 @@ export default function DashboardPage() {
       try {
         const userSettings = await getUserSettings();
         
+        let desktop: any;
+        let mobile: any;
+        
         if (!userSettings) {
           // Initialize user settings for new users
           console.log('🔄 Initializing user settings for new user');
@@ -530,11 +533,11 @@ export default function DashboardPage() {
           }, user?.uid);
           // Reload settings after initialization
           const newUserSettings = await getUserSettings();
-          var desktop = newUserSettings?.dashboardLayout;
-          var mobile = newUserSettings?.dashboardLayoutMobile;
+          desktop = newUserSettings?.dashboardLayout;
+          mobile = newUserSettings?.dashboardLayoutMobile;
         } else {
-          var desktop = userSettings.dashboardLayout;
-          var mobile = userSettings.dashboardLayoutMobile;
+          desktop = userSettings.dashboardLayout;
+          mobile = userSettings.dashboardLayoutMobile;
         }
         
         // Check if user has no dashboard layout or invalid format

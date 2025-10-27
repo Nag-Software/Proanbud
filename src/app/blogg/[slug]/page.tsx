@@ -219,21 +219,21 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
           <div className="flex justify-between items-center h-20">
             <Logo size="lg" />
             <nav className="hidden md:flex items-center gap-8">
-              <a href="/#features" className="text-gray-700 hover:text-[#00b85b] transition-colors font-medium">
+              <Link href="/#features" className="text-gray-700 hover:text-[#00b85b] transition-colors font-medium">
                 Funksjoner
-              </a>
-              <a href="/#showcase" className="text-gray-700 hover:text-[#00b85b] transition-colors font-medium">
+              </Link>
+              <Link href="/#showcase" className="text-gray-700 hover:text-[#00b85b] transition-colors font-medium">
                 Plattform
-              </a>
-              <a href="/priser" className='text-gray-700 hover:text-[#00b85b] transition-colors font-medium'>
+              </Link>
+              <Link href="/priser" className='text-gray-700 hover:text-[#00b85b] transition-colors font-medium'>
                 Priser
-              </a>
-              <a href="/#faq" className="text-gray-700 hover:text-[#00b85b] transition-colors font-medium">
+              </Link>
+              <Link href="/#faq" className="text-gray-700 hover:text-[#00b85b] transition-colors font-medium">
                 FAQ
-              </a>
-              <a href="/blogg" className="text-[#00b85b] font-semibold">
+              </Link>
+              <Link href="/blogg" className="text-[#00b85b] font-semibold">
                 Blogg
-              </a>
+              </Link>
             </nav>
             <div className="hidden md:flex items-center gap-4">
               <Link href="/login" className="text-gray-700 hover:text-[#00b85b] transition-colors font-medium">

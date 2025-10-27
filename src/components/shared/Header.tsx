@@ -173,7 +173,7 @@ export default function Header({ currentPage }: HeaderProps) {
                   <ul className="grid gap-2 p-3 md:w-[400px] lg:w-[500px] lg:grid-cols-[.75fr_1fr]">
                     <li className="row-span-3">
                       <NavigationMenuLink asChild>
-                        <a
+                        <Link
                           className="hover:from-muted/50 hover:to-muted flex h-full w-full flex-col justify-end rounded-md bg-linear-to-b p-4 no-underline outline-hidden transition-all duration-100 select-none active:shadow-md md:p-6"
                           href="/"
                         >
@@ -183,7 +183,7 @@ export default function Header({ currentPage }: HeaderProps) {
                           <p className="text-muted-foreground text-sm leading-tight">
                             {NAV_ITEMS[0].description}
                           </p>
-                        </a>
+                        </Link>
                       </NavigationMenuLink>
                     </li>
                     {NAV_ITEMS[0].children?.map((item: any) => (

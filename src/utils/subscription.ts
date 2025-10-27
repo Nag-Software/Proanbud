@@ -33,7 +33,7 @@ export async function upsertSubscription(
 
     // Filter out undefined values from data
     const filteredData = Object.fromEntries(
-      Object.entries(data).filter(([_, value]) => value !== undefined)
+      Object.entries(data).filter(([, value]) => value !== undefined)
     );
 
     const updatedData: any = {
