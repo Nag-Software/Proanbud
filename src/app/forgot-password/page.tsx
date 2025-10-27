@@ -23,7 +23,7 @@ export default function ForgotPasswordPage() {
     if (resetError) {
       setError(getAuthErrorMessage(resetError));
     } else {
-      setMessage('Password reset email sent! Check your inbox for further instructions.');
+      setMessage('Epost med tilbakestilling av passord sendt! Sjekk innboksen din for videre instruksjoner.');
     }
 
     setLoading(false);
@@ -33,15 +33,15 @@ export default function ForgotPasswordPage() {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Reset Password</h1>
-          <p className="text-muted-text">Enter your email to receive a password reset link</p>
+          <h1 className="text-3xl font-bold text-foreground mb-2">Tilbakestill passord</h1>
+          <p className="text-muted-text max-w-xl">Skriv inn e-posten din for å motta en lenke for tilbakestilling av passord</p>
         </div>
 
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 justify-center">
               <Mail className="w-5 h-5 text-primary" />
-              Reset Password
+              Tilbakestill passord
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -60,7 +60,7 @@ export default function ForgotPasswordPage() {
 
               <div className="space-y-2">
                 <label htmlFor="email" className="block text-sm font-medium text-foreground">
-                  Email
+                  E-post
                 </label>
                 <div className="relative">
                   <input
@@ -69,7 +69,7 @@ export default function ForgotPasswordPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-colors"
-                    placeholder="Enter your email"
+                    placeholder="Skriv inn e-posten din"
                     required
                   />
                   <Mail className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
@@ -81,7 +81,7 @@ export default function ForgotPasswordPage() {
                 disabled={loading}
                 className="w-full bg-primary text-primary-foreground py-2 px-4 rounded-md hover:bg-primary/90 focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
               >
-                {loading ? 'Sending...' : 'Send Reset Link'}
+                {loading ? 'Sending...' : 'Send gjenopprettingslenke'}
               </button>
             </form>
 
@@ -91,7 +91,7 @@ export default function ForgotPasswordPage() {
                 className="inline-flex items-center gap-2 text-primary hover:text-primary/80 font-medium transition-colors"
               >
                 <ArrowLeft className="w-4 h-4" />
-                Back to Sign In
+                Tilbake til innlogging
               </Link>
             </div>
           </CardContent>

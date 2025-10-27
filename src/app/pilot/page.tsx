@@ -32,10 +32,10 @@ export default function PilotPage() {
       <section className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-4xl font-bold text-gray-900 mb-">
+            <h2 className="text-3xl md:text-3xl font-bold text-gray-900 mb-2">
               Hvordan pilotprogrammet fungerer
             </h2>
-            <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
+            <p className="text-md text-muted-foreground max-w-3xl mx-auto">
               En enkel prosess fra første kontakt til full implementasjon
             </p>
           </div>

@@ -242,16 +242,16 @@ export default function Header({ currentPage }: HeaderProps) {
               </NavigationMenuItem>
             </NavigationMenuList>
           </NavigationMenu>
-          <div className="hidden md:flex items-center gap-4">
+          <div className="hidden md:flex items-center gap-2">
             <Link
               href="/login"
-              className="text-nowrap text-gray-700 text-sm hover:text-[#00b85b] transition-colors font-medium"
+              className="text-nowrap text-gray-700 text-sm hover:bg-muted px-4 py-2.5 rounded-lg transition-colors font-medium"
             >
               Logg inn
             </Link>
             <Link
               href="/signup"
-              className="text-nowrap bg-secondary-foreground text-sm text-gray-800 px-4 py-[7px] rounded-lg transition-all font-semibold border-1 border-secondary/30 shadow-sm shadow-secondary/20 hover:shadow-lg hover:shadow-secondary/30"
+              className="text-nowrap bg-primary text-primary-foreground text-sm px-4 py-[7px] rounded-lg transition-all font-semibold border-1 border-primary/30 shadow-sm shadow-primary/20 hover:shadow-md hover:shadow-primary/30"
             >
               Kom igang
             </Link>
@@ -322,7 +322,7 @@ export default function Header({ currentPage }: HeaderProps) {
                     <Link
                       href="/signup"
                       onClick={() => setIsMobileMenuOpen(false)}
-                      className="block w-full text-center bg-[#82ffb2] text-gray-900 px-6 py-3 rounded-xl transition-all font-semibold shadow-lg shadow-[#82ffb2]/20 hover:shadow-xl hover:shadow-[#82ffb2]/30"
+                      className="block w-full text-center bg-primary text-primary-foreground px-6 py-3 rounded-xl transition-all font-semibold shadow-lg shadow-primary/20 hover:shadow-sm hover:shadow-primary/30"
                     >
                       Kom igang
                     </Link>
