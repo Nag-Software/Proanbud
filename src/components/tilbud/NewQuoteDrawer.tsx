@@ -1763,19 +1763,27 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Velg kunde
             </label>
-            <select
-              value={selectedCustomerId}
-              onChange={(e) => setSelectedCustomerId(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-              required
-            >
-              <option value="">Velg en kunde...</option>
-              {customers.map((customer) => (
-                <option key={customer.id} value={customer.id}>
-                  {customer.navn}
-                </option>
-              ))}
-            </select>
+            {customers.length === 0 ? (
+              <div className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50">
+                <p className="text-sm text-gray-600">
+                  Ingen kunder registrert. Gå til <a href="/kunder" className="text-blue-600 hover:underline">Kunder</a> for å opprette kunder først.
+                </p>
+              </div>
+            ) : (
+              <select
+                value={selectedCustomerId}
+                onChange={(e) => setSelectedCustomerId(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                required
+              >
+                <option value="">Velg en kunde...</option>
+                {customers.map((customer) => (
+                  <option key={customer.id} value={customer.id}>
+                    {customer.navn}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
           <div>
