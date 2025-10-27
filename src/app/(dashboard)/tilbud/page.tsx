@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { PageHeader } from '@/components/shared/PageHeader';
-import { DataTable } from '@/components/shared/DataTable';
+import { DataTable } from '@/components/ui/data-table';
 import { NewQuoteDrawer, QuoteDetailsDrawer } from '@/components/tilbud';
 import { CustomerDetailsDrawer, NewCustomerDrawer } from '@/components/kunder';
 import { getTilbud, updateTilbud } from '@/lib/services/tilbudService';
@@ -10,39 +10,23 @@ import { getCustomers } from '@/lib/services/customerService';
 import { ref, onValue, off } from 'firebase/database';
 import { db } from '@/lib/firebase';
 import { auth } from '@/lib/firebase';
-import { Tilbud, TilbudStatus, ColumnDef, Kunde } from '@/lib/types';
+import { Tilbud, TilbudStatus, Kunde } from '@/lib/types';
 import { PlusCircle } from 'lucide-react';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import {useRouter} from 'next/navigation';
-
-const StatusPill: React.FC<{ status: TilbudStatus }> = ({ status }) => {
-  const statusStyles = {
-    draft: 'bg-gray-100 text-gray-800',
-    vunnet: 'bg-green-100 text-green-800',
-    venter: 'bg-yellow-100 text-yellow-800',
-    tapt: 'bg-red-100 text-red-800',
-  };
-
-  const statusLabels = {
-    draft: 'Utkast',
-    vunnet: 'Vunnet',
-    venter: 'Venter',
-    tapt: 'Tapt',
-  };
-
-  return (
-    <span
-      className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${statusStyles[status]}`}
-    >
-      {statusLabels[status]}
-    </span>
-  );
-};
+import { useSubscriptionLimits } from '@/hooks/useSubscriptionLimits';
+import { useSubscriptionAccess } from '@/hooks/useSubscriptionAccess';
+import { useSubscription } from '@/contexts/SubscriptionContextNew';
+import { AccessRestrictedBanner } from '@/components/subscription/AccessRestrictedBanner';
+import { getQuoteColumns } from '@/lib/table-columns/quotes-columns';
 
 export default function TilbudPage() {
 
   const router = useRouter();
+  const { checkQuoteLimit, showUpgradeDialog, loading: limitsLoading } = useSubscriptionLimits();
+  const { hasAccess, hasTrialAccess, isLimited } = useSubscriptionAccess();
+  const { subscription, refreshUsage } = useSubscription();
 
   const [isNewQuoteOpen, setIsNewQuoteOpen] = useState(false);
   const [isQuoteDetailsOpen, setIsQuoteDetailsOpen] = useState(false);
@@ -58,6 +42,23 @@ export default function TilbudPage() {
   const [editingQuote, setEditingQuote] = useState<Tilbud | null>(null);
 
   function check_if_new_quote_ready() {
+    // Check if user has access first (but allow trial users)
+    if (!hasTrialAccess) {
+      alert('Du har ikke lenger tilgang til å opprette nye tilbud. Oppgrader abonnementet for å fortsette.');
+      return;
+    }
+
+    // Check subscription limits
+    const limitCheck = checkQuoteLimit();
+    if (!limitCheck.canProceed) {
+      if (limitCheck.upgradeRequired) {
+        showUpgradeDialog(limitCheck.message!);
+      } else {
+        alert(limitCheck.message);
+      }
+      return;
+    }
+
     console.log(customers.length)
     if(customers.length > 0) {
       setIsNewQuoteOpen(true);
@@ -176,8 +177,10 @@ export default function TilbudPage() {
     };
   }, []);
 
-  const handleTilbudCreated = () => {
+  const handleTilbudCreated = async () => {
     // Data will automatically update via real-time listeners
+    // Refresh usage data to update subscription limits
+    await refreshUsage();
   };
 
   const handleQuoteClick = (quote: Tilbud) => {
@@ -277,111 +280,6 @@ export default function TilbudPage() {
     }
   };
 
-  const columns: ColumnDef<Tilbud>[] = [
-    {
-      accessorKey: 'kundenavn',
-      header: 'Kunde',
-    },
-    {
-      accessorKey: 'prosjekt',
-      header: 'Prosjekt',
-    },
-    {
-      accessorKey: 'belop',
-      header: 'Beløp',
-      cell: ({ row }) => `${(row.original.belop as number).toLocaleString('nb-NO')} kr`,
-    },
-    {
-      accessorKey: 'profit',
-      header: 'Profitt',
-      cell: ({ row }) => {
-        const r = row.original as Tilbud;
-        const totalProfit = (r.prisgrunnlag || []).reduce((sum, c) => {
-          const amount = c.amount || 0;
-          const markupPercent = c.priceMarkup || 0;
-          // Calculate base cost: amount / (1 + markup%)
-          const baseCost = markupPercent > 0 ? amount / (1 + markupPercent / 100) : amount;
-          // Profit = final amount - base cost
-          const profit = amount - baseCost;
-          return sum + profit;
-        }, 0);
-        const customerPrice = r.belop || 0;
-        const profitMargin = customerPrice > 0 ? (totalProfit / customerPrice) * 100 : 0;
-
-        return (
-          <span className={`font-medium ${totalProfit >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-            {totalProfit.toFixed(1).toLocaleString('nb-NO')} kr {customerPrice > 0 && (
-              <span className="text-xs text-gray-500">({profitMargin.toFixed(1)}%)</span>
-            )}
-          </span>
-        );
-      },
-    },
-    {
-      accessorKey: 'status',
-      header: 'Status',
-      cell: ({ row }) => <StatusPill status={row.original.status as TilbudStatus} />,
-    },
-    {
-      accessorKey: 'dato',
-      header: 'Dato',
-    },
-    {
-      accessorKey: 'actions',
-      header: 'Handlinger',
-      cell: ({ row }) => {
-        const isUpdating = updatingQuotes.has(row.original.id);
-        const status = row.original.status;
-        
-        return (
-          <div className="flex gap-2">
-            {status === 'draft' ? (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleSendQuote(row.original);
-                }}
-                disabled={isUpdating}
-                className="text-blue-600 border-blue-300 hover:bg-blue-50 disabled:opacity-50"
-              >
-                {isUpdating ? '...' : 'Send'}
-              </Button>
-            ) : (
-              <>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleMarkAsWon(row.original);
-                  }}
-                  disabled={status === 'vunnet' || isUpdating}
-                  className="text-green-600 border-green-300 hover:bg-green-50 disabled:opacity-50"
-                >
-                  {isUpdating && status !== 'vunnet' ? '...' : 'Vunnet'}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleMarkAsLost(row.original);
-                  }}
-                  disabled={status === 'tapt' || isUpdating}
-                  className="text-red-600 border-red-300 hover:bg-red-50 disabled:opacity-50"
-                >
-                  {isUpdating && status !== 'tapt' ? '...' : 'Tapt'}
-                </Button>
-              </>
-            )}
-          </div>
-        );
-      },
-    },
-  ];
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -403,22 +301,33 @@ export default function TilbudPage() {
 
   return (
     <div>
-      <PageHeader title="Alle Tilbud">
-        <button 
-          onClick={() => check_if_new_quote_ready()}
-          className="flex items-center cursor-pointer gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-        >
-          <PlusCircle className="h-5 w-5" />
-          Nytt Tilbud
-        </button>
-      </PageHeader>
+      <PageHeader title="Alle Tilbud" />
+
+      <AccessRestrictedBanner 
+        title="Begrenset tilgang til tilbudsfunksjon"
+        message="Du kan se eksisterende tilbud, men kan ikke opprette nye uten aktiv abonnement."
+      />
       
       <DataTable 
-        columns={columns} 
+        columns={getQuoteColumns(handleSendQuote, handleMarkAsWon, handleMarkAsLost, updatingQuotes)} 
         data={tilbuds} 
-        enableFiltering 
+        searchKey="kundenavn"
         searchPlaceholder="Søk tilbud..."
         onRowClick={handleQuoteClick}
+        rightContent={
+          <button 
+            onClick={() => check_if_new_quote_ready()}
+            disabled={(isLimited && !hasTrialAccess) || !checkQuoteLimit().canProceed || limitsLoading}
+            className={`flex items-center cursor-pointer gap-2 px-4 py-2 rounded-lg transition-colors ${
+              (isLimited && !hasTrialAccess) || !checkQuoteLimit().canProceed || limitsLoading
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+                : 'bg-primary text-primary-foreground hover:bg-primary/90'
+            }`}
+          >
+            <PlusCircle className="h-5 w-5" />
+            Nytt Tilbud
+          </button>
+        }
       />
       
       <NewQuoteDrawer 

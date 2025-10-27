@@ -42,6 +42,8 @@ import { getBusinessContextForAI, getBusinessSettings } from '@/lib/services/bus
 import { getProducts, getCategories, getSubcategories } from '@/lib/services/catalogService';
 import { Kunde, PriceComponent, AIPriceSuggestion, BusinessSettings, Product, Category, Subcategory, Tilbud } from '@/lib/types';
 import { useBreakpoint } from '@/hooks/useResponsive';
+import { ref } from 'firebase/database';
+import { db } from '@/lib/firebase';
 
 import {
   Select,
@@ -52,6 +54,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { ProductDetailsDrawer } from '../katalog';
+import { AlertDialog } from '../ui/alert-dialog';
 
 async function downloadTemplate(templateName: string): Promise<string> {
   let url = "";
@@ -147,6 +151,8 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
   const [catalogViewMode, setCatalogViewMode] = useState<'grid' | 'list'>('list');
   const [catalogSortBy, setCatalogSortBy] = useState<'name' | 'price'>('name');
   const [selectedProducts, setSelectedProducts] = useState<Map<string, { product: Product; quantity: number }>>(new Map());
+  const [catalogLoaded, setCatalogLoaded] = useState(false);
+  const [unitPriceInputs, setUnitPriceInputs] = useState<Map<string, string>>(new Map());
   
   // Preview functions
   const handlePreview = async () => {
@@ -237,12 +243,15 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
     return html;
   };
 
-  // Load customers when drawer opens
+  // Load customers and catalog data when drawer opens
   useEffect(() => {
     if (open) {
       loadCustomers();
+      if (!catalogLoaded) {
+        loadCatalogData();
+      }
     }
-  }, [open]);
+  }, [open, catalogLoaded]);
 
   // Update component prices when markup changes
   useEffect(() => {
@@ -319,6 +328,7 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
       setCatalogProducts(products);
       setCatalogCategories(categories);
       setCatalogSubcategories(subcategories);
+      setCatalogLoaded(true);
     } catch (error) {
       console.error('Error loading catalog:', error);
     } finally {
@@ -327,7 +337,6 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
   };
 
   const openCatalogDialog = async () => {
-    await loadCatalogData();
     setSelectedProducts(new Map());
     setIsCatalogDialogOpen(true);
   };
@@ -410,7 +419,54 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
     setIsSubmitting(false);
     setShowAddCategory(false);
     setNewCategoryName('');
+    setUnitPriceInputs(new Map());
     onOpenChange(false);
+  };
+
+  const generateNewCatalog = () => {
+    let newCatalog: any = {};
+
+    catalogCategories.forEach(cat => {
+      newCatalog[cat.id] = {
+        "category-name": cat.navn,
+        "category-description": cat.beskrivelse || '',
+        "subcategories": []
+      };
+    });
+
+    catalogSubcategories.forEach(subcat => {
+      if (newCatalog[subcat.kategoriId]) {
+        newCatalog[subcat.kategoriId].subcategories.push({
+          "subcategory-name": subcat.navn,
+          "subcategory-description": subcat.beskrivelse || '',
+          "products": []
+        });
+      }
+    });
+
+    // Add products to their respective subcategories
+    catalogProducts.forEach(product => {
+      const category = newCatalog[product.kategoriId];
+      if (category) {
+        const subcategory = category.subcategories.find((sub: any) => {
+          // Find the subcategory by matching the subcategory ID
+          const matchingSubcat = catalogSubcategories.find(s => s.id === product.underkategoriId);
+          return matchingSubcat && matchingSubcat.navn === sub["subcategory-name"];
+        });
+        if (subcategory) {
+          subcategory.products.push({
+            "produktnavn": product.produktnavn,
+            "produsent": product.produsent,
+            "enhet": product.enhet,
+            "enhetspris": product.enhetspris,
+            "påslag": product.påslag,
+            "beskrivelse": product.beskrivelse || ''
+          });
+        }
+      }
+    });
+
+    return newCatalog;
   };
 
   const handleNext = async () => {
@@ -425,8 +481,11 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
           body: JSON.stringify({
             prompt: quoteData.jobDescription,
             businessInfo,
+            catalog: generateNewCatalog()
           }),
         });
+
+        console.log(catalogProducts);
 
         if (!response.ok) throw new Error('AI-tjeneste feilet: ' + response.statusText);
 
@@ -473,8 +532,8 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
             const componentWithCorrectMapping = {
               ...numericComp,
               quantity: numericComp.amount, // API amount is actually the quantity
-              priceMarkup: priceMarkup, // Override with user settings
-              materialMarkup: materialMarkup, // Override with user settings
+              priceMarkup: numericComp.priceMarkup, // Override with user settings
+              materialMarkup: numericComp.materialMarkup, // Override with user settings
               isEditable: true, // Ensure all components are always editable
             };
 
@@ -566,6 +625,7 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
       setProjectName('');
       setQuoteMessage('');
       setSelectedTemplate('modern');
+      setUnitPriceInputs(new Map());
       onOpenChange(false);
       
       if (onTilbudCreated) {
@@ -574,6 +634,7 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
     } catch (error) {
       console.error('Error saving draft:', error);
       alert('Kunne ikke lagre utkast. Prøv igjen.');
+
     } finally {
       setIsSubmitting(false);
     }
@@ -1040,6 +1101,12 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
         finalPrice: newTotal,
       };
     });
+    // Clear the input value for this component so it shows the updated component value
+    setUnitPriceInputs(prev => {
+      const newMap = new Map(prev);
+      newMap.delete(id);
+      return newMap;
+    });
   };
 
   const renderStep2 = () => {
@@ -1329,7 +1396,7 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
                             {component.isEditable ? (
                               <input
                                 type="text"
-                                value={component.quantity || 1}
+                                value={component.quantity ?? 1}
                                 onChange={(e) => {
                                   const quantity = Number(e.target.value);
                                   updateComponent(component.id, {
@@ -1360,20 +1427,25 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
                           <td className="py-2 px-2 text-right">
                             {component.isEditable ? (
                               <input
-                                type="number"
-                                value={component.unitPrice || 0}
+                                type="text"
+                                step="10"
+                                value={unitPriceInputs.get(component.id) ?? (component.unitPrice || 0)}
                                 onChange={(e) => {
-                                  const unitPrice = Number(e.target.value);
-                                  updateComponent(component.id, {
-                                    unitPrice,
-                                  });
+                                  const value = e.target.value.replace(/,/g, ''); // Remove commas
+                                  // Update the input display value
+                                  setUnitPriceInputs(prev => new Map(prev).set(component.id, value));
+                                  
+                                  // Only update component if it's a valid number (not ending with just a dot)
+                                  if (value === '' || (!value.endsWith('.'))) {
+                                    const unitPrice = parseFloat(value) || 0;
+                                    updateComponent(component.id, { unitPrice });
+                                  }
                                 }}
                                 className="w-20 px-2 py-1 text-sm border rounded text-right focus:ring-1 focus:ring-primary"
                                 min="0"
-                                step="10"
                               />
                             ) : (
-                              <span className="text-sm">kr {component.unitPrice?.toLocaleString('nb-NO')}</span>
+                              <span className="text-sm">kr {component.unitPrice ? (component.unitPrice % 1 === 0 ? Math.round(component.unitPrice).toLocaleString('nb-NO') : component.unitPrice.toLocaleString('nb-NO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })) : '0'}</span>
                             )}
                           </td>
                           <td className="py-2 px-2 text-right">
@@ -1836,7 +1908,7 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="max-h-[95vh]">
+      <DrawerContent className="max-h-[95vh] z-[250]">
         <DrawerHeader className='max-h-[130px]'>
           <div className="flex items-center justify-between">
             <div>
@@ -1920,7 +1992,7 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
       {/* Catalog Dialog - Enhanced & Responsive */}
       {isMobile ? (
         <Drawer open={isCatalogDialogOpen} onOpenChange={setIsCatalogDialogOpen}>
-          <DrawerContent className="max-h-[95vh] flex flex-col">
+          <DrawerContent className="max-h-[95vh] flex flex-col z-[250]">
             <DrawerHeader className="border-b">
               <div className="flex items-center justify-between">
                 <div>

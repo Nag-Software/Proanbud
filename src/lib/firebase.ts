@@ -2,6 +2,7 @@ import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getDatabase, connectDatabaseEmulator } from 'firebase/database';
 import { getStorage } from 'firebase/storage';
+import { getFirestore } from 'firebase/firestore';
 
 // Firebase configuration
 const firebaseConfig = {
@@ -35,6 +36,9 @@ export const auth = getAuth(app);
 
 // Initialize Realtime Database and get a reference to the service
 export const db = getDatabase(app);
+
+// Initialize Firestore and get a reference to the service
+export const firestore = getFirestore(app);
 
 // Initialize Firebase Storage and get a reference to the service
 export const storage = getStorage(app);

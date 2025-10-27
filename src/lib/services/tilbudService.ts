@@ -224,6 +224,41 @@ export const createTilbud = async (tilbudData: TilbudFormData): Promise<string> 
     // Get current user ID
     const userId = getCurrentUserId();
     
+    // Check subscription limits before creating quote
+    try {
+      const userRef = ref(db, `users/${userId}`);
+      const userSnapshot = await get(userRef);
+      
+      if (userSnapshot.exists()) {
+        const userData = userSnapshot.val();
+        const subscription = userData.subscription;
+        
+        // Count existing quotes
+        const quotesData = userData.tilbud || {};
+        const quotesCount = Object.keys(quotesData).length;
+        
+        // Only enforce limits for non-pro plans
+        if (subscription?.plan !== 'pro') {
+          const plan = subscription?.plan || 'free';
+          const { SUBSCRIPTION_PLANS } = await import('@/lib/stripe');
+          const planDetails = SUBSCRIPTION_PLANS.find(p => p.id === plan);
+          const quotesLimit = planDetails?.limits.quotes || 5;
+          
+          if (quotesLimit !== -1 && quotesCount >= quotesLimit) {
+            const isTrialing = subscription?.plan === 'free' && subscription?.status === 'active' && !!subscription?.trialEnd;
+            const planName = isTrialing ? 'prøveperiode' : plan === 'free' ? 'gratis prøveperiode' : plan + ' plan';
+            throw new Error(`Du har nådd grensen på ${quotesLimit} tilbud for din ${planName}. Oppgrader for å opprette flere tilbud.`);
+          }
+        }
+      }
+    } catch (limitError) {
+      console.warn('Could not verify subscription limits:', limitError);
+      // Only throw if it's a limit error, not a technical error
+      if (limitError instanceof Error && limitError.message.includes('grensen på')) {
+        throw limitError;
+      }
+    }
+    
     const now = serverTimestamp();
     const viewToken = generateViewToken(); // Generate unique token for customer access
     
@@ -282,13 +317,13 @@ export const createTilbud = async (tilbudData: TilbudFormData): Promise<string> 
       console.warn('Could not update user analytics:', error);
     }
 
-    // Create inbox message for quote sent
+    // Create inbox message for quote created
     try {
       const customerId = await findCustomerIdByName(tilbudData.kundenavn);
       await createInboxMessage({
         from: tilbudData.kundenavn,
-        subject: `Tilbud sendt: ${tilbudData.prosjekt}`,
-        message: `Et nytt tilbud på ${tilbudData.belop.toLocaleString('nb-NO')} kr for prosjektet "${tilbudData.prosjekt}" har blitt sendt til ${tilbudData.kundenavn}.`,
+        subject: `Tilbud opprettet: ${tilbudData.prosjekt}`,
+        message: `Et nytt tilbud på ${tilbudData.belop.toLocaleString('nb-NO')} kr for prosjektet "${tilbudData.prosjekt}" har blitt opprettet for ${tilbudData.kundenavn}.`,
         timestamp: new Date().toISOString(),
         isRead: false,
         quoteId: newTilbudRef.key!,
@@ -296,9 +331,17 @@ export const createTilbud = async (tilbudData: TilbudFormData): Promise<string> 
         type: 'quote_sent',
         customerName: tilbudData.kundenavn,
         quoteTitle: tilbudData.prosjekt,
+        folder: 'tilbud',
       });
     } catch (error) {
       console.warn('Could not create inbox message:', error);
+    }
+
+    const tilbudCountRef = ref(db, `users/${userId}/tilbudCount`);
+    const tilbudSnapshot = await get(tilbudCountRef);
+    if(tilbudSnapshot.exists()) {
+      const currentCount = tilbudSnapshot.val() as number;
+      await set(tilbudCountRef, currentCount + 1);
     }
 
     return newTilbudRef.key!;

@@ -84,7 +84,7 @@ export const NotificationButton = () => {
                 isFlagged: value.isFlagged || false,
                 folder: value.folder || 'innboks',
               }))
-              .filter(msg => !msg.isRead && msg.folder === 'innboks')
+              .filter(msg => !msg.isRead && (msg.folder === 'innboks' || msg.folder === 'tilbud'))
               .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
               .slice(0, 5); // Show only latest 5 unread messages
 
@@ -160,9 +160,9 @@ export const NotificationButton = () => {
       </button>
 
       {isOpen && (
-        <>
+        <div className="!z-99999">
           {/* Mobile: Full screen overlay */}
-          <div className="lg:hidden fixed inset-0 bg-black/20 backdrop-blur-sm z-40" onClick={() => setIsOpen(false)} />
+          <div className="lg:hidden fixed inset-0 bg-black/20 backdrop-blur-sm" onClick={() => setIsOpen(false)} />
           
           {/* Notification dropdown */}
           <div className="fixed lg:absolute left-2 right-2 lg:left-0 lg:right-auto top-16 lg:top-auto mt-0 lg:mt-2 w-auto lg:w-80 max-w-md lg:max-w-none bg-white rounded-lg shadow-lg border border-gray-200 z-50">
@@ -231,7 +231,7 @@ export const NotificationButton = () => {
             </div>
           )}
           </div>
-        </>
+        </div>
       )}
     </div>
   );

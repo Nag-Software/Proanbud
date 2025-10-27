@@ -1,14 +1,21 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { PageHeader } from '@/components/shared/PageHeader';
-import { Card } from '@/components/shared/Card';
-import { InboxMessage, Kunde, Tilbud, ConversationEntry } from '@/lib/types';
-import { Mail, MailOpen, Clock, User, Send, Eye, MessageSquare, CheckCircle, XCircle, FileText, Trash2, Flag, FlagOff, Building2, AlertCircle } from 'lucide-react';
-import { CustomerDetailsDrawer } from '@/components/kunder/CustomerDetailsDrawer';
-import { QuoteDetailsDrawer } from '@/components/tilbud/QuoteDetailsDrawer';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Dialog,
   DialogContent,
@@ -17,10 +24,36 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { getInboxMessages, markMessageAsRead, deleteInboxMessage, flagMessage, unflagMessage, moveMessageToFolder, getFolders } from '@/lib/services/inboxService';
+import { InboxMessage, Kunde, Tilbud, ConversationEntry, Folder } from '@/lib/types';
+import {
+  Mail,
+  Clock,
+  User,
+  Send,
+  Eye,
+  MessageSquare,
+  CheckCircle,
+  XCircle,
+  FileText,
+  Trash2,
+  Flag,
+  FlagOff,
+  Building2,
+  AlertCircle,
+  Inbox,
+  Archive,
+  Plus,
+  Reply,
+  Search,
+  Filter,
+  Folder as FolderIcon
+} from 'lucide-react';
+import { CustomerDetailsDrawer } from '@/components/kunder/CustomerDetailsDrawer';
+import { QuoteDetailsDrawer } from '@/components/tilbud/QuoteDetailsDrawer';
+import { markMessageAsRead, deleteInboxMessage, flagMessage, unflagMessage, moveMessageToFolder, getFolders, createFolder, deleteFolder } from '@/lib/services/inboxService';
 import { getCustomer } from '@/lib/services/customerService';
 import { getTilbudById } from '@/lib/services/tilbudService';
-import { ref, onValue, off, push, set } from 'firebase/database';
+import { ref, onValue, push, set } from 'firebase/database';
 import { db } from '@/lib/firebase';
 import { auth } from '@/lib/firebase';
 
@@ -96,21 +129,21 @@ export default function InnboksPage() {
   const [replySubject, setReplySubject] = useState('');
   const [replyMessage, setReplyMessage] = useState('');
   const [isSendingReply, setIsSendingReply] = useState(false);
-  const [folders, setFolders] = useState<string[]>(['innboks']);
+  const [folders, setFolders] = useState<Folder[]>([]);
   const [selectedFolder, setSelectedFolder] = useState('innboks');
   const [isCreatingMessage, setIsCreatingMessage] = useState(false);
   const [newMessageSubject, setNewMessageSubject] = useState('');
   const [newMessageTo, setNewMessageTo] = useState('');
   const [newMessageContent, setNewMessageContent] = useState('');
   const [isSendingNewMessage, setIsSendingNewMessage] = useState(false);
-
   const [error, setError] = useState<string | null>(null);
-
-  // Dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogTitle, setDialogTitle] = useState('');
   const [dialogMessage, setDialogMessage] = useState('');
   const [dialogType, setDialogType] = useState<'success' | 'error'>('success');
+  const [isCreatingFolder, setIsCreatingFolder] = useState(false);
+  const [newFolderName, setNewFolderName] = useState('');
+  const [newFolderParent, setNewFolderParent] = useState<string>('none');
 
   const showDialog = (title: string, message: string, type: 'success' | 'error' = 'success') => {
     setDialogTitle(title);
@@ -119,12 +152,140 @@ export default function InnboksPage() {
     setDialogOpen(true);
   };
 
+  const handleCreateFolder = async () => {
+    if (!newFolderName.trim()) return;
+    
+    try {
+      const parentId = newFolderParent && newFolderParent !== 'none' ? getFolderByName(folders, newFolderParent)?.id : undefined;
+      await createFolder(newFolderName.trim(), parentId);
+      setNewFolderName('');
+      setNewFolderParent('none');
+      setIsCreatingFolder(false);
+      showDialog('Mappe opprettet', `Mappen "${newFolderName}" ble opprettet.`);
+      // Reload folders
+      const loadedFolders = await getFolders();
+      setFolders(loadedFolders);
+    } catch (error) {
+      showDialog('Feil', 'Kunne ikke opprette mappe.', 'error');
+    }
+  };
+
+  const handleDeleteFolder = async (folderId: string, folderName: string) => {
+    if (!confirm(`Er du sikker på at du vil slette mappen "${folderName}"? Alle meldinger i denne mappen vil flyttes til innboks.`)) {
+      return;
+    }
+    
+    try {
+      await deleteFolder(folderId);
+      showDialog('Mappe slettet', `Mappen "${folderName}" ble slettet.`);
+      // Reload folders
+      const loadedFolders = await getFolders();
+      setFolders(loadedFolders);
+      // If deleted folder was selected, switch to inbox
+      if (selectedFolder === folderName) {
+        setSelectedFolder('innboks');
+      }
+    } catch (error) {
+      showDialog('Feil', 'Kunne ikke slette mappe.', 'error');
+    }
+  };
+
+  // Recursive folder rendering component
+  const FolderItem = ({ folder, depth = 0 }: { folder: Folder; depth?: number }) => {
+    const folderMessages = messages.filter(m => (m.folder || 'innboks') === folder.name);
+    const folderUnreadCount = folderMessages.filter(m => !m.isRead).length;
+    const [contextMenuOpen, setContextMenuOpen] = useState(false);
+    const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
+
+    return (
+      <div>
+        <div
+          className="flex items-center group"
+          onContextMenu={(e) => {
+            e.preventDefault();
+            setContextMenuPosition({ x: e.clientX, y: e.clientY });
+            setContextMenuOpen(true);
+          }}
+        >
+          <button
+            onClick={() => setSelectedFolder(folder.name)}
+            className={`flex-1 text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center justify-between ${
+              selectedFolder === folder.name
+                ? 'bg-primary text-primary-foreground'
+                : 'hover:bg-muted text-muted-foreground hover:text-foreground'
+            }`}
+            style={{ paddingLeft: `${12 + depth * 16}px` }}
+          >
+            <div className="flex items-center gap-2">
+              {folder.name === 'innboks' && <Inbox className="h-4 w-4" />}
+              {folder.name === 'tilbud' && <FolderIcon className="h-4 w-4" />}
+              {folder.name === 'sendt' && <Send className="h-4 w-4" />}
+              {folder.name === 'arkiv' && <Archive className="h-4 w-4" />}
+              {!['innboks', 'sendt', 'arkiv', 'tilbud'].includes(folder.name) && <FolderIcon className="h-4 w-4" />}
+              <span className="capitalize">{folder.name}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              {folderUnreadCount > 0 && (
+                <Badge variant="destructive" className="h-5 w-5 rounded-full p-0 text-xs">
+                  {folderUnreadCount}
+                </Badge>
+              )}
+              <span className="text-xs text-muted-foreground">
+                {folderMessages.length}
+              </span>
+            </div>
+          </button>
+        </div>
+        {contextMenuOpen && (
+          <>
+            <div
+              className="fixed inset-0 z-40"
+              onClick={() => setContextMenuOpen(false)}
+            />
+            <div
+              className="fixed z-50 w-48 bg-popover border border-border rounded-md shadow-md p-1"
+              style={{
+                left: contextMenuPosition.x,
+                top: contextMenuPosition.y,
+              }}
+            >
+              <button
+                className="flex items-center w-full px-2 py-1.5 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground"
+                onClick={() => {
+                  setSelectedFolder(folder.name);
+                  setContextMenuOpen(false);
+                }}
+              >
+                <Inbox className="h-4 w-4 mr-2" />
+                Åpne
+              </button>
+              {!['innboks', 'sendt', 'arkiv', 'tilbud'].includes(folder.name) && (
+                <button
+                  className="flex items-center w-full px-2 py-1.5 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground text-destructive"
+                  onClick={() => {
+                    handleDeleteFolder(folder.id, folder.name);
+                    setContextMenuOpen(false);
+                  }}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Slett
+                </button>
+              )}
+            </div>
+          </>
+        )}
+        {folder.children && folder.children.map(child => (
+          <FolderItem key={child.id} folder={child} depth={depth + 1} />
+        ))}
+      </div>
+    );
+  };
+
   useEffect(() => {
     let unsubscribe: () => void;
 
     const setupRealtimeListener = async () => {
       try {
-        // Wait for auth to be ready
         if (!auth.currentUser) {
           setError('Bruker ikke autentisert');
           setIsLoading(false);
@@ -137,7 +298,6 @@ export default function InnboksPage() {
         const userId = auth.currentUser.uid;
         const inboxRef = ref(db, `users/${userId}/inbox`);
 
-        // Set up real-time listener
         unsubscribe = onValue(inboxRef, (snapshot) => {
           try {
             if (!snapshot.exists()) {
@@ -150,22 +310,10 @@ export default function InnboksPage() {
             const messages: InboxMessage[] = [];
             const folderSet = new Set<string>(['innboks']);
 
-            // Convert to array and sort by timestamp (newest first)
             Object.entries(messageData)
               .sort(([, a], [, b]) => b.timestamp - a.timestamp)
               .forEach(([key, data]) => {
                 try {
-                  // Debug logging for conversation data
-                  if (data.type === 'quote_conversation') {
-                    console.log('📨 Loading quote_conversation:', key);
-                    console.log('📨 Conversation data:', data.conversation);
-                    console.log('📨 Has conversation?', !!data.conversation);
-                    if (data.conversation) {
-                      console.log('📨 Conversation keys:', Object.keys(data.conversation));
-                    }
-                  }
-
-                  // Convert Firebase data to InboxMessage format
                   const message: InboxMessage = {
                     id: key,
                     from: data.from,
@@ -196,7 +344,7 @@ export default function InnboksPage() {
               });
 
             setMessages(messages);
-            setFolders(Array.from(folderSet).sort());
+            // Folders will be loaded separately
             setIsLoading(false);
           } catch (error) {
             console.error('Error processing inbox messages:', error);
@@ -208,7 +356,6 @@ export default function InnboksPage() {
           setError('Kunne ikke lytte til meldinger');
           setIsLoading(false);
         });
-
       } catch (error) {
         console.error('Error setting up real-time listener:', error);
         setError(error instanceof Error ? error.message : 'Kunne ikke sette opp sanntidsoppdatering');
@@ -218,7 +365,6 @@ export default function InnboksPage() {
 
     setupRealtimeListener();
 
-    // Cleanup function
     return () => {
       if (unsubscribe) {
         unsubscribe();
@@ -226,13 +372,54 @@ export default function InnboksPage() {
     };
   }, []);
 
+  // Load folders
+  useEffect(() => {
+    const loadFolders = async () => {
+      try {
+        const loadedFolders = await getFolders();
+        setFolders(loadedFolders);
+      } catch (error) {
+        console.error('Error loading folders:', error);
+      }
+    };
+    
+    loadFolders();
+  }, []);
+
+  // Helper function to get all folder names flat
+  const getAllFolderNames = (folders: Folder[]): string[] => {
+    const names: string[] = [];
+    const traverse = (folderList: Folder[]) => {
+      folderList.forEach(folder => {
+        if (folder.name && folder.name.trim()) {
+          names.push(folder.name);
+        }
+        if (folder.children) {
+          traverse(folder.children);
+        }
+      });
+    };
+    traverse(folders);
+    return names;
+  };
+
+  // Helper function to get folder by name
+  const getFolderByName = (folders: Folder[], name: string): Folder | null => {
+    for (const folder of folders) {
+      if (folder.name === name) return folder;
+      if (folder.children) {
+        const found = getFolderByName(folder.children, name);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+
   const handleMessageClick = async (message: InboxMessage) => {
     setSelectedMessage(message);
-    // Mark as read if not already read
     if (!message.isRead) {
       try {
         await markMessageAsRead(message.id);
-        // Update local state
         setMessages(prev =>
           prev.map(m =>
             m.id === message.id ? { ...m, isRead: true } : m
@@ -240,7 +427,6 @@ export default function InnboksPage() {
         );
       } catch (error) {
         console.error('Error marking message as read:', error);
-        // Still show the message even if marking as read fails
       }
     }
   };
@@ -279,7 +465,6 @@ export default function InnboksPage() {
 
   const handleReply = () => {
     if (!selectedMessage) return;
-
     setIsReplying(true);
     setReplySubject(`Re: ${selectedMessage.subject}`);
     setReplyMessage(`\n\n--- Original melding ---\n${selectedMessage.message}`);
@@ -316,13 +501,11 @@ export default function InnboksPage() {
 
       const result = await response.json();
       console.log('✅ Reply sent successfully:', result);
-      
+
       showDialog('Suksess', 'Svar sendt til kunden!', 'success');
       setIsReplying(false);
       setReplySubject('');
       setReplyMessage('');
-      
-      // Messages will automatically update via real-time listener
     } catch (error: any) {
       console.error('❌ Error sending reply:', error);
       showDialog('Feil', error.message || 'Kunne ikke sende svar. Prøv igjen.', 'error');
@@ -338,11 +521,17 @@ export default function InnboksPage() {
   };
 
   const handleDeleteMessage = async (messageId: string) => {
+    // Prevent deletion of tilbud messages as they represent important business records
+    const message = messages.find(m => m.id === messageId);
+    if (message?.folder === 'tilbud') {
+      showDialog('Feil', 'Tilbud-meldinger kan ikke slettes da de representerer viktige forretningsoppføringer.', 'error');
+      return;
+    }
+
     if (!confirm('Er du sikker på at du vil slette denne meldingen?')) return;
 
     try {
       await deleteInboxMessage(messageId);
-      // Remove from local state
       setMessages(prev => prev.filter(m => m.id !== messageId));
       if (selectedMessage?.id === messageId) {
         setSelectedMessage(null);
@@ -360,7 +549,6 @@ export default function InnboksPage() {
       } else {
         await flagMessage(messageId);
       }
-      // Update local state
       setMessages(prev =>
         prev.map(m =>
           m.id === messageId ? { ...m, isFlagged: !isCurrentlyFlagged } : m
@@ -378,7 +566,6 @@ export default function InnboksPage() {
   const handleMoveToFolder = async (messageId: string, folder: string) => {
     try {
       await moveMessageToFolder(messageId, folder);
-      // Update local state
       setMessages(prev =>
         prev.map(m =>
           m.id === messageId ? { ...m, folder } : m
@@ -412,8 +599,7 @@ export default function InnboksPage() {
       const userId = auth.currentUser.uid;
 
       console.log('📧 Sending new message to:', newMessageTo);
-      
-      // Send email
+
       const response = await fetch('/api/send-email', {
         method: 'POST',
         headers: {
@@ -433,19 +619,18 @@ export default function InnboksPage() {
       const emailResult = await response.json();
       console.log('✅ Email sent:', emailResult);
 
-      // Create outgoing message log in "sendt" folder since it has no reference
       const outgoingInboxRef = ref(db, `users/${userId}/inbox`);
       const outgoingMessageRef = push(outgoingInboxRef);
-      
+
       const outgoingMessage = {
         from: 'Deg',
         subject: newMessageSubject,
         message: newMessageContent,
         timestamp: Date.now(),
-        isRead: true, // Mark as read since it's our own message
+        isRead: true,
         type: 'outgoing_reply',
         isFlagged: false,
-        folder: 'sendt', // New messages without reference go to "sendt"
+        folder: 'sendt',
         sentTo: newMessageTo,
         emailId: emailResult.messageId,
         opprettet: Date.now(),
@@ -475,11 +660,8 @@ export default function InnboksPage() {
     setNewMessageContent('');
   };
 
-  // Filter messages by folder, but exclude outgoing_reply without relatedMessageId
-  // (replies are shown in conversation log, not as separate messages)
   const filteredMessages = messages.filter(message => {
     const inCorrectFolder = (message.folder || 'innboks') === selectedFolder;
-    // Show outgoing_reply only if it has no relatedMessageId (standalone messages)
     const shouldShow = message.type !== 'outgoing_reply' || !message.relatedMessageId;
     return inCorrectFolder && shouldShow;
   });
@@ -509,513 +691,562 @@ export default function InnboksPage() {
 
   return (
     <>
-      <div className="h-full flex flex-col lg:flex-row">
-        {/* Message List */}
-        <div className="w-full lg:w-1/2 border-r border-gray-200 lg:flex flex-col">
-          {/* Folders Sidebar */}
-          <div className="border-b border-gray-200 p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-medium text-gray-700">Mapper</h3>
-              <Button onClick={handleCreateNewMessage} size="sm" className="flex items-center gap-2">
-                <Send className="h-4 w-4" />
-                Ny melding
-              </Button>
+      <div className="h-full flex flex-col">
+        {/* Header */}
+        <div className="border-b bg-white">
+          <div className="flex flex-col sm:flex-row h-auto justify-center sm:h-16 items-start sm:items-center px-6 py-4 sm:py-0 gap-4">
+            <div className="flex items-center gap-2">
+              <Inbox className="h-5 w-5" />
+              <h1 className="text-xl font-semibold">Innboks</h1>
             </div>
-            <div className="space-y-1">
-              {folders.map((folder) => {
-                const folderMessages = messages.filter(m => (m.folder || 'innboks') === folder);
-                const folderUnreadCount = folderMessages.filter(m => !m.isRead).length;
-                return (
-                  <button
-                    key={folder}
-                    onClick={() => setSelectedFolder(folder)}
-                    className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
-                      selectedFolder === folder
-                        ? 'bg-blue-100 text-blue-700'
-                        : 'hover:bg-gray-100 text-gray-700'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="capitalize">{folder}</span>
-                      <div className="flex items-center gap-2">
-                        {folderUnreadCount > 0 && (
-                          <span className="bg-blue-500 text-white text-xs px-2 py-0.5 rounded-full">
-                            {folderUnreadCount}
-                          </span>
-                        )}
-                        <span className="text-gray-500 text-xs">
-                          {folderMessages.length}
-                        </span>
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="p-4 border-b border-gray-200">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg lg:text-xl font-semibold capitalize">{selectedFolder}</h2>
-              {unreadCount > 0 && (
-                <span className="bg-primary text-primary-foreground text-xs px-2 py-1 rounded-full">
-                  {unreadCount} ulest
-                </span>
-              )}
-            </div>
-          </div>
-
-          <div className="flex-1 overflow-y-auto">
-            {filteredMessages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-gray-500 p-8">
-                <Mail className="h-12 w-12 mb-4" />
-                <p>Ingen meldinger enda</p>
-              </div>
-            ) : (
-              filteredMessages.map((message) => (
-                <div
-                  key={message.id}
-                  onClick={() => handleMessageClick(message)}
-                  className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${
-                    selectedMessage?.id === message.id ? 'bg-blue-50 border-l-4 border-l-blue-500 lg:border-l-4' : ''
-                  } ${!message.isRead ? 'bg-gray-50' : ''} ${message.type === 'outgoing_reply' ? 'bg-blue-50/30' : ''}`}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 mt-1 flex items-center gap-1">
-                      {getMessageTypeIcon(message.type)}
-                      {message.isFlagged && <Flag className="h-3 w-3 text-yellow-500" />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-1">
-                        <div className="flex items-center gap-2">
-                          {message.type === 'outgoing_reply' ? (
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium text-blue-900">
-                                Til: {message.customerName || message.from}
-                              </span>
-                              {message.sentTo && (
-                                <span className="text-xs text-gray-500">({message.sentTo})</span>
-                              )}
-                            </div>
-                          ) : (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (message.customerId) {
-                                  handleCustomerClick(message.customerId);
-                                }
-                              }}
-                              className={`text-sm font-medium truncate hover:text-blue-600 transition-colors ${
-                                !message.isRead ? 'text-gray-900' : 'text-gray-700'
-                              }`}
-                            >
-                              {message.customerName || message.from}
-                            </button>
-                          )}
-                          <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600">
-                            {getMessageTypeLabel(message.type)}
-                          </span>
-                        </div>
-                        <p className="text-xs text-gray-500 flex items-center gap-1 flex-shrink-0">
-                          <Clock className="h-3 w-3" />
-                          {formatDate(message.timestamp)}
-                        </p>
-                      </div>
-                      <p className={`text-sm truncate mb-1 ${
-                        !message.isRead ? 'font-medium text-gray-900' : 'text-gray-600'
-                      }`}>
-                        {message.subject}
-                      </p>
-                      <p className="text-xs text-gray-500 truncate hidden sm:block">
-                        {message.message}
-                      </p>
-                      {message.quoteTitle && (
-                        <div className="flex items-center gap-1 mt-1">
-                          <FileText className="h-3 w-3 text-gray-400" />
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (message.quoteId) {
-                                handleQuoteClick(message.quoteId);
-                              }
-                            }}
-                            className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
-                          >
-                            {message.quoteTitle}
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1 mt-2">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleToggleFlag(message.id, message.isFlagged || false);
-                        }}
-                        className={`p-1 rounded hover:bg-gray-200 transition-colors ${
-                          message.isFlagged ? 'text-yellow-500' : 'text-gray-400'
-                        }`}
-                        title={message.isFlagged ? 'Fjern flagg' : 'Flagg melding'}
-                      >
-                        {message.isFlagged ? <Flag className="h-4 w-4" /> : <FlagOff className="h-4 w-4" />}
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteMessage(message.id);
-                        }}
-                        className="p-1 rounded hover:bg-gray-200 text-gray-400 hover:text-red-500 transition-colors"
-                        title="Slett melding"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
+            <div className="flex-1 max-w-md">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Søk i meldinger..."
+                    className="pl-10 pr-4"
+                  />
                 </div>
-              ))
-            )}
+              </div>
+            <div className="flex flex-col sm:flex-row justify-end items-stretch sm:items-center gap-2 flex-1">
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm">
+                  <Filter className="h-4 w-4 mr-2" />
+                  Filter
+                </Button>
+                <Button onClick={handleCreateNewMessage} size="sm">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Ny melding
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Message Detail - Hidden on mobile when no message selected */}
-        <div className={`w-full lg:w-1/2 flex flex-col ${selectedMessage ? 'block' : 'hidden lg:block'}`}>
-          {selectedMessage ? (
-            <>
-              <div className="p-4 lg:p-6 border-b border-gray-200">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      {getMessageTypeIcon(selectedMessage.type)}
-                      {selectedMessage.isFlagged && <Flag className="h-4 w-4 text-yellow-500" />}
-                      <span className="text-sm px-2 py-1 rounded-full bg-gray-100 text-gray-600">
-                        {getMessageTypeLabel(selectedMessage.type)}
-                      </span>
-                    </div>
-                    <h3 className="text-lg font-semibold mb-2">{selectedMessage.subject}</h3>
-                    <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-                      <User className="h-4 w-4" />
-                      <button
-                        onClick={() => selectedMessage.customerId && handleCustomerClick(selectedMessage.customerId)}
-                        className="hover:text-blue-600 transition-colors"
-                      >
-                        {selectedMessage.customerName || selectedMessage.from}
-                      </button>
-                      <span>•</span>
-                      <span>{formatDateLong(selectedMessage.timestamp)}</span>
-                    </div>
-                    {selectedMessage.quoteTitle && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <FileText className="h-4 w-4 text-gray-400" />
-                        <button
-                          onClick={() => selectedMessage.quoteId && handleQuoteClick(selectedMessage.quoteId)}
-                          className="text-blue-600 hover:text-blue-800 hover:underline"
-                        >
-                          {selectedMessage.quoteTitle}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                  {/* Close button for mobile */}
-                  <button
-                    onClick={() => setSelectedMessage(null)}
-                    className="lg:hidden ml-4 p-2 hover:bg-gray-100 rounded-full"
-                  >
-                    ✕
-                  </button>
-                </div>
-                {!isReplying && (
-                  <div className="mt-4 flex items-center gap-2 flex-wrap">
-                    <Button onClick={handleReply} className="flex items-center gap-2">
-                      <Send className="h-4 w-4" />
-                      Svar
-                    </Button>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-gray-600">Mappe:</span>
-                      <Select
-                        value={selectedMessage.folder || 'innboks'}
-                        onValueChange={(value) => handleMoveToFolder(selectedMessage.id, value)}
-                      >
-                        <SelectTrigger className="w-32">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {folders.map((folder) => (
-                            <SelectItem key={folder} value={folder}>
-                              {folder}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <button
-                      onClick={() => handleToggleFlag(selectedMessage.id, selectedMessage.isFlagged || false)}
-                      className={`p-2 rounded hover:bg-gray-200 transition-colors ${
-                        selectedMessage.isFlagged ? 'text-yellow-500' : 'text-gray-400'
-                      }`}
-                      title={selectedMessage.isFlagged ? 'Fjern flagg' : 'Flagg melding'}
-                    >
-                      {selectedMessage.isFlagged ? <Flag className="h-4 w-4" /> : <FlagOff className="h-4 w-4" />}
-                    </button>
-                    <button
-                      onClick={() => handleDeleteMessage(selectedMessage.id)}
-                      className="p-2 rounded hover:bg-gray-200 text-gray-400 hover:text-red-500 transition-colors"
-                      title="Slett melding"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                )}
+        {/* Main Content */}
+        <div className="flex flex-col lg:flex-row overflow-hidden h-full">
+          {/* Sidebar - Folders */}
+          <div className="w-full lg:w-48 border-r lg:block">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-medium text-muted-foreground">Mapper</h3>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsCreatingFolder(true)}
+                  className="h-6 w-6 p-0"
+                >
+                  <Plus className="h-3 w-3" />
+                </Button>
               </div>
-              <div className="flex-1 p-4 lg:p-6 overflow-y-auto">
-                {isCreatingMessage ? (
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Til
-                      </label>
-                      <input
-                        type="email"
-                        value={newMessageTo}
-                        onChange={(e) => setNewMessageTo(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="mottaker@example.com"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Emne
-                      </label>
-                      <input
-                        type="text"
-                        value={newMessageSubject}
-                        onChange={(e) => setNewMessageSubject(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Melding
-                      </label>
-                      <textarea
-                        value={newMessageContent}
-                        onChange={(e) => setNewMessageContent(e.target.value)}
-                        rows={10}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Skriv din melding her..."
-                      />
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        onClick={handleSendNewMessage}
-                        disabled={isSendingNewMessage || !newMessageSubject.trim() || !newMessageTo.trim() || !newMessageContent.trim()}
-                        className="flex items-center gap-2"
-                      >
-                        {isSendingNewMessage ? (
-                          <>
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                            Sender...
-                          </>
-                        ) : (
-                          <>
-                            <Send className="h-4 w-4" />
-                            Send melding
-                          </>
-                        )}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={handleCancelNewMessage}
-                        disabled={isSendingNewMessage}
-                      >
-                        Avbryt
-                      </Button>
-                    </div>
-                  </div>
-                ) : isReplying ? (
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Emne
-                      </label>
-                      <input
-                        type="text"
-                        value={replySubject}
-                        onChange={(e) => setReplySubject(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Melding
-                      </label>
-                      <textarea
-                        value={replyMessage}
-                        onChange={(e) => setReplyMessage(e.target.value)}
-                        rows={10}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Skriv ditt svar her..."
-                      />
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        onClick={handleSendReply}
-                        disabled={isSendingReply || !replySubject.trim() || !replyMessage.trim()}
-                        className="flex items-center gap-2"
-                      >
-                        {isSendingReply ? (
-                          <>
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                            Sender...
-                          </>
-                        ) : (
-                          <>
-                            <Send className="h-4 w-4" />
-                            Send svar
-                          </>
-                        )}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={handleCancelReply}
-                        disabled={isSendingReply}
-                      >
-                        Avbryt
-                      </Button>
-                    </div>
+              <div className="space-y-1">
+                {folders.map((folder) => (
+                  <FolderItem key={folder.id} folder={folder} />
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Message List and Detail */}
+          <div className="flex-1 flex flex-col lg:flex-row min-h-0">
+            {/* Message List */}
+            <div className="lg:w-2/5 border-r flex flex-col min-h-0 min-w-[430px]">
+              <div className="p-4 border-b">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-semibold capitalize">{selectedFolder}</h2>
+                  {unreadCount > 0 && (
+                    <Badge variant="secondary">
+                      {unreadCount} ulest
+                    </Badge>
+                  )}
+                </div>
+              </div>
+
+              <ScrollArea className="flex-1 max-h-[calc(100vh-200px)]">
+                {filteredMessages.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
+                    <Inbox className="h-12 w-12 mb-4" />
+                    <p className="text-lg font-medium">Ingen meldinger</p>
+                    <p className="text-sm">Nye meldinger vil dukke opp her</p>
                   </div>
                 ) : (
-                  <div className="space-y-6">
-                    {/* Original Message */}
-                    <div className="prose prose-sm max-w-none">
-                      <div className={`p-4 rounded-lg border ${
-                        selectedMessage.type === 'outgoing_reply' 
-                          ? 'bg-blue-50 border-blue-200' 
-                          : 'bg-gray-50 border-gray-200'
-                      }`}>
-                        <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-                          {selectedMessage.type === 'outgoing_reply' ? (
-                            <>
-                              <Building2 className="h-4 w-4 text-blue-600" />
-                              <span className="font-medium text-blue-900">Sendt av deg</span>
-                            </>
-                          ) : (
-                            <>
-                              <User className="h-4 w-4" />
-                              <span className="font-medium">{selectedMessage.customerName || selectedMessage.from}</span>
-                            </>
-                          )}
-                          <span className="text-gray-400">•</span>
-                          <span>{formatDateLong(selectedMessage.timestamp)}</span>
-                          {selectedMessage.sentTo && (
-                            <>
-                              <span className="text-gray-400">•</span>
-                              <span className="text-xs">Sendt til {selectedMessage.sentTo}</span>
-                            </>
-                          )}
+                  <div className="p-3 grid grid-cols-1 gap-2 w-full">
+                    {filteredMessages.map((message) => (
+                      <Card
+                        key={message.id}
+                        className={`cursor-pointer transition-all w-full hover:shadow-md ${
+                          selectedMessage?.id === message.id
+                            ? 'ring-2 ring-primary bg-background'
+                            : !message.isRead
+                            ? 'bg-background'
+                            : ''
+                        }`}
+                        onClick={() => handleMessageClick(message)}
+                      >
+                        <CardContent className="p-3 h-34">
+                          <div className="flex items-start gap-2">
+                            <Avatar className="h-8 w-8">
+                              <AvatarFallback>
+                                {message.type === 'outgoing_reply' ? (
+                                  <Building2 className="h-4 w-4" />
+                                ) : (
+                                  <User className="h-4 w-4" />
+                                )}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between mb-1">
+                                <div className="flex items-center gap-2">
+                                  {message.type === 'outgoing_reply' ? (
+                                    <span className="text-sm font-medium">
+                                      Til: {message.customerName || message.from}
+                                    </span>
+                                  ) : (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (message.customerId) {
+                                          handleCustomerClick(message.customerId);
+                                        }
+                                      }}
+                                      className="text-sm font-medium hover:text-primary transition-colors truncate"
+                                    >
+                                      {message.customerName || message.from}
+                                    </button>
+                                  )}
+                                  <Badge variant="outline" className="text-xs">
+                                    {getMessageTypeLabel(message.type)}
+                                  </Badge>
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-1">
+                                      {/*getMessageTypeIcon(message.type)*/}
+                                      {message.isFlagged && <Flag className="h-3 w-3 text-yellow-500" />}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                  <Clock className="h-3 w-3" />
+                                  {formatDate(message.timestamp)}
+                                </div>
+                              </div>
+                              <p className={`text-sm truncate ${
+                                !message.isRead ? 'font-medium' : ''
+                              }`}>
+                                {message.subject}
+                              </p>
+                              <p className="text-xs text-muted-foreground truncate hidden sm:block">
+                                {message.message}
+                              </p>
+                              {message.quoteTitle && (
+                                <div className="flex items-center gap-1 mt-1">
+                                  <FileText className="h-3 w-3 text-muted-foreground" />
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (message.quoteId) {
+                                        handleQuoteClick(message.quoteId);
+                                      }
+                                    }}
+                                    className="text-xs text-primary hover:underline"
+                                  >
+                                    {message.quoteTitle}
+                                  </button>
+                                </div>
+                              )}
+                              <div className="flex items-center float-right justify-between">
+                                <div className="flex items-center gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleToggleFlag(message.id, message.isFlagged || false);
+                                    }}
+                                    className="h-8 w-8 p-0"
+                                  >
+                                    {!message.isFlagged ? (
+                                      <Flag className="h-4 w-4 text-yellow-500" />
+                                    ) : (
+                                      <FlagOff className="h-4 w-4" />
+                                    )}
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDeleteMessage(message.id);
+                                    }}
+                                    className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </ScrollArea>
+            </div>
+
+            {/* Message Detail */}
+            <div className={`flex-1 flex flex-col ${selectedMessage || isCreatingMessage ? 'block' : 'hidden lg:block'}`}>
+              {isCreatingMessage ? (
+                <ScrollArea className="flex-1">
+                  <div className="p-4">
+                    <Card>
+                      <CardHeader>
+                        <h4 className="text-lg font-semibold">Ny melding</h4>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div>
+                          <label className="text-sm font-medium mb-2 block">Til</label>
+                          <Input
+                            type="email"
+                            value={newMessageTo}
+                            onChange={(e) => setNewMessageTo(e.target.value)}
+                            placeholder="mottaker@example.com"
+                          />
                         </div>
-                        {selectedMessage.message && selectedMessage.type !== 'quote_conversation' && (
-                          <p className="whitespace-pre-wrap text-gray-800">{selectedMessage.message}</p>
-                        )}
-                        {selectedMessage.type === 'quote_conversation' && (!selectedMessage.conversation || Object.keys(selectedMessage.conversation).length === 0) && (
-                          <p className="text-gray-500 italic">Ingen meldinger i samtalen ennå</p>
-                        )}
-                        {selectedMessage.emailId && (
-                          <div className="mt-2 text-xs text-gray-500 flex items-center gap-1">
-                            <CheckCircle className="h-3 w-3 text-green-500" />
-                            E-post sendt (ID: {selectedMessage.emailId.substring(0, 8)}...)
+                        <div>
+                          <label className="text-sm font-medium mb-2 block">Emne</label>
+                          <Input
+                            type="text"
+                            value={newMessageSubject}
+                            onChange={(e) => setNewMessageSubject(e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium mb-2 block">Melding</label>
+                          <Textarea
+                            value={newMessageContent}
+                            onChange={(e) => setNewMessageContent(e.target.value)}
+                            rows={10}
+                            placeholder="Skriv din melding her..."
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={handleSendNewMessage}
+                            disabled={isSendingNewMessage || !newMessageSubject.trim() || !newMessageTo.trim() || !newMessageContent.trim()}
+                            className="flex items-center gap-2"
+                          >
+                            {isSendingNewMessage ? (
+                              <>
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                Sender...
+                              </>
+                            ) : (
+                              <>
+                                <Send className="h-4 w-4" />
+                                Send melding
+                              </>
+                            )}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={handleCancelNewMessage}
+                            disabled={isSendingNewMessage}
+                          >
+                            Avbryt
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </ScrollArea>
+              ) : selectedMessage ? (
+                <>
+                  <div className="p-4 border-b">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-3">
+                          {getMessageTypeIcon(selectedMessage.type)}
+                          {selectedMessage.isFlagged && <Flag className="h-4 w-4 text-yellow-500" />}
+                          <Badge variant="outline">
+                            {getMessageTypeLabel(selectedMessage.type)}
+                          </Badge>
+                        </div>
+                        <h3 className="text-xl font-semibold mb-2">{selectedMessage.subject}</h3>
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-6 w-6">
+                              <AvatarFallback className="text-xs">
+                                {selectedMessage.type === 'outgoing_reply' ? (
+                                  <Building2 className="h-3 w-3" />
+                                ) : (
+                                  <User className="h-3 w-3" />
+                                )}
+                              </AvatarFallback>
+                            </Avatar>
+                            <button
+                              onClick={() => selectedMessage.customerId && handleCustomerClick(selectedMessage.customerId)}
+                              className="hover:text-primary transition-colors"
+                            >
+                              {selectedMessage.customerName || selectedMessage.from}
+                            </button>
+                          </div>
+                          <span>•</span>
+                          <span>{formatDateLong(selectedMessage.timestamp)}</span>
+                        </div>
+                        {selectedMessage.quoteTitle && (
+                          <div className="flex items-center gap-2 mt-3">
+                            <FileText className="h-4 w-4 text-muted-foreground" />
+                            <button
+                              onClick={() => selectedMessage.quoteId && handleQuoteClick(selectedMessage.quoteId)}
+                              className="text-sm text-primary hover:underline"
+                            >
+                              {selectedMessage.quoteTitle}
+                            </button>
                           </div>
                         )}
                       </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSelectedMessage(null)}
+                        className="lg:hidden"
+                      >
+                        ✕
+                      </Button>
                     </div>
 
-                    {/* Conversation History / Replies */}
-                    {(() => {
-                      console.log('🔍 Selected message:', selectedMessage.id);
-                      console.log('🔍 Has conversation?', !!selectedMessage.conversation);
-                      console.log('🔍 Conversation:', selectedMessage.conversation);
-                      if (selectedMessage.conversation) {
-                        console.log('🔍 Conversation keys:', Object.keys(selectedMessage.conversation));
-                      }
-                      return null;
-                    })()}
-                    {selectedMessage.conversation && Object.keys(selectedMessage.conversation).length > 0 && (
-                      <div className="space-y-4">
-                        <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                          <MessageSquare className="h-4 w-4" />
-                          {selectedMessage.type === 'quote_conversation' ? 'Meldinger' : 'Samtalehistorikk'} ({Object.keys(selectedMessage.conversation).length})
-                        </h4>
-                        <div className="space-y-3">
-                          {Object.entries(selectedMessage.conversation)
-                            .sort(([, a], [, b]) => (a as ConversationEntry).timestamp - (b as ConversationEntry).timestamp)
-                            .map(([replyId, replyData]) => {
-                              const reply = replyData as ConversationEntry;
-                              return (
-                              <div
-                                key={replyId}
-                                className={`p-4 rounded-lg border ${
-                                  reply.sentBy === 'business'
-                                    ? 'bg-blue-50 border-blue-200 ml-8'
-                                    : 'bg-gray-50 border-gray-200 mr-8'
-                                }`}
-                              >
-                                <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-                                  {reply.sentBy === 'business' ? (
-                                    <>
-                                      <Building2 className="h-4 w-4 text-blue-600" />
-                                      <span className="font-medium text-blue-900">Du</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <User className="h-4 w-4" />
-                                      <span className="font-medium">{selectedMessage.customerName || selectedMessage.from}</span>
-                                      {reply.type === 'quote_approved' && (
-                                        <span className="text-green-600 text-xs">✅ Godkjent</span>
-                                      )}
-                                      {reply.type === 'quote_rejected' && (
-                                        <span className="text-red-600 text-xs">❌ Avvist</span>
-                                      )}
-                                      {reply.type === 'quote_question' && (
-                                        <span className="text-blue-600 text-xs">💬 Spørsmål</span>
-                                      )}
-                                    </>
-                                  )}
-                                  <span className="text-gray-400">•</span>
-                                  <span>{new Date(reply.timestamp).toLocaleString('nb-NO')}</span>
-                                  {reply.sentTo && (
-                                    <>
-                                      <span className="text-gray-400">•</span>
-                                      <span className="text-xs">Sendt til {reply.sentTo}</span>
-                                    </>
-                                  )}
-                                </div>
-                                <p className="whitespace-pre-wrap text-sm text-gray-800">{reply.message}</p>
-                              </div>
-                            );
-                            })}
-                        </div>
-                      </div>
-                    )}
-
-                    {selectedMessage.hasReply && (
-                      <div className="text-sm text-gray-500 flex items-center gap-2">
-                        <CheckCircle className="h-4 w-4 text-green-500" />
-                        <span>
-                          Besvart {selectedMessage.lastReplyAt && new Date(selectedMessage.lastReplyAt).toLocaleString('nb-NO')}
-                        </span>
+                    {!isReplying && (
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Button onClick={handleReply} className="flex items-center gap-2">
+                          <Reply className="h-4 w-4" />
+                          Svar
+                        </Button>
+                        <Select
+                          value={(selectedMessage.folder && selectedMessage.folder.trim()) || 'innboks'}
+                          onValueChange={(value) => handleMoveToFolder(selectedMessage.id, value)}
+                        >
+                          <SelectTrigger className="w-32">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {getAllFolderNames(folders).filter(name => name && name.trim()).map((folderName) => (
+                              <SelectItem key={folderName} value={folderName}>
+                                {folderName}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleToggleFlag(selectedMessage.id, selectedMessage.isFlagged || false)}
+                          className={!selectedMessage.isFlagged ? 'text-yellow-500' : ''}
+                        >
+                          {!selectedMessage.isFlagged ? <Flag className="h-4 w-4" /> : <FlagOff className="h-4 w-4" />}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteMessage(selectedMessage.id)}
+                          className="text-muted-foreground hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     )}
                   </div>
-                )}
-              </div>
-            </>
-          ) : (
-            <div className="flex-1 flex items-center justify-center text-gray-500">
-              <div className="text-center">
-                <Mail className="h-12 w-12 mx-auto mb-4" />
-                <p>Velg en melding for å se detaljer</p>
-              </div>
+
+                  <ScrollArea className="flex-1">
+                    <div className="p-4">
+                      {isReplying ? (
+                        <Card>
+                          <CardHeader>
+                            <h4 className="text-lg font-semibold">Svar på melding</h4>
+                          </CardHeader>
+                          <CardContent className="space-y-4">
+                            <div>
+                              <label className="text-sm font-medium mb-2 block">Emne</label>
+                              <Input
+                                type="text"
+                                value={replySubject}
+                                onChange={(e) => setReplySubject(e.target.value)}
+                              />
+                            </div>
+                            <div>
+                              <label className="text-sm font-medium mb-2 block">Melding</label>
+                              <Textarea
+                                value={replyMessage}
+                                onChange={(e) => setReplyMessage(e.target.value)}
+                                rows={10}
+                                placeholder="Skriv ditt svar her..."
+                              />
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
+                                onClick={handleSendReply}
+                                disabled={isSendingReply || !replySubject.trim() || !replyMessage.trim()}
+                                className="flex items-center gap-2"
+                              >
+                                {isSendingReply ? (
+                                  <>
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                    Sender...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Send className="h-4 w-4" />
+                                    Send svar
+                                  </>
+                                )}
+                              </Button>
+                              <Button
+                                variant="outline"
+                                onClick={handleCancelReply}
+                                disabled={isSendingReply}
+                              >
+                                Avbryt
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ) : (
+                        <div className="space-y-6">
+                          {/* Original Message */}
+                          <Card className={
+                            selectedMessage.type === 'outgoing_reply'
+                              ? 'border-blue-200 bg-background'
+                              : 'border-muted'
+                          }>
+                            <CardContent className="p-4">
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
+                                {selectedMessage.type === 'outgoing_reply' ? (
+                                  <>
+                                    <Building2 className="h-4 w-4 text-blue-600" />
+                                    <span className="font-medium text-blue-900">Sendt av deg</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <User className="h-4 w-4" />
+                                    <span className="font-medium">{selectedMessage.customerName || selectedMessage.from}</span>
+                                  </>
+                                )}
+                                <span>•</span>
+                                <span>{formatDateLong(selectedMessage.timestamp)}</span>
+                                {selectedMessage.sentTo && (
+                                  <>
+                                    <span>•</span>
+                                    <span className="text-xs">Sendt til {selectedMessage.sentTo}</span>
+                                  </>
+                                )}
+                              </div>
+                              {selectedMessage.message && selectedMessage.type !== 'quote_conversation' && (
+                                <p className="whitespace-pre-wrap text-sm">{selectedMessage.message}</p>
+                              )}
+                              {selectedMessage.type === 'quote_conversation' && (!selectedMessage.conversation || Object.keys(selectedMessage.conversation).length === 0) && (
+                                <p className="text-muted-foreground italic">Ingen meldinger i samtalen ennå</p>
+                              )}
+                              {selectedMessage.emailId && (
+                                <div className="mt-3 text-xs text-muted-foreground flex items-center gap-1">
+                                  <CheckCircle className="h-3 w-3 text-green-500" />
+                                  E-post sendt (ID: {selectedMessage.emailId.substring(0, 8)}...)
+                                </div>
+                              )}
+                            </CardContent>
+                          </Card>
+
+                          {/* Conversation History */}
+                          {selectedMessage.conversation && Object.keys(selectedMessage.conversation).length > 0 && (
+                            <div className="space-y-4">
+                              <div className="flex items-center gap-2">
+                                <MessageSquare className="h-4 w-4" />
+                                <h4 className="text-sm font-semibold">
+                                  {selectedMessage.type === 'quote_conversation' ? 'Meldinger' : 'Samtalehistorikk'} ({Object.keys(selectedMessage.conversation).length})
+                                </h4>
+                              </div>
+                              <div className="space-y-3">
+                                {Object.entries(selectedMessage.conversation)
+                                  .sort(([, a], [, b]) => (a as ConversationEntry).timestamp - (b as ConversationEntry).timestamp)
+                                  .map(([replyId, replyData]) => {
+                                    const reply = replyData as ConversationEntry;
+                                    return (
+                                      <Card
+                                        key={replyId}
+                                        className={`${
+                                          reply.sentBy === 'business'
+                                            ? 'border-blue-200 bg-background ml-8'
+                                            : 'border-muted mr-8'
+                                        }`}
+                                      >
+                                        <CardContent className="p-4">
+                                          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                                            {reply.sentBy === 'business' ? (
+                                              <>
+                                                <Building2 className="h-4 w-4 text-blue-600" />
+                                                <span className="font-medium text-blue-900">Du</span>
+                                              </>
+                                            ) : (
+                                              <>
+                                                <User className="h-4 w-4" />
+                                                <span className="font-medium">{selectedMessage.customerName || selectedMessage.from}</span>
+                                                {reply.type === 'quote_approved' && (
+                                                  <Badge variant="default" className="text-xs bg-green-500">
+                                                    Godkjent
+                                                  </Badge>
+                                                )}
+                                                {reply.type === 'quote_rejected' && (
+                                                  <Badge variant="destructive" className="text-xs">
+                                                    Avvist
+                                                  </Badge>
+                                                )}
+                                                {reply.type === 'quote_question' && (
+                                                  <Badge variant="default" className="text-xs">
+                                                    Spørsmål
+                                                  </Badge>
+                                                )}
+                                              </>
+                                            )}
+                                            <span>•</span>
+                                            <span>{new Date(reply.timestamp).toLocaleString('nb-NO')}</span>
+                                            {reply.sentTo && (
+                                              <>
+                                                <span>•</span>
+                                                <span className="text-xs">Sendt til {reply.sentTo}</span>
+                                              </>
+                                            )}
+                                          </div>
+                                          <p className="whitespace-pre-wrap text-sm">{reply.message}</p>
+                                        </CardContent>
+                                      </Card>
+                                    );
+                                  })}
+                              </div>
+                            </div>
+                          )}
+
+                          {selectedMessage.hasReply && (
+                            <Alert>
+                              <CheckCircle className="h-4 w-4" />
+                              <AlertDescription>
+                                Besvart {selectedMessage.lastReplyAt && new Date(selectedMessage.lastReplyAt).toLocaleString('nb-NO')}
+                              </AlertDescription>
+                            </Alert>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </ScrollArea>
+                </>
+              ) : (
+                <div className="flex-1 h-full flex items-center justify-center text-muted-foreground">
+                  <div className="text-center">
+                    <Inbox className="h-12 w-12 mx-auto mb-4" />
+                    <p className="text-lg font-medium">Velg en melding</p>
+                    <p className="text-sm">Velg en melding fra listen for å se detaljer</p>
+                  </div>
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </div>
 
@@ -1042,6 +1273,52 @@ export default function InnboksPage() {
           }}
         />
       )}
+
+      {/* Create Folder Dialog */}
+      <Dialog open={isCreatingFolder} onOpenChange={setIsCreatingFolder}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Opprett ny mappe</DialogTitle>
+            <DialogDescription>
+              Legg til en ny mappe for å organisere meldingene dine.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">Mappenavn</label>
+              <Input
+                value={newFolderName}
+                onChange={(e) => setNewFolderName(e.target.value)}
+                placeholder="Skriv inn mappenavn"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Overordnet mappe (valgfritt)</label>
+              <Select value={newFolderParent} onValueChange={setNewFolderParent}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Velg overordnet mappe" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Ingen (rotmappe)</SelectItem>
+                  {getAllFolderNames(folders).filter(name => name && name.trim()).map((folderName) => (
+                    <SelectItem key={folderName} value={folderName}>
+                      {folderName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCreatingFolder(false)}>
+              Avbryt
+            </Button>
+            <Button onClick={handleCreateFolder} disabled={!newFolderName.trim()}>
+              Opprett mappe
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Message Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

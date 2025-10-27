@@ -20,7 +20,7 @@ interface CardHeaderProps {
 
 export const CardHeader: React.FC<CardHeaderProps> = ({ children, className = '' }) => {
   return (
-    <div className={`px-6 py-4 border-b border-gray-200 ${className}`}>
+    <div className={`px-4 py-3 border-b border-gray-200 ${className}`}>
       {children}
     </div>
   );

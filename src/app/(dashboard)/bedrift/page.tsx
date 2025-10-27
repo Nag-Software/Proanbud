@@ -12,7 +12,7 @@ import {
   saveBusinessSettings, 
   uploadBusinessLogo,
   deleteBusinessLogo,
-  initializeBusinessSettings 
+  initializeBusinessSettings
 } from '@/lib/services/businessService';
 import {
   Dialog,
@@ -71,6 +71,7 @@ export default function BedriftPage() {
     industry: '',
     businessType: 'as',
     annualRevenue: 0,
+    hourlyRateWithoutVat: 0,
     serviceAreas: [],
     specializations: [],
     
@@ -238,7 +239,7 @@ export default function BedriftPage() {
     <>
       <PageHeader title="Min Bedrift" />
       
-      <div className="space-y-6">
+      <div className="space-y-6 grid grid-cols-1 xl:grid-cols-2 gap-4">
         {/* Company Information */}
         <Card>
           <CardHeader>
@@ -420,6 +421,20 @@ export default function BedriftPage() {
                   onChange={(e) => handleInputChange('annualRevenue', parseInt(e.target.value) || 0)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                   min="0"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Timepris (uten MVA)
+                </label>
+                <input
+                  type="number"
+                  value={businessSettings.hourlyRateWithoutVat || ''}
+                  onChange={(e) => handleInputChange('hourlyRateWithoutVat', parseInt(e.target.value) || 0)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  min="0"
+                  placeholder=""
                 />
               </div>
             </div>
@@ -758,14 +773,15 @@ export default function BedriftPage() {
             </div>
           </CardContent>
         </Card>
+      </div>
 
-        {/* Save Button */}
+      {/* Save Button */}
         <div className="flex justify-end pt-4 border-t border-gray-200">
           <button
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-8 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {saving ? (
               <Icons.Loader2 className="h-4 w-4 animate-spin" />
@@ -775,7 +791,6 @@ export default function BedriftPage() {
             {saving ? 'Lagrer...' : 'Lagre endringer'}
           </button>
         </div>
-      </div>
 
       {/* Success Dialog */}
       <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>

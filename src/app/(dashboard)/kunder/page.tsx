@@ -2,45 +2,27 @@
 
 import { useState, useEffect } from 'react';
 import { PageHeader } from '@/components/shared/PageHeader';
-import { DataTable } from '@/components/shared/DataTable';
+import { DataTable } from '@/components/ui/data-table';
 import { NewCustomerDrawer, CustomerDetailsDrawer } from '@/components/kunder';
 import { QuoteDetailsDrawer } from '@/components/tilbud';
-import { getCustomers } from '@/lib/services/customerService';
+import { getCustomers, deleteCustomer } from '@/lib/services/customerService';
 import { getTilbud } from '@/lib/services/tilbudService';
 import { ref, onValue, off } from 'firebase/database';
 import { db } from '@/lib/firebase';
 import { auth } from '@/lib/firebase';
-import { Kunde, ColumnDef, Tilbud } from '@/lib/types';
+import { Kunde, Tilbud } from '@/lib/types';
 import { PlusCircle } from 'lucide-react';
-
-const columns: ColumnDef<any>[] = [
-  {
-    accessorKey: 'navn',
-    header: 'Kunde',
-  },
-  {
-    accessorKey: 'epost',
-    header: 'E-post',
-  },
-  {
-    accessorKey: 'telefon',
-    header: 'Telefon',
-  },
-  {
-    accessorKey: 'antallTilbud',
-    header: 'Antall Tilbud',
-  },
-  {
-    accessorKey: 'antallVunnet',
-    header: 'Vunnet',
-  },
-  {
-    accessorKey: 'sistAktivitet',
-    header: 'Sist Aktivitet',
-  },
-];
+import { useSubscriptionLimits } from '@/hooks/useSubscriptionLimits';
+import { useSubscriptionAccess } from '@/hooks/useSubscriptionAccess';
+import { useSubscription } from '@/contexts/SubscriptionContextNew';
+import { AccessRestrictedBanner } from '@/components/subscription/AccessRestrictedBanner';
+import { getCustomerColumns } from '@/lib/table-columns/customers-columns';
 
 export default function KunderPage() {
+  const { checkCustomerLimit, showUpgradeDialog, loading: limitsLoading } = useSubscriptionLimits();
+  const { hasAccess, hasTrialAccess, isLimited } = useSubscriptionAccess();
+  const { refreshUsage } = useSubscription();
+  
   const [isNewCustomerOpen, setIsNewCustomerOpen] = useState(false);
   const [isCustomerDetailsOpen, setIsCustomerDetailsOpen] = useState(false);
   const [isQuoteDetailsOpen, setIsQuoteDetailsOpen] = useState(false);
@@ -169,8 +151,10 @@ export default function KunderPage() {
     };
   }, []);
 
-  const handleCustomerCreated = () => {
+  const handleCustomerCreated = async () => {
     // Data will automatically update via real-time listeners
+    // Refresh usage data to update subscription limits
+    await refreshUsage();
   };
 
   const handleCustomerClick = (customer: Kunde) => {
@@ -183,10 +167,48 @@ export default function KunderPage() {
     setIsQuoteDetailsOpen(true);
   };
 
+  const handleNewCustomer = () => {
+    // Check if user has access first (but allow trial users)
+    if (!hasTrialAccess) {
+      alert('Du har ikke lenger tilgang til å opprette nye kunder. Oppgrader abonnementet for å fortsette.');
+      return;
+    }
+
+    // Check subscription limits
+    const limitCheck = checkCustomerLimit();
+    if (!limitCheck.canProceed) {
+      if (limitCheck.upgradeRequired) {
+        showUpgradeDialog(limitCheck.message!);
+      } else {
+        alert(limitCheck.message);
+      }
+      return;
+    }
+    
+    setIsNewCustomerOpen(true);
+  };
+
+  const handleEditCustomer = (customer: Kunde) => {
+    setSelectedCustomer(customer);
+    setIsCustomerDetailsOpen(true);
+  };
+
+  const handleDeleteCustomer = async (customer: Kunde) => {
+    if (confirm(`Er du sikker på at du vil slette kunden "${customer.navn}"?`)) {
+      try {
+        await deleteCustomer(customer.id);
+        // The real-time listener will automatically update the UI
+      } catch (error) {
+        console.error('Error deleting customer:', error);
+        alert('Kunne ikke slette kunden. Prøv igjen.');
+      }
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <p className="text-gray-500">Laster kunder...</p>
       </div>
     );
   }
@@ -204,24 +226,33 @@ export default function KunderPage() {
 
   return (
     <div>
-      <PageHeader title="Alle Kunder">
-        <div className="flex gap-2">
-          <button 
-            onClick={() => setIsNewCustomerOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+      <PageHeader title="Alle Kunder" />
+
+      <AccessRestrictedBanner 
+        title="Begrenset tilgang til kundefunksjon"
+        message="Du kan se eksisterende kunder, men kan ikke opprette nye uten aktiv abonnement."
+      />
+      
+      <DataTable
+        columns={getCustomerColumns(handleEditCustomer, handleDeleteCustomer)}
+        data={customers}
+        searchKey="navn"
+        searchPlaceholder="Søk kunder..."
+        onRowClick={handleCustomerClick}
+        rightContent={
+          <button   
+            onClick={handleNewCustomer}
+            disabled={(isLimited && !hasTrialAccess) || !checkCustomerLimit().canProceed || limitsLoading}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+              (isLimited && !hasTrialAccess) || !checkCustomerLimit().canProceed || limitsLoading
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+                : 'bg-primary text-primary-foreground hover:bg-primary/90'
+            }`}
           >
             <PlusCircle className="h-5 w-5" />
             Ny kunde
           </button>
-        </div>
-      </PageHeader>
-      
-      <DataTable 
-        columns={columns} 
-        data={customers} 
-        enableFiltering 
-        searchPlaceholder="Søk kunder..."
-        onRowClick={handleCustomerClick}
+        }
       />
       
       <NewCustomerDrawer 

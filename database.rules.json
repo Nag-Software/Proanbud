@@ -6,84 +6,10 @@
         ".write": "auth != null && auth.uid == $userId",
         "tilbud": {
           "$tilbudId": {
-            ".read": "auth != null && auth.uid == $userId || (data.child('viewToken').exists() && query.orderByKey == null)",
-            ".write": "auth != null && auth.uid == $userId",
-            ".validate": "newData.hasChildren(['kundenavn', 'prosjekt', 'jobbtype', 'belop', 'status', 'dato', 'svarfrist'])",
-            "kundenavn": { ".validate": "newData.isString() && newData.val().length > 0" },
-            "prosjekt": { ".validate": "newData.isString() && newData.val().length > 0" },
-            "jobbtype": { ".validate": "newData.isString() && newData.val().length > 0" },
-            "belop": { ".validate": "newData.isNumber() && newData.val() >= 0" },
-            "status": { ".validate": "newData.val() == 'draft' || newData.val() == 'venter' || newData.val() == 'vunnet' || newData.val() == 'tapt'" },
-            "dato": { ".validate": "newData.isString() && newData.val().length > 0" },
-            "svarfrist": { ".validate": "newData.isString() && newData.val().length > 0" },
-            "beskrivelse": { ".validate": "newData.isString() || !newData.exists()" },
-            "prisgrunnlag": {
-              ".validate": "!newData.exists() || newData.hasChildren()",
-              "$componentId": {
-                ".validate": "newData.hasChildren(['id', 'category', 'name', 'amount', 'isEditable', 'confidence'])"
-              }
-            },
-            "template": { ".validate": "newData.isString() || !newData.exists()" },
-            "viewToken": { ".validate": "newData.isString() || !newData.exists()" },
-            "userId": { ".validate": "!newData.exists() || newData.val() == $userId" }
-          }
-        },
-        "kunder": {
-          "$kundeId": {
-            ".read": "auth != null && auth.uid == $userId",
-            ".write": "auth != null && auth.uid == $userId",
-            ".validate": "newData.hasChildren(['navn'])",
-            "navn": { ".validate": "newData.isString() && newData.val().length > 0" },
-            "epost": { ".validate": "newData.isString() || !newData.exists()" },
-            "telefon": { ".validate": "newData.isString() || !newData.exists()" },
-            "antallTilbud": { ".validate": "newData.isNumber() || !newData.exists()" },
-            "antallVunnet": { ".validate": "newData.isNumber() || !newData.exists()" },
-            "sistAktivitet": { ".validate": "newData.isString() || newData.isNumber() || !newData.exists()" },
-            "adresse": { ".validate": "newData.isString() || !newData.exists()" },
-            "postnummer": { ".validate": "newData.isString() || !newData.exists()" },
-            "poststed": { ".validate": "newData.isString() || !newData.exists()" },
-            "notater": { ".validate": "newData.isString() || !newData.exists()" },
-            "opprettet": { ".validate": "newData.isNumber() || !newData.exists()" },
-            "oppdatert": { ".validate": "newData.isNumber() || !newData.exists()" },
-            "addresser": { ".validate": "!newData.exists() || newData.hasChildren()" },
-            "tilbud": { ".validate": "!newData.exists() || newData.hasChildren()" }
-          }
-        },
-        "inbox": {
-          "$messageId": {
-            ".read": "auth != null && auth.uid == $userId",
-            ".write": "auth != null && auth.uid == $userId",
-            ".validate": "newData.hasChildren(['from', 'subject', 'message', 'timestamp', 'isRead', 'type'])"
-          }
-        },
-        "businessSettings": {
-          ".read": "auth != null && auth.uid == $userId",
-          ".write": "auth != null && auth.uid == $userId",
-          ".validate": "newData.hasChildren(['companyName', 'email'])"
-        },
-        "userSettings": {
-          ".read": "auth != null && auth.uid == $userId",
-          ".write": "auth != null && auth.uid == $userId"
-        },
-        "analytics": {
-          ".read": true,
-          ".write": "auth != null && auth.uid == $userId"
-        },
-        "subscription": {
-          ".read": "auth != null && auth.uid == $userId",
-          ".write": "false"
-        },
-        "invoices": {
-          "$invoiceId": {
-            ".read": "auth != null && auth.uid == $userId",
-            ".write": "false"
+            ".read": "auth != null || (data.child('viewToken').exists() && query.orderByKey == null)"
           }
         }
       }
-    },
-    "katalog": {
-    	".read": true,
-    	".write": true
-  	}
+    }
   }
 }

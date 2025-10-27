@@ -1,22 +1,93 @@
 "use client";
+import { toast } from "@/hooks/use-toast";
 
 import { PageHeader } from "@/components/shared/PageHeader";
 import { UserSettings, SubscriptionSettings } from "@/components/settings";
+import { LoadingRing } from "@/components/ui/loading-ring";
 import { useState, useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { getUserSettings, UserSettingsData } from '@/lib/services/userSettingsService';
 import { getBusinessSettings } from '@/lib/services/businessService';
 import { BusinessSettings } from '@/lib/types';
-import { ref, onValue, off } from 'firebase/database';
+import { ref, onValue, off } from 'firebase/database'; 
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
+import { getAuth } from 'firebase/auth';
+import { useSubscription } from '@/contexts/SubscriptionContextNew';
 
 
 
 export default function SettingsPage() {
     const { user } = useAuth();
+    const { refetch } = useSubscription();
+    const searchParams = useSearchParams();
+    const router = useRouter();
     const [userSettings, setUserSettings] = useState<UserSettingsData | null>(null);
     const [businessSettings, setBusinessSettings] = useState<BusinessSettings | null>(null);
     const [loading, setLoading] = useState(true);
+    const [verifyingPayment, setVerifyingPayment] = useState(false);
+
+    // Handle Stripe checkout success
+    useEffect(() => {
+        const handleCheckoutSuccess = async () => {
+            const success = searchParams.get('success');
+            const sessionId = searchParams.get('session_id');
+
+            if (success === 'true' && sessionId && user?.uid) {
+                setVerifyingPayment(true);
+                console.log('🔍 Verifying payment for session:', sessionId);
+
+                try {
+                    const auth = getAuth();
+                    const idToken = await auth.currentUser?.getIdToken();
+
+                    if (!idToken) {
+                        throw new Error('No authentication token');
+                    }
+
+                    const response = await fetch('/api/stripe/verify-session', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${idToken}`
+                        },
+                        body: JSON.stringify({ sessionId })
+                    });
+
+                    if (!response.ok) {
+                        const error = await response.json();
+                        toast({
+                            title: 'Betalingsverifisering feilet',
+                            description: error.error || 'Kunne ikke verifisere betaling.',
+                            variant: 'destructive',
+                        });
+                        throw new Error(error.error || 'Failed to verify payment');
+                    }
+
+                    const result = await response.json();
+                    console.log('✅ Payment verified:', result);
+
+                    // Refresh subscription data
+                    await refetch();
+                    // Clean up URL parameters
+                    router.replace('/innstillinger', { scroll: false });
+
+                    // Show success message (you could add a toast here)
+                    console.log('🎉 Subscription activated:', result.subscription.plan);
+
+                } catch (error) {
+                    console.error('❌ Failed to verify payment:', error);
+                    // You could show an error toast here
+                } finally {
+                    setVerifyingPayment(false);
+                }
+            }
+        };
+
+        if (user?.uid) {
+            handleCheckoutSuccess();
+        }
+    }, [searchParams, user?.uid, refetch, router]);
 
     useEffect(() => {
         if (!user?.uid) return;
@@ -81,13 +152,28 @@ export default function SettingsPage() {
         };
     }, [user]);
 
-    if (loading) {
+    if (loading || verifyingPayment) {
         return (
             <div className="space-y-6">
                 <PageHeader title="Innstillinger" />
                 <div className="space-y-8">
-                    <div className="animate-pulse bg-gray-200 h-64 rounded-lg"></div>
-                    <div className="animate-pulse bg-gray-200 h-96 rounded-lg"></div>
+                    {verifyingPayment && (
+                        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6 shadow-sm">
+                            <div className="flex items-center justify-center gap-4">
+                                <LoadingRing size="lg" color="blue" />
+                                <div className="text-center">
+                                    <p className="text-blue-800 font-semibold text-lg">Verifiserer betaling...</p>
+                                    <p className="text-blue-600 text-sm mt-1">Oppdaterer abonnement og aktiverer tjenester</p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    {!verifyingPayment && (
+                        <>
+                            <div className="animate-pulse bg-gray-200 h-64 rounded-lg"></div>
+                            <div className="animate-pulse bg-gray-200 h-96 rounded-lg"></div>
+                        </>
+                    )}
                 </div>
             </div>
         );
@@ -97,7 +183,7 @@ export default function SettingsPage() {
         <div className="space-y-6">
             <PageHeader title="Innstillinger" />
             
-            <div className="space-y-8">
+            <div className="flex flex-col 2xl:flex-row gap-4">
                 {/* User Settings */}
                 <UserSettings userSettings={userSettings} />
                 

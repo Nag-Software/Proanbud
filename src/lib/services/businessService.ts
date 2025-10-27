@@ -150,6 +150,7 @@ export const initializeBusinessSettings = async (userData: { companyName?: strin
       industry: '',
       businessType: 'as',
       annualRevenue: 0,
+      hourlyRateWithoutVat: 700,
       serviceAreas: [],
       specializations: [],
       
@@ -196,14 +197,15 @@ export const getBusinessContextForAI = async (): Promise<string> => {
     if (!settings) return '';
     
     return `
-Bedrift: ${settings.companyName}
-Bransje: ${settings.industry}
-Ansatte: ${settings.employeeCount}
-Etablert: ${settings.foundedYear}
-Spesialiseringer: ${(settings.specializations || []).join(', ')}
-Serviceareer: ${(settings.serviceAreas || []).join(', ')}
-Prising strategi: ${settings.pricingStrategy}
-Markeds segment: ${settings.marketSegment}
+      Bedrift: ${settings.companyName}
+      Bransje: ${settings.industry}
+      Ansatte: ${settings.employeeCount}
+      Etablert: ${settings.foundedYear}
+      Spesialiseringer: ${(settings.specializations || []).join(', ')}
+      Serviceareer: ${(settings.serviceAreas || []).join(', ')}
+      Prising strategi: ${settings.pricingStrategy}
+      Timepris (uten MVA): ${settings.hourlyRateWithoutVat}
+      Markeds segment: ${settings.marketSegment}
     `.trim();
   } catch (error) {
     console.error('Failed to get business context for AI:', error);

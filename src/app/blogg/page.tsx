@@ -8,6 +8,7 @@ import { client, allPostsQuery, formatDate, urlForImage } from '@/lib/sanity'
 import * as Icons from 'lucide-react'
 import Logo from '@/components/shared/Logo'
 import Footer from '@/components/shared/Footer'
+import Header from '@/components/shared/Header'
 
 
 
@@ -39,7 +40,6 @@ interface SanityPost {
 
 export default function BlogPage() {
   const [blogPosts, setBlogPosts] = useState<SanityPost[]>([])
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   useEffect(() => {
     const fetchPosts = async () => {
@@ -70,111 +70,7 @@ export default function BlogPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
-      <header className="sticky top-0 z-50 backdrop-blur-lg bg-white/80 border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-20">
-            <Logo size="lg" />
-            <nav className="hidden md:flex items-center gap-8">
-              <a href="/#features" className="text-gray-700 hover:text-[#00b85b] transition-colors font-medium">
-                Funksjoner
-              </a>
-              <a href="/#showcase" className="text-gray-700 hover:text-[#00b85b] transition-colors font-medium">
-                Plattform
-              </a>
-              <a href="/priser" className='text-gray-700 hover:text-[#00b85b] transition-colors font-medium'>
-                Priser
-              </a>
-              <a href="/#faq" className="text-gray-700 hover:text-[#00b85b] transition-colors font-medium">
-                FAQ
-              </a>
-              <a href="/blogg" className="text-[#00b85b] font-semibold">
-                Blogg
-              </a>
-            </nav>
-            <div className="hidden md:flex items-center gap-4">
-              <Link
-                href="/login"
-                className="text-gray-700 hover:text-[#00b85b] transition-colors font-medium"
-              >
-                Logg inn
-              </Link>
-              <Link
-                href="/signup"
-                className="bg-[#82ffb2] text-gray-900 px-6 py-2.5 rounded-xl transition-all font-semibold shadow-lg shadow-[#82ffb2]/20 hover:shadow-xl hover:shadow-[#82ffb2]/30"
-              >
-                Kom igang
-              </Link>
-            </div>
-            
-            {/* Mobile Menu Toggle */}
-            <button
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="md:hidden p-2 text-gray-700 hover:text-[#00b85b] transition-colors"
-              aria-label="Toggle mobile menu"
-            >
-              {isMobileMenuOpen ? <Icons.X className="h-6 w-6" /> : <Icons.Menu className="h-6 w-6" />}
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile Menu */}
-        {isMobileMenuOpen && (
-          <div className="md:hidden border-t border-gray-200 bg-white">
-            <nav className="px-4 py-4 space-y-4">
-              <a 
-                href="/#features" 
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="block text-gray-700 hover:text-[#00b85b] transition-colors font-medium py-2"
-              >
-                Funksjoner
-              </a>
-              <a 
-                href="/#showcase"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="block text-gray-700 hover:text-[#00b85b] transition-colors font-medium py-2"
-              >
-                Plattform
-              </a>
-              <a href="/priser"
-              className='block text-gray-700 hover:text-[#00b85b] transition-colors font-medium py-2'
-              onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Priser
-              </a>
-              <a 
-                href="/#faq" 
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="block text-gray-700 hover:text-[#00b85b] transition-colors font-medium py-2"
-              >
-                FAQ
-              </a>
-              <a 
-                href="/blogg" 
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="block text-[#00b85b] font-semibold py-2"
-              >
-                Blogg
-              </a>
-              <div className="pt-4 border-t border-gray-200 space-y-3">
-                <Link
-                  href="/login"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="block w-full text-center text-gray-700 hover:text-[#00b85b] transition-colors font-medium py-3 border-2 border-gray-200 rounded-xl hover:border-[#00b85b]"
-                >
-                  Logg inn
-                </Link>
-                <Link
-                  href="/signup"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="block w-full text-center bg-[#82ffb2] text-gray-900 px-6 py-3 rounded-xl transition-all font-semibold shadow-lg shadow-[#82ffb2]/20 hover:shadow-xl hover:shadow-[#82ffb2]/30"
-                >
-                  Kom igang
-                </Link>
-              </div>
-            </nav>
-          </div>
-        )}
-      </header>
+      <Header currentPage="blogg" />
 
       <section className="relative py-20 px-4 bg-gradient-to-br from-gray-50 via-white to-gray-100 text-gray-900">
         <div className="relative container mx-auto max-w-4xl text-center">
@@ -195,12 +91,12 @@ export default function BlogPage() {
               return (
                 <Link href={`/blogg/${post.slug.current}`} key={post._id} className="group">
                   <article className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all h-full flex flex-col">
-                    <div className="relative h-48 bg-gradient-to-br from-[#00b85b] to-[#00854a]">
+                    <div className="relative h-48 bg-gradient-to-br from-secondary to-cyan-100">
                       {imageUrl ? (
                         <Image src={imageUrl} alt={post.mainImage?.alt || post.title} fill className="object-cover" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
-                          <Icons.FileText className="h-16 w-16 text-white/50" />
+                          <Icons.FileText className="h-16 w-16 text-white/80" />
                         </div>
                       )}
                       <div className="absolute top-4 left-4">

@@ -356,30 +356,6 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
         )}
       </article>
 
-      {/* CTA Section */}
-      <section className="bg-gradient-to-br from-[#00b85b] to-[#00854a] text-white py-16 px-4">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl font-bold mb-4">Klar til å komme i gang?</h2>
-          <p className="text-xl text-white/90 mb-8">
-            Lag profesjonelle tilbud på minutter med Proanbud
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link
-              href="/signup"
-              className="bg-white text-[#00b85b] px-8 py-4 rounded-xl font-semibold hover:bg-gray-100 transition-colors"
-            >
-              Start gratis prøveperiode
-            </Link>
-            <Link
-              href="/blogg"
-              className="bg-white/10 backdrop-blur text-white px-8 py-4 rounded-xl font-semibold hover:bg-white/20 transition-colors"
-            >
-              Les flere artikler
-            </Link>
-          </div>
-        </div>
-      </section>
-
       {/* Footer - shared component */}
       <Footer />
     </div>

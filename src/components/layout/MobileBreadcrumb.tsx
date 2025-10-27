@@ -96,18 +96,6 @@ export const MobileBreadcrumb = () => {
     return name.charAt(0).toUpperCase();
   };
 
-  const getPlanBadge = () => {
-    const plan = 'free'; // Hardcoded until subscription system is implemented
-    
-    const badges: Record<string, { label: string; color: string }> = {
-      free: { label: 'Gratis', color: 'bg-gray-100 text-gray-700' },
-      basic: { label: 'Basic', color: 'bg-blue-100 text-blue-700' },
-      pro: { label: 'Pro', color: 'bg-purple-100 text-purple-700' },
-    };
-
-    return badges[plan];
-  };
-
   const breadcrumbItems = getBreadcrumbItems();
 
   return (
@@ -240,9 +228,6 @@ export const MobileBreadcrumb = () => {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <p className="font-semibold text-sm text-foreground truncate">{getDisplayName()}</p>
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${getPlanBadge().color}`}>
-                      {getPlanBadge().label}
-                    </span>
                   </div>
                   <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
                 </div>

@@ -2,6 +2,10 @@
   "database": {
     "rules": "database.rules.json"
   },
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
   "hosting": {
     "public": ".next",
     "ignore": [
@@ -9,5 +13,8 @@
       "**/.*",
       "**/node_modules/**"
     ]
+  },
+  "extensions": {
+    "firestore-stripe-payments": "stripe/firestore-stripe-payments@0.3.4"
   }
 }

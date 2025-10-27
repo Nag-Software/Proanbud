@@ -1,46 +1,38 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { DataTable } from '@/components/shared/DataTable';
+import { DataTable } from '@/components/ui/data-table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/shared/Card';
-import { Kunde, ColumnDef } from '@/lib/types';
+import { Kunde } from '@/lib/types';
 import { getCustomers } from '@/lib/services/customerService';
 import { ref, onValue } from 'firebase/database';
 import { db } from '@/lib/firebase';
 import { auth } from '@/lib/firebase';
+import { getCustomerColumns } from '@/lib/table-columns/customers-columns';
 
-const customersColumns: ColumnDef<Kunde>[] = [
-  {
-    accessorKey: 'navn',
-    header: 'Navn',
-  },
-  {
-    accessorKey: 'epost',
-    header: 'E-post',
-  },
-  {
-    accessorKey: 'telefon',
-    header: 'Telefon',
-  },
-  {
-    accessorKey: 'antallTilbud',
-    header: 'Antall Tilbud',
-    cell: (info) => info.getValue() as number,
-  },
-  {
-    accessorKey: 'antallVunnet',
-    header: 'Vunnet',
-    cell: (info) => info.getValue() as number,
-  },
-  {
-    accessorKey: 'sistAktivitet',
-    header: 'Sist Aktivitet',
-  },
-];
-
-export const CustomersDataTable = () => {
+export const CustomersDataTable = ({
+  onEditCustomer,
+  onDeleteCustomer,
+  onRowClick,
+  onHeightChange
+}: {
+  onEditCustomer?: (customer: Kunde) => void;
+  onDeleteCustomer?: (customer: Kunde) => void;
+  onRowClick?: (customer: Kunde) => void;
+  onHeightChange?: (height: number) => void;
+}) => {
   const [customers, setCustomers] = useState<Kunde[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Handle height changes from DataTable
+  const handleDataTableHeightChange = (height: number) => {
+    if (onHeightChange) {
+      // Add header height only - padding is handled by dashboard
+      const headerHeight = 56; // CardHeader height
+      const totalHeight = height + headerHeight;
+      onHeightChange(totalHeight);
+    }
+  };
 
   useEffect(() => {
     let unsubscribe: (() => void) | null = null;
@@ -110,9 +102,9 @@ export const CustomersDataTable = () => {
     return (
       <Card className="h-full flex flex-col">
         <CardHeader className="flex-shrink-0">
-          <CardTitle className="text-base sm:text-lg">Siste Kunder</CardTitle>
-        </CardHeader>
-        <CardContent className="flex-1 flex items-center justify-center">
+        <CardTitle className="text-base m-auto md:text-md text-left">Dine Kunder</CardTitle>
+      </CardHeader>
+        <CardContent className="flex-1 overflow-hidden flex items-center justify-center">
           <div className="w-full h-full bg-gray-200 animate-pulse rounded-lg min-h-[200px] flex items-center justify-center">
             <span className="text-gray-500 text-sm">Laster kunder...</span>
           </div>
@@ -122,21 +114,20 @@ export const CustomersDataTable = () => {
   }
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="flex-shrink-0 mb-4">
-        <h3 className="text-base sm:text-lg font-semibold text-slate-800">Siste Kunder</h3>
-      </div>
-      <div className="flex-1 min-h-0">
+    <Card className="h-full flex flex-col">
+      <CardHeader className="flex-shrink-0">
+        <CardTitle className="text-base m-auto md:text-md text-left">Dine Kunder</CardTitle>
+      </CardHeader>
+      <CardContent className="flex-1 overflow-hidden">
         <DataTable
-          columns={customersColumns}
+          columns={getCustomerColumns(onEditCustomer, onDeleteCustomer)}
           data={customers}
+          searchKey="navn"
           searchPlaceholder="Søk i kunder..."
-          enableFiltering={true}
-          responsive={true}
-          compactOnMobile={true}
-          maxHeight="100%"
+          onRowClick={onRowClick}
+          onHeightChange={handleDataTableHeightChange}
         />
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 };

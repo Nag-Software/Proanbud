@@ -11,13 +11,13 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Space Grotesk', 'sans-serif'],
+        sans: ['var(--font-geist)', 'sans-serif'],
       },
       colors: {
         primary: {
           DEFAULT: '#1A4314',
           foreground: '#FFFFFF',
-        },
+        }, 
         accent: '#82ffb2',
         background: '#F8F9FA',
         foreground: '#1C1C1E',

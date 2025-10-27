@@ -3,6 +3,8 @@
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { MobileBreadcrumb } from '@/components/layout/MobileBreadcrumb';
+import { TrialHeader } from '@/components/subscription/TrialHeader';
+import { SubscriptionBlocker } from '@/components/subscription/SubscriptionBlocker';
 
 export default function DashboardLayout({
   children,
@@ -11,15 +13,18 @@ export default function DashboardLayout({
 }) {
   return (
     <ProtectedRoute>
-      <div className="flex flex-col lg:flex-row h-screen bg-background">
-        <Sidebar />
-        <div className="flex-1 flex flex-col">
-          <MobileBreadcrumb />
-          <main className="flex-1 p-4 lg:p-8 overflow-y-auto bg-background">
-            {children}
-          </main>
+      <SubscriptionBlocker>
+        <div className="flex flex-col z-1 lg:flex-row h-screen bg-background">
+          <Sidebar />
+          <div className="flex-1 flex flex-col bg-background p-4 overflow-y-auto lg:ml-[280px]">
+            <main className="flex-1 px-3 lg:px-6 pt-4 pb-3 lg:pb-6 shadow-sm border border-gray-100 bg-white rounded-2xl">
+              <TrialHeader />
+              <MobileBreadcrumb />
+              {children}
+            </main>
+          </div>
         </div>
-      </div>
+      </SubscriptionBlocker>
     </ProtectedRoute>
   );
 }

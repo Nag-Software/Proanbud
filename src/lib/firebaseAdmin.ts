@@ -24,22 +24,16 @@ if (!admin.apps.length) {
       }
     }
 
-    if (serviceAccount && process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL) {
+    if (serviceAccount) {
       // Initialize with service account
       admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
-        databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
+        databaseURL: "https://proanbudas-default-rtdb.europe-west1.firebasedatabase.app",
       });
       console.log('✅ Firebase Admin SDK initialized successfully');
-      console.log('📍 Database URL:', process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL);
     } else {
       console.error('⚠️  Firebase Admin SDK not available');
-      if (!serviceAccount) {
-        console.error('⚠️  Add FIREBASE_SERVICE_ACCOUNT_KEY (file path) or FIREBASE_SERVICE_ACCOUNT_JSON (JSON string)');
-      }
-      if (!process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL) {
-        console.error('⚠️  Add NEXT_PUBLIC_FIREBASE_DATABASE_URL to .env.local');
-      }
+      console.error('⚠️  Add FIREBASE_SERVICE_ACCOUNT_KEY (file path) or FIREBASE_SERVICE_ACCOUNT_JSON (JSON string)');
     }
   } catch (error) {
     console.error('❌ Failed to initialize Firebase Admin SDK:', error);
@@ -47,73 +41,31 @@ if (!admin.apps.length) {
 }
 
 // Safe exports - only create if app is properly initialized
-let adminDb: admin.database.Database | null = null;
-let adminAuth: admin.auth.Auth | null = null;
+let firestore: admin.firestore.Firestore | null = null;
+let auth: admin.auth.Auth | null = null;
+let database: admin.database.Database | null = null;
 
-if (admin.apps.length > 0 && process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL) {
+if (admin.apps.length > 0) {
   try {
-    adminDb = admin.database();
-    adminAuth = admin.auth();
+    firestore = admin.firestore();
+    auth = admin.auth();
+    // Try to initialize database with explicit URL
+    database = admin.database();
+    console.log('✅ Firebase Admin services initialized successfully');
   } catch (error) {
     console.error('⚠️  Failed to initialize Firebase Admin services:', error);
+    firestore = null;
+    auth = null;
+    database = null;
   }
+} else {
+  console.error('⚠️  Firebase Admin app not initialized, cannot create services');
 }
 
-export { adminDb, adminAuth };
+export { firestore, auth, database };
+
+// Export adminAuth as an alias for auth for backward compatibility
+export const adminAuth = auth;
 
 // Helper function to check if admin SDK is available
-export const isAdminAvailable = () => adminDb !== null;
-
-// Helper function to safely write subscription data
-export async function updateUserSubscription(
-  userId: string,
-  subscriptionData: {
-    plan: 'free' | 'basic' | 'pro';
-    status: string;
-    stripeCustomerId?: string;
-    stripeSubscriptionId?: string;
-    stripePriceId?: string;
-    currentPeriodStart?: number;
-    currentPeriodEnd?: number;
-    cancelAtPeriodEnd?: boolean;
-    canceledAt?: number;
-    trialStart?: number;
-    trialEnd?: number;
-  }
-): Promise<void> {
-  if (!adminDb) {
-    throw new Error('Firebase Admin SDK not initialized');
-  }
-
-  const subscriptionRef = adminDb.ref(`users/${userId}/subscription`);
-  
-  await subscriptionRef.set({
-    ...subscriptionData,
-    updatedAt: Date.now(),
-  });
-}
-
-// Helper function to store invoice
-export async function storeInvoice(
-  userId: string,
-  invoiceId: string,
-  invoiceData: {
-    amount: number;
-    currency: string;
-    status: string;
-    paidAt?: number;
-    invoiceUrl?: string;
-    invoicePdf?: string;
-  }
-): Promise<void> {
-  if (!adminDb) {
-    throw new Error('Firebase Admin SDK not initialized');
-  }
-
-  const invoiceRef = adminDb.ref(`users/${userId}/invoices/${invoiceId}`);
-  
-  await invoiceRef.set({
-    ...invoiceData,
-    createdAt: Date.now(),
-  });
-}
+export const isAdminAvailable = () => firestore !== null;
