@@ -247,9 +247,9 @@ export const SubscriptionSettings = ({ businessSettings }: { businessSettings: B
                     Kommer snart
                   </button>
                 </div>
-              );
-            })}
-          </div>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
