@@ -18,6 +18,7 @@ export default function TilbudsvisningPage() {
   
   const quoteId = params.id as string;
   const token = searchParams.get('token');
+  const viewOnly = searchParams.get('viewOnly') === 'true';
   
   const [quote, setQuote] = useState<any>(null);
   const [businessSettings, setBusinessSettings] = useState<any>(null);
@@ -56,6 +57,17 @@ export default function TilbudsvisningPage() {
       setLoading(false);
     }
   };
+
+  // Calculate profit from quote data
+  const totalProfit = quote ? (quote.prisgrunnlag || []).reduce((sum: number, c: any) => {
+    const amount = c.amount || 0;
+    const markupPercent = c.priceMarkup || 0;
+    // Calculate base cost: amount / (1 + markup%)
+    const baseCost = markupPercent > 0 ? amount / (1 + markupPercent / 100) : amount;
+    // Profit = final amount - base cost
+    const profit = amount - baseCost;
+    return sum + profit;
+  }, 0) : 0;
 
   const handleFeedback = async (type: 'approval' | 'rejection' | 'question') => {
     if (!feedbackMessage.trim() && type === 'question') {
@@ -316,27 +328,43 @@ export default function TilbudsvisningPage() {
                     </tbody>
                     <tfoot>
                       <tr className="border-t-2 border-slate-300">
-                        <td colSpan={3} className="py-2 px-2 text-right font-medium text-slate-900">
-                          Total:
-                        </td>
-                        <td className="py-2 px-2 text-right font-bold text-primary">
-                          {Number(quote.belop).toLocaleString('nb-NO')} kr
+                        <td colSpan={4} className="py-2 px-2">
+                          <div className="flex justify-between items-center">
+                            <span className="font-medium text-green-600">Profitt:</span>
+                            <span className="font-bold text-green-600">
+                              {Number(totalProfit).toLocaleString('nb-NO')} kr
+                            </span>
+                          </div>
                         </td>
                       </tr>
                       <tr>
-                        <td colSpan={3} className="py-2 px-2 text-right font-medium text-slate-900">
-                          MVA (25%):
+                        <td colSpan={4} className="py-2 px-2">
+                          <div className="flex justify-between items-center">
+                            <span className="font-medium text-slate-900">Total:</span>
+                            <span className="font-bold text-primary">
+                              {Number(quote.belop).toLocaleString('nb-NO')} kr
+                            </span>
+                          </div>
                         </td>
-                        <td className="py-2 px-2 text-right font-bold text-primary">
-                          {Number(quote.belop * 0.25).toLocaleString('nb-NO')} kr
+                      </tr>
+                      <tr>
+                        <td colSpan={4} className="py-1 px-2">
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs text-slate-500">MVA (25%):</span>
+                            <span className="text-xs text-slate-500">
+                              {Number(quote.belop * 0.25).toLocaleString('nb-NO')} kr
+                            </span>
+                          </div>
                         </td>
                       </tr>
                       <tr className="border-t-2 border-slate-100">
-                        <td colSpan={3} className="py-4 px-2 text-right font-bold text-slate-900">
-                          Total inkl. MVA:
-                        </td>
-                        <td className="py-4 px-2 text-right font-bold underline text-xl text-primary">
-                          {Number(quote.belop * 1.25).toLocaleString('nb-NO')} kr
+                        <td colSpan={4} className="py-4 px-2">
+                          <div className="flex justify-between items-center">
+                            <span className="font-bold text-slate-900">Total inkl. MVA:</span>
+                            <span className="font-bold underline text-xl text-primary">
+                              {Number(quote.belop * 1.25).toLocaleString('nb-NO')} kr
+                            </span>
+                          </div>
                         </td>
                       </tr>
                     </tfoot>
@@ -379,14 +407,20 @@ export default function TilbudsvisningPage() {
                   <Card className="p-4 bg-slate-50">
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
+                        <span className="font-medium text-green-600">Profitt:</span>
+                        <span className="font-bold text-green-600">
+                          {Number(totalProfit).toLocaleString('nb-NO')} kr
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
                         <span className="font-medium text-slate-900">Total:</span>
                         <span className="font-bold text-primary">
                           {Number(quote.belop).toLocaleString('nb-NO')} kr
                         </span>
                       </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="font-medium text-slate-900">MVA (25%):</span>
-                        <span className="font-bold text-primary">
+                      <div className="flex justify-between text-xs text-slate-500">
+                        <span>MVA (25%):</span>
+                        <span>
                           {Number(quote.belop * 0.25).toLocaleString('nb-NO')} kr
                         </span>
                       </div>
@@ -410,7 +444,7 @@ export default function TilbudsvisningPage() {
         </Card>
 
         {/* Action Section */}
-        {!isCompleted && (
+        {!viewOnly && !isCompleted && (
           <Card className="mb-6">
             <CardHeader>
               <CardTitle>Svar på tilbudet</CardTitle>

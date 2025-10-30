@@ -121,8 +121,14 @@ export default function DashboardPage() {
   };
 
   const handleQuoteRowClick = (quote: Tilbud) => {
-    setSelectedQuote(quote);
-    setIsQuoteDetailsOpen(true);
+    // On desktop (lg/md breakpoints), navigate to dedicated page
+    if (currentBreakpoint === 'lg' || currentBreakpoint === 'md') {
+      router.push(`/tilbud/${quote.id}`);
+    } else {
+      // On mobile (sm/xs/xxs breakpoints), open drawer
+      setSelectedQuote(quote);
+      setIsQuoteDetailsOpen(true);
+    }
   };
 
   // Get current layout based on breakpoint
