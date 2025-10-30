@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { X, User, FileText, Calendar, DollarSign, Briefcase, Clock, Edit3, Save, XCircle, ExternalLink, Eye, Download, Trash2, Plus, Play, RotateCcw, Send, ArrowLeft, MoreHorizontal } from 'lucide-react';
 import { Tilbud, Kunde, BusinessSettings, PriceComponent, Product, Category, Subcategory } from '@/lib/types';
-import { Card } from '@/components/shared/Card';
+import { Card, CardHeader, CardContent, CardTitle } from '@/components/shared/Card';
 import { updateTilbud, deleteTilbud, getTilbudById, TilbudFormData } from '@/lib/services/tilbudService';
 import { getBusinessSettings } from '@/lib/services/businessService';
 import { getCustomers } from '@/lib/services/customerService';
@@ -34,6 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Textarea } from '@/components/ui/textarea';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -61,6 +62,7 @@ export default function QuoteDetailsPage() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [editedQuote, setEditedQuote] = useState<Partial<TilbudFormData>>({});
   const [editedPriceComponents, setEditedPriceComponents] = useState<PriceComponent[]>([]);
+  const [editedNotes, setEditedNotes] = useState<string>('');
   const [businessSettings, setBusinessSettings] = useState<BusinessSettings | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
@@ -215,6 +217,7 @@ export default function QuoteDetailsPage() {
     });
     // Deep copy of price components for editing
     setEditedPriceComponents(currentQuote.prisgrunnlag ? JSON.parse(JSON.stringify(currentQuote.prisgrunnlag)) : []);
+    setEditedNotes(currentQuote.notater || '');
     setIsEditing(true);
   };
 
@@ -222,6 +225,7 @@ export default function QuoteDetailsPage() {
     setIsEditing(false);
     setEditedQuote({});
     setEditedPriceComponents([]);
+    setEditedNotes('');
   };
 
   const handleResendEmail = async () => {
@@ -279,6 +283,71 @@ export default function QuoteDetailsPage() {
     } catch (error: any) {
       console.error('❌ Error resending email:', error);
       alert(`Kunne ikke sende e-post:\n${error.message}`);
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
+
+  const handleSendQuote = async () => {
+    if (!relatedCustomer || !quote || isSendingEmail) return;
+
+    setIsSendingEmail(true);
+    try {
+      console.log('📧 Sending quote email to:', relatedCustomer.epost);
+      console.log('🔗 Quote ID:', quote.id);
+
+      // Ensure the quote has a viewToken
+      let viewToken = quote.viewToken;
+      if (!viewToken) {
+        console.log('⚠️ ViewToken missing, generating new one...');
+        const { ensureViewToken } = await import('@/lib/services/tilbudService');
+        viewToken = await ensureViewToken(quote.id);
+        console.log('✅ ViewToken generated:', viewToken);
+      }
+
+      const baseUrl = window.location.origin;
+      const viewUrl = viewToken
+        ? `${baseUrl}/tilbudsvisning/${quote.id}?token=${viewToken}`
+        : null;
+
+      console.log('🔗 Generated viewUrl:', viewUrl);
+
+      // Generate email HTML
+      const emailHtml = generateEmailHtml(quote, relatedCustomer, viewUrl);
+
+      const emailResponse = await fetch('/api/send-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          to: relatedCustomer.epost,
+          subject: `Tilbud: ${quote.prosjekt}`,
+          message: emailHtml,
+          customerId: relatedCustomer.id,
+          quoteId: quote.id,
+        }),
+      });
+
+      if (!emailResponse.ok) {
+        const errorData = await emailResponse.json();
+        throw new Error(errorData.error || 'Failed to send email');
+      }
+
+      const responseData = await emailResponse.json();
+      console.log('✅ Email sent successfully:', responseData);
+
+      // Update quote status to 'venter'
+      await updateTilbud(quote.id, { status: 'venter' });
+      
+      // Update local state
+      setQuote(prev => prev ? { ...prev, status: 'venter' } : null);
+
+      alert(`Tilbud sendt til ${relatedCustomer.epost}!`);
+      setEmailCooldown(10); // Start 10 second cooldown
+    } catch (error: any) {
+      console.error('❌ Error sending quote:', error);
+      alert(`Kunne ikke sende tilbud:\n${error.message}`);
     } finally {
       setIsSendingEmail(false);
     }
@@ -384,6 +453,7 @@ export default function QuoteDetailsPage() {
       await updateTilbud(currentQuote.id, {
         ...editedQuote,
         prisgrunnlag: editedPriceComponents,
+        notater: editedNotes,
         belop: calculatedTotal, // Auto-update total based on components
       });
 
@@ -392,12 +462,14 @@ export default function QuoteDetailsPage() {
         ...prev,
         ...editedQuote,
         prisgrunnlag: editedPriceComponents,
+        notater: editedNotes,
         belop: calculatedTotal,
       } : null);
 
       setIsEditing(false);
       setEditedQuote({});
       setEditedPriceComponents([]);
+      setEditedNotes('');
     } catch (error) {
       console.error('Error updating quote:', error);
       alert('Kunne ikke oppdatere tilbud');
@@ -575,20 +647,25 @@ export default function QuoteDetailsPage() {
   };
 
   const addProductsFromCatalog = (selectedProducts: Product[]) => {
-    const newComponents: PriceComponent[] = selectedProducts.map(product => ({
-      id: `catalog-${product.id}-${Date.now()}`,
-      category: 'materialer', // Default category since Product doesn't have category field
-      name: product.produktnavn,
-      description: product.beskrivelse || '',
-      amount: product.enhetspris || 0,
-      quantity: 1,
-      unit: product.enhet || 'stk',
-      unitPrice: product.enhetspris || 0,
-      priceMarkup: product.påslag || 0,
-      materialMarkup: 0,
-      isEditable: true,
-      confidence: 0,
-    }));
+    const newComponents: PriceComponent[] = selectedProducts.map(product => {
+      const component: PriceComponent = {
+        id: `catalog-${product.id}-${Date.now()}`,
+        category: 'materialer', // Default category since Product doesn't have category field
+        name: product.produktnavn,
+        description: product.beskrivelse || '',
+        amount: 0, // Will be calculated below
+        quantity: 1,
+        unit: product.enhet || 'stk',
+        unitPrice: product.enhetspris || 0,
+        priceMarkup: product.påslag || 0,
+        materialMarkup: 0,
+        isEditable: true,
+        confidence: 0,
+      };
+      // Calculate amount with markup
+      component.amount = calculateAmountWithMarkup(component);
+      return component;
+    });
 
     setEditedPriceComponents(prev => [...prev, ...newComponents]);
     setIsCatalogDialogOpen(false);
@@ -619,20 +696,25 @@ export default function QuoteDetailsPage() {
   };
 
   const addSelectedProductsToQuote = () => {
-    const newComponents: PriceComponent[] = Array.from(selectedProducts.values()).map(({ product, quantity }) => ({
-      id: `catalog-${product.id}-${Date.now()}-${Math.random()}`,
-      category: 'materialer', // Default category
-      name: product.produktnavn,
-      description: product.beskrivelse || '',
-      amount: product.enhetspris * quantity,
-      quantity: quantity,
-      unit: product.enhet || 'stk',
-      unitPrice: product.enhetspris,
-      priceMarkup: product.påslag || 0,
-      materialMarkup: 0,
-      isEditable: true,
-      confidence: 0,
-    }));
+    const newComponents: PriceComponent[] = Array.from(selectedProducts.values()).map(({ product, quantity }) => {
+      const component: PriceComponent = {
+        id: `catalog-${product.id}-${Date.now()}-${Math.random()}`,
+        category: 'materialer', // Default category
+        name: product.produktnavn,
+        description: product.beskrivelse || '',
+        amount: 0, // Will be calculated below
+        quantity: quantity,
+        unit: product.enhet || 'stk',
+        unitPrice: product.enhetspris,
+        priceMarkup: product.påslag || 0,
+        materialMarkup: 0,
+        isEditable: true,
+        confidence: 0,
+      };
+      // Calculate amount with markup
+      component.amount = calculateAmountWithMarkup(component);
+      return component;
+    });
 
     setEditedPriceComponents(prev => [...prev, ...newComponents]);
     setIsCatalogDialogOpen(false);
@@ -777,9 +859,9 @@ export default function QuoteDetailsPage() {
   };
 
   return (
-    <div className="min-h-full bg-background rounded-xl">
+    <div className="min-h-full bg-background rounded-lg">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b rounded-2xl border-slate-100 sticky top-0 z-10">
+      <div className="bg-white shadow-sm border-b rounded-xl border-slate-100 sticky top-0 z-10">
         <div className="max-w-[1450px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-20">
             <div className="flex items-center gap-6">
@@ -826,13 +908,15 @@ export default function QuoteDetailsPage() {
                 <div className="flex items-center gap-2">
                   {/* Buttons for large screens (>= 1500px) */}
                   <div className="hidden min-[1500px]:flex items-center gap-2">
-                    {quote?.status === 'draft' && (
+                    {/* Send tilbud button for draft quotes */}
+                    {relatedCustomer && quote?.status === 'draft' && (
                       <Button
-                        variant="outline"
-                        className="border-slate-300 text-slate-700 hover:bg-slate-50"
+                        onClick={handleSendQuote}
+                        disabled={isSendingEmail}
+                        className="bg-primary text-primary-foreground hover:bg-primary/90"
                       >
-                        <Play className="h-4 w-4 mr-2" />
-                        Fortsett redigering
+                        <Send className="h-4 w-4 mr-2" />
+                        {isSendingEmail ? 'Sender...' : 'Send tilbud'}
                       </Button>
                     )}
                     {/* Send tilbud på nytt button with cooldown */}
@@ -861,8 +945,8 @@ export default function QuoteDetailsPage() {
                       onClick={startEditing}
                       className="border-slate-300 text-slate-700 hover:bg-slate-50"
                     >
-                      <Edit3 className="h-4 w-4 mr-2" />
-                      Rediger
+                      {quote?.status === 'draft' ? <Play className="h-4 w-4 mr-2" /> : <Edit3 className="h-4 w-4 mr-2" />}
+                      {quote?.status === 'draft' ? 'Fortsett redigering' : 'Rediger'}
                     </Button>
                   </div>
 
@@ -879,10 +963,13 @@ export default function QuoteDetailsPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-48">
-                        {quote?.status === 'draft' && (
-                          <DropdownMenuItem onClick={() => {}}>
-                            <Play className="h-4 w-4 mr-2" />
-                            Fortsett redigering
+                        {relatedCustomer && quote?.status === 'draft' && (
+                          <DropdownMenuItem
+                            onClick={handleSendQuote}
+                            disabled={isSendingEmail}
+                          >
+                            <Send className="h-4 w-4 mr-2" />
+                            {isSendingEmail ? 'Sender...' : 'Send tilbud'}
                           </DropdownMenuItem>
                         )}
                         {relatedCustomer && quote?.status !== 'draft' && (
@@ -900,8 +987,8 @@ export default function QuoteDetailsPage() {
                           Forhåndsvis
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={startEditing}>
-                          <Edit3 className="h-4 w-4 mr-2" />
-                          Rediger
+                          {quote?.status === 'draft' ? <Play className="h-4 w-4 mr-2" /> : <Edit3 className="h-4 w-4 mr-2" />}
+                          {quote?.status === 'draft' ? 'Fortsett redigering' : 'Rediger'}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -930,13 +1017,15 @@ export default function QuoteDetailsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* Quote Information */}
             <Card className="shadow-sm border-slate-200">
-              <div className="p-8">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="p-2 bg-blue-50 rounded-lg">
-                    <FileText className="h-6 w-6 text-blue-600" />
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-slate-100 rounded-lg">
+                    <FileText className="h-6 w-6 text-slate-600" />
                   </div>
-                  <h3 className="text-xl font-semibold text-slate-900">Tilbudsinformasjon</h3>
+                  <CardTitle>Tilbudsinformasjon</CardTitle>
                 </div>
+              </CardHeader>
+              <CardContent>
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -1010,18 +1099,20 @@ export default function QuoteDetailsPage() {
                   </div>
                 </div>
               </div>
-            </div>
-          </Card>
+              </CardContent>
+            </Card>
 
           {/* Customer Information */}
           <Card className="shadow-sm border-slate-200">
-            <div className="p-8">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="p-2 bg-green-50 rounded-lg">
-                  <User className="h-6 w-6 text-green-600" />
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-slate-100 rounded-lg">
+                  <User className="h-6 w-6 text-slate-600" />
                 </div>
-                <h3 className="text-xl font-semibold text-slate-900">Kundeinformasjon</h3>
+                <CardTitle>Kundeinformasjon</CardTitle>
               </div>
+            </CardHeader>
+            <CardContent>
               <div className="flex items-start justify-between">
                 <div className="space-y-3">
                   <p className="text-slate-900 font-semibold text-xl">{quote.kundenavn}</p>
@@ -1053,20 +1144,20 @@ export default function QuoteDetailsPage() {
                   </Button>
                 )}
               </div>
-            </div>
+            </CardContent>
           </Card>
           </div>
 
           {/* Price Breakdown */}
           {((isEditing && editedPriceComponents.length > 0) || (!isEditing && quote.prisgrunnlag && quote.prisgrunnlag.length > 0)) && (
             <Card className="shadow-sm border-slate-200">
-              <div className="p-8">
-                <div className="flex items-center justify-between mb-6">
+              <CardHeader>
+                <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-green-50 rounded-lg">
-                      <DollarSign className="h-6 w-6 text-green-600" />
+                    <div className="p-2 bg-slate-100 rounded-lg">
+                      <DollarSign className="h-6 w-6 text-slate-600" />
                     </div>
-                    <h3 className="text-xl font-semibold text-slate-900">Prisgrunnlag</h3>
+                    <CardTitle>Prisgrunnlag</CardTitle>
                   </div>
                   {isEditing && (
                     <div className="flex gap-2">
@@ -1081,6 +1172,8 @@ export default function QuoteDetailsPage() {
                     </div>
                   )}
                 </div>
+              </CardHeader>
+              <CardContent>
 
                 {isEditing ? (
                   <>
@@ -1138,7 +1231,7 @@ export default function QuoteDetailsPage() {
 
                     {/* Interactive Price Components Table */}
                     <div className="overflow-x-auto border border-gray-200">
-                      <table className="w-full rounded-lg">
+                      <table className="w-full rounded-md">
                         <thead className="bg-gray-50">
                           <tr>
                             <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 border-b">Kategori</th>
@@ -1317,6 +1410,7 @@ export default function QuoteDetailsPage() {
                           <th className="px-6 py-4 text-left text-sm font-semibold text-slate-900 border-b border-slate-200">Navn</th>
                           <th className="px-6 py-4 text-center text-sm font-semibold text-slate-900 border-b border-slate-200">Antall</th>
                           <th className="px-6 py-4 text-center text-sm font-semibold text-slate-900 border-b border-slate-200">Enhetspris</th>
+                          <th className="px-6 py-4 text-center text-sm font-semibold text-slate-900 border-b border-slate-200">Påslag (%)</th>
                           <th className="px-6 py-4 text-right text-sm font-semibold text-slate-900 border-b border-slate-200">Beløp</th>
                         </tr>
                       </thead>
@@ -1336,6 +1430,9 @@ export default function QuoteDetailsPage() {
                             </td>
                             <td className="px-6 py-4 text-center text-slate-900">
                               {formatCurrency(component.unitPrice || 0)}
+                            </td>
+                            <td className="px-6 py-4 text-center text-slate-900">
+                              {component.priceMarkup || 0}%
                             </td>
                             <td className="px-6 py-4 text-right font-medium text-slate-900">
                               {formatCurrency(component.amount || 0)}
@@ -1378,9 +1475,40 @@ export default function QuoteDetailsPage() {
                     </table>
                   </div>
                 )}
-              </div>
+              </CardContent>
             </Card>
           )}
+
+          {/* Notes */}
+          <Card className="shadow-sm border-slate-200">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-slate-100 rounded-lg">
+                  <FileText className="h-6 w-6 text-slate-600" />
+                </div>
+                <CardTitle>Notater</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {isEditing ? (
+                <Textarea
+                  value={editedNotes}
+                  onChange={(e) => setEditedNotes(e.target.value)}
+                  placeholder="Skriv inn notater om prosjektet (f.eks. hvor lang tid det skal ta, spesielle forhold, etc.)"
+                  className="min-h-[120px] resize-none"
+                  rows={5}
+                />
+              ) : (
+                <div className="min-h-[120px] p-4 bg-gray-50 rounded-lg">
+                  {quote?.notater ? (
+                    <p className="text-slate-700 whitespace-pre-wrap">{quote.notater}</p>
+                  ) : (
+                    <p className="text-slate-500 italic">Ingen notater lagt til ennå.</p>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
         </div>
       </div>

@@ -75,6 +75,7 @@ export interface Tilbud {
   jobbtype: string;
   belop: number;
   beskrivelse?: string;
+  notater?: string;
   status: 'draft' | 'venter' | 'vunnet' | 'tapt';
   dato: string;
   svarfrist: string;

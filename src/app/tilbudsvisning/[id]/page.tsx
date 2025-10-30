@@ -28,6 +28,21 @@ export default function TilbudsvisningPage() {
   const [submitting, setSubmitting] = useState(false);
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [contactMessage, setContactMessage] = useState('');
+  const [contactSubmitting, setContactSubmitting] = useState(false);
+  const [showContactDialog, setShowContactDialog] = useState(false);
+  
+  // Debug time travel
+  const [debugDate, setDebugDate] = useState<Date | null>(null);
+  const [showDebug, setShowDebug] = useState(false);
+
+  // Check if deadline has expired (must be before useEffect hooks)
+  const deadlineExpired = quote ? (quote.svarfrist ? new Date(quote.svarfrist) < (debugDate || new Date()) : false) : false;
+
+  // Debug setDebugDate wrapper
+  const debugSetDebugDate = (date: Date | null) => {
+    setDebugDate(date);
+  };
 
   useEffect(() => {
     if (!token) {
@@ -38,6 +53,20 @@ export default function TilbudsvisningPage() {
 
     fetchQuote();
   }, [quoteId, token]);
+
+  // Debug logging
+  useEffect(() => {
+    if (debugDate && quote) {
+      console.log('🕐 Debug date set to:', debugDate.toLocaleDateString('nb-NO'));
+      console.log('📅 Svarfrist:', quote.svarfrist ? new Date(quote.svarfrist).toLocaleDateString('nb-NO') : 'Ikke satt');
+      console.log('⚡ Deadline expired:', deadlineExpired);
+    }
+  }, [debugDate, quote, deadlineExpired]);
+
+  // Log when deadline status changes
+  useEffect(() => {
+    console.log('🔄 Deadline status changed:', deadlineExpired ? 'EXPIRED' : 'ACTIVE', '| debugDate:', debugDate ? debugDate.toLocaleDateString('nb-NO') : 'null');
+  }, [deadlineExpired, debugDate]);
 
   const fetchQuote = async () => {
     try {
@@ -57,17 +86,6 @@ export default function TilbudsvisningPage() {
       setLoading(false);
     }
   };
-
-  // Calculate profit from quote data
-  const totalProfit = quote ? (quote.prisgrunnlag || []).reduce((sum: number, c: any) => {
-    const amount = c.amount || 0;
-    const markupPercent = c.priceMarkup || 0;
-    // Calculate base cost: amount / (1 + markup%)
-    const baseCost = markupPercent > 0 ? amount / (1 + markupPercent / 100) : amount;
-    // Profit = final amount - base cost
-    const profit = amount - baseCost;
-    return sum + profit;
-  }, 0) : 0;
 
   const handleFeedback = async (type: 'approval' | 'rejection' | 'question') => {
     if (!feedbackMessage.trim() && type === 'question') {
@@ -177,9 +195,90 @@ export default function TilbudsvisningPage() {
 
   const isCompleted = quote.status === 'vunnet' || quote.status === 'tapt';
 
+  const handleContactUs = () => {
+    setShowContactDialog(true);
+  };
+
+  const handleSendContactMessage = async () => {
+    if (!contactMessage.trim()) {
+      toast({
+        title: 'Melding mangler',
+        description: 'Vennligst skriv en melding før du sender.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setContactSubmitting(true);
+    try {
+      const response = await fetch(`/api/quotes/${quoteId}/feedback`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          token,
+          message: `(Melding fra kunde etter svarfristen har gått ut)\n\n${contactMessage}`,
+          type: 'question',
+          customerName: quote.kundenavn,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Kunne ikke sende melding');
+      }
+
+      setContactMessage('');
+      setShowContactDialog(false);
+      
+      toast({
+        title: 'Melding sendt!',
+        description: 'Din melding er sendt til håndverkeren. De vil kontakte deg snart.',
+      });
+
+      // Refresh quote data
+      await fetchQuote();
+    } catch (err: any) {
+      toast({
+        title: 'Feil',
+        description: err.message || 'Kunne ikke sende melding',
+        variant: 'destructive',
+      });
+    } finally {
+      setContactSubmitting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-8 px-4">
       <div className="max-w-4xl mx-auto">
+        {/* Expired Deadline Header */}
+        {deadlineExpired && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <XCircle className="w-5 h-5 text-red-600 mr-2" />
+                <div>
+                  <h3 className="text-red-800 font-semibold">Svarfristen har gått ut</h3>
+                  <p className="text-red-700 text-sm">
+                    Fristen for å svare på dette tilbudet var {new Date(quote.svarfrist).toLocaleDateString('nb-NO')}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center">
+                <Button
+                  onClick={handleContactUs}
+                  size="sm"
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  <Mail className="w-4 h-4 mr-1" />
+                  Kontakt oss
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
           <div className="flex items-start justify-between mb-4">
@@ -251,6 +350,75 @@ export default function TilbudsvisningPage() {
           </div>
         </div>
 
+        {/* Debug Time Travel */}
+        {showDebug && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-yellow-800 font-semibold flex items-center">
+                  🕐 Debug Time Travel
+                </h3>
+                <p className="text-yellow-700 text-sm mt-1">
+                  Simuler forskjellige datoer for å teste svarfrist-funksjonalitet
+                </p>
+              </div>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="date"
+                  value={debugDate ? debugDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0]}
+                  onChange={(e) => debugSetDebugDate(e.target.value ? new Date(e.target.value) : null)}
+                  className="px-3 py-1 border border-yellow-300 rounded text-sm"
+                />
+                <Button
+                  onClick={() => {
+                    const newDate = quote.svarfrist ? new Date(new Date(quote.svarfrist).getTime() + 24 * 60 * 60 * 1000) : new Date();
+                    debugSetDebugDate(newDate);
+                  }}
+                  size="sm"
+                  variant="outline"
+                  className="text-yellow-700 border-yellow-300"
+                >
+                  Etter frist
+                </Button>
+                <Button
+                  onClick={() => debugSetDebugDate(null)}
+                  size="sm"
+                  variant="outline"
+                  className="text-yellow-700 border-yellow-300"
+                >
+                  Reset
+                </Button>
+                <Button
+                  onClick={() => setShowDebug(false)}
+                  size="sm"
+                  variant="outline"
+                  className="text-yellow-700 border-yellow-300"
+                >
+                  Skjul
+                </Button>
+              </div>
+            </div>
+            <div className="mt-3 text-xs text-yellow-600">
+              <p><strong>Nåværende dato:</strong> {debugDate ? debugDate.toLocaleDateString('nb-NO') : new Date().toLocaleDateString('nb-NO')}</p>
+              <p><strong>Svarfrist:</strong> {quote.svarfrist ? new Date(quote.svarfrist).toLocaleDateString('nb-NO') : 'Ikke satt'}</p>
+              <p><strong>Status:</strong> {deadlineExpired ? 'Utgått ❌' : 'Aktiv ✅'}</p>
+            </div>
+          </div>
+        )}
+
+        {!showDebug && (
+          <div className="mb-6 text-center">
+            <Button
+              onClick={() => setShowDebug(true)}
+              size="sm"
+              variant="outline"
+              className="text-xs text-slate-500"
+            >
+              🕐 Debug
+            </Button>
+          </div>
+        )}
+
         {/* Quote Description */}
         {quote.beskrivelse && (
           <Card className="mb-6">
@@ -271,7 +439,7 @@ export default function TilbudsvisningPage() {
         {/* Price Breakdown */}
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle>Prisgrunnlag</CardTitle>
+            <CardTitle>Prisforslag</CardTitle>
             <CardDescription>Detaljert oversikt over kostnadene</CardDescription>
           </CardHeader>
           <CardContent>
@@ -318,7 +486,7 @@ export default function TilbudsvisningPage() {
                             {item.quantity || 1} {item.unit || 'stk'}
                           </td>
                           <td className="text-right py-3 px-2 text-slate-700">
-                            {(item.unitPrice || 0).toLocaleString('nb-NO')} kr
+                            {Math.round((item.unitPrice || 0) * (1 + (item.priceMarkup || 0) / 100)).toLocaleString('nb-NO')} kr
                           </td>
                           <td className="text-right py-3 px-2 font-semibold text-slate-900">
                             {item.amount.toLocaleString('nb-NO')} kr
@@ -327,20 +495,10 @@ export default function TilbudsvisningPage() {
                       ))}
                     </tbody>
                     <tfoot>
-                      <tr className="border-t-2 border-slate-300">
-                        <td colSpan={4} className="py-2 px-2">
-                          <div className="flex justify-between items-center">
-                            <span className="font-medium text-green-600">Profitt:</span>
-                            <span className="font-bold text-green-600">
-                              {Number(totalProfit).toLocaleString('nb-NO')} kr
-                            </span>
-                          </div>
-                        </td>
-                      </tr>
                       <tr>
-                        <td colSpan={4} className="py-2 px-2">
+                        <td colSpan={4} className="border-t-2 pt-2 px-2">
                           <div className="flex justify-between items-center">
-                            <span className="font-medium text-slate-900">Total:</span>
+                            <span className="font-bold text-slate-900">Total:</span>
                             <span className="font-bold text-primary">
                               {Number(quote.belop).toLocaleString('nb-NO')} kr
                             </span>
@@ -348,7 +506,7 @@ export default function TilbudsvisningPage() {
                         </td>
                       </tr>
                       <tr>
-                        <td colSpan={4} className="py-1 px-2">
+                        <td colSpan={4} className="pb-2 px-2">
                           <div className="flex justify-between items-center">
                             <span className="text-xs text-slate-500">MVA (25%):</span>
                             <span className="text-xs text-slate-500">
@@ -357,7 +515,7 @@ export default function TilbudsvisningPage() {
                           </div>
                         </td>
                       </tr>
-                      <tr className="border-t-2 border-slate-100">
+                      <tr className="border-t-1 border-slate-100">
                         <td colSpan={4} className="py-4 px-2">
                           <div className="flex justify-between items-center">
                             <span className="font-bold text-slate-900">Total inkl. MVA:</span>
@@ -397,7 +555,7 @@ export default function TilbudsvisningPage() {
                         </div>
                         <div className="flex justify-between text-sm text-slate-600">
                           <span>Mengde: {item.quantity || 1} {item.unit || 'stk'}</span>
-                          <span>Pris: {(item.unitPrice || 0).toLocaleString('nb-NO')} kr</span>
+                          <span>Pris: {Math.round((item.unitPrice || 0) * (1 + (item.priceMarkup || 0) / 100)).toLocaleString('nb-NO')} kr</span>
                         </div>
                       </div>
                     </Card>
@@ -406,12 +564,6 @@ export default function TilbudsvisningPage() {
                   {/* Mobile Totals */}
                   <Card className="p-4 bg-slate-50">
                     <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="font-medium text-green-600">Profitt:</span>
-                        <span className="font-bold text-green-600">
-                          {Number(totalProfit).toLocaleString('nb-NO')} kr
-                        </span>
-                      </div>
                       <div className="flex justify-between text-sm">
                         <span className="font-medium text-slate-900">Total:</span>
                         <span className="font-bold text-primary">
@@ -443,8 +595,23 @@ export default function TilbudsvisningPage() {
           </CardContent>
         </Card>
 
+        {/* Notes */}
+        {quote.notater && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>Notater</CardTitle>
+              <CardDescription>Tilleggsinformasjon om prosjektet</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="p-4 bg-slate-50 rounded-lg">
+                <p className="text-slate-700 whitespace-pre-wrap">{quote.notater}</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Action Section */}
-        {!viewOnly && !isCompleted && (
+        {!viewOnly && !isCompleted && !deadlineExpired && (
           <Card className="mb-6">
             <CardHeader>
               <CardTitle>Svar på tilbudet</CardTitle>
@@ -513,6 +680,23 @@ export default function TilbudsvisningPage() {
           </Card>
         )}
 
+        {/* Expired Deadline Message */}
+        {deadlineExpired && !isCompleted && !viewOnly && (
+          <Card className="mb-6 bg-amber-50 border-amber-200">
+            <CardContent className="pt-6">
+              <div className="text-center">
+                <Calendar className="w-12 h-12 text-amber-600 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-amber-800 mb-2">
+                  Svarfristen har gått ut
+                </h3>
+                <p className="text-amber-700 mb-4">
+                  Du kan fortsatt kontakte håndverkeren ved å bruke "Kontakt oss" knappen øverst på siden.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Feedback Confirmation */}
         {feedbackSubmitted && (
           <Card className="bg-green-50 border-green-200">
@@ -529,6 +713,51 @@ export default function TilbudsvisningPage() {
         <div className="text-center text-sm text-slate-600 mt-8">
           <p>Powered by Proanbud</p>
         </div>
+
+        {/* Contact Dialog */}
+        <Dialog open={showContactDialog} onOpenChange={setShowContactDialog}>
+          <DialogContent className="sm:max-w-md rounded-xl">
+            <DialogHeader>
+              <DialogTitle>Kontakt håndverker</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Melding
+                </label>
+                <Textarea
+                  value={contactMessage}
+                  onChange={(e) => setContactMessage(e.target.value)}
+                  placeholder="Skriv din melding til håndverkeren..."
+                  rows={4}
+                  className="w-full"
+                  disabled={contactSubmitting}
+                />
+              </div>
+              <div className="flex justify-end space-x-2">
+                <Button
+                  onClick={() => setShowContactDialog(false)}
+                  variant="outline"
+                  disabled={contactSubmitting}
+                >
+                  Avbryt
+                </Button>
+                <Button
+                  onClick={handleSendContactMessage}
+                  disabled={contactSubmitting || !contactMessage.trim()}
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  {contactSubmitting ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Mail className="w-4 h-4 mr-2" />
+                  )}
+                  Send melding
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* Item Details Dialog */}
         <Dialog open={!!selectedItem} onOpenChange={() => setSelectedItem(null)}>
