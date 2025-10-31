@@ -7,20 +7,49 @@ if (!admin.apps.length) {
   try {
     let serviceAccount = null;
 
-    // Try to load from JSON string (Production - Vercel)
+    // Try to load from JSON string (Production - Vercel) OR a path provided in the same var.
     if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
-      serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
-      console.log('📦 Loading service account from JSON string');
+      const raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+      // If the env var looks like a path (ends with .json or starts with ./ or /), treat it as a file path.
+      const looksLikePath = typeof raw === 'string' && /(^\.|\.json$|^\\|^\/)/i.test(raw);
+      if (!looksLikePath) {
+        try {
+          serviceAccount = JSON.parse(raw);
+          console.log('📦 Loading service account from JSON string');
+        } catch (parseErr) {
+          console.warn('⚠️ FIREBASE_SERVICE_ACCOUNT_JSON is set but not valid JSON. Will try to treat it as a file path. Error:', String(parseErr));
+        }
+      }
+
+      // If parsing failed or the var looked like a path, try to read it as a file path
+      if (!serviceAccount) {
+        try {
+          const keyPath = path.resolve(process.cwd(), raw);
+          if (fs.existsSync(keyPath)) {
+            const fileContent = fs.readFileSync(keyPath, 'utf8');
+            serviceAccount = JSON.parse(fileContent);
+            console.log('� Loading service account from file (via FIREBASE_SERVICE_ACCOUNT_JSON):', keyPath);
+          } else {
+            console.error('❌ Service account file not found at path from FIREBASE_SERVICE_ACCOUNT_JSON:', keyPath);
+          }
+        } catch (fileErr) {
+          console.error('❌ Failed to read/parse service account from FIREBASE_SERVICE_ACCOUNT_JSON path:', String(fileErr));
+        }
+      }
     }
     // Try to load from file path (Development - Local)
     else if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
-      const keyPath = path.resolve(process.cwd(), process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
-      if (fs.existsSync(keyPath)) {
-        const fileContent = fs.readFileSync(keyPath, 'utf8');
-        serviceAccount = JSON.parse(fileContent);
-        console.log('📄 Loading service account from file:', keyPath);
-      } else {
-        console.error('❌ Service account file not found:', keyPath);
+      try {
+        const keyPath = path.resolve(process.cwd(), process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
+        if (fs.existsSync(keyPath)) {
+          const fileContent = fs.readFileSync(keyPath, 'utf8');
+          serviceAccount = JSON.parse(fileContent);
+          console.log('📄 Loading service account from file (FIREBASE_SERVICE_ACCOUNT_KEY):', keyPath);
+        } else {
+          console.error('❌ Service account file not found:', keyPath);
+        }
+      } catch (err) {
+        console.error('❌ Failed to read/parse service account from FIREBASE_SERVICE_ACCOUNT_KEY:', String(err));
       }
     }
 

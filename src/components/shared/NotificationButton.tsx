@@ -160,7 +160,7 @@ export const NotificationButton = () => {
       </button>
 
       {isOpen && (
-        <div className="!z-99999">
+        <div className="!z-9999">
           {/* Mobile: Full screen overlay */}
           <div className="lg:hidden fixed inset-0 bg-black/20 backdrop-blur-sm" onClick={() => setIsOpen(false)} />
           

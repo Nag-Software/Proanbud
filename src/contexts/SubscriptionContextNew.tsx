@@ -68,6 +68,42 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
     return Math.floor(Date.now() / 1000) + debugTimeOffset;
   }, [debugTimeOffset]);
 
+  // Ensure usage counters are reset once per billing period (first login/reload in the new period)
+  const ensureUsageResetIfNeeded = useCallback(async (subscription: UserSubscription | null) => {
+    if (!user?.uid || !subscription) return;
+    // Do not reset usage when subscription is canceled (user explicitly cancelled)
+    // Check both explicit 'canceled' status and the Stripe 'cancel_at_period_end' marker
+    if (subscription.status === 'canceled' || subscription.cancelAtPeriodEnd === true) {
+      console.log(`ensureUsageResetIfNeeded - subscription canceled/cancel_at_period_end for user ${user.uid}, skipping reset`);
+      return;
+    }
+
+    try {
+      const periodStart = Number(subscription.currentPeriodStart) || 0;
+      if (!periodStart) return;
+
+      const lastResetRef = ref(db, `users/${user.uid}/lastUsageResetPeriod`);
+      const lastResetSnap = await get(lastResetRef);
+      const lastResetPeriod = lastResetSnap.exists() ? Number(lastResetSnap.val()) : null;
+
+      // If we've never recorded a reset, or the stored marker is earlier than this subscription's period start,
+      // then this is the first login in the new period — reset counts and record the marker.
+      if (lastResetPeriod === null || lastResetPeriod < periodStart) {
+        console.log(`♻️ Detected new billing period for user ${user.uid}. Resetting usage counters.`);
+        await set(ref(db, `users/${user.uid}/tilbudCount`), 0);
+        await set(ref(db, `users/${user.uid}/kunderCount`), 0);
+        // Record the period start as the marker so we don't reset again for the same period
+        await set(lastResetRef, periodStart);
+        console.log(`♻️ Recorded lastUsageResetPeriod=${periodStart} for user ${user.uid}`);
+      } else {
+        // No reset needed
+        // console.log(`No reset needed for user ${user.uid}. lastUsageResetPeriod=${lastResetPeriod}, periodStart=${periodStart}`);
+      }
+    } catch (err) {
+      console.error('ensureUsageResetIfNeeded - realtime DB error:', err);
+    }
+  }, [user?.uid]);
+
   // Fetch usage data from Realtime Database (existing data structure)
   const fetchUsage = useCallback(async () => {
     if (!user?.uid) return;
@@ -200,6 +236,10 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
               }
             }
             console.log('📋 Mapped subscription:', mappedSubscription);
+            // Ensure usage counters are reset once per billing period (first login/reload in the new period)
+            ensureUsageResetIfNeeded(mappedSubscription).catch((err) => {
+              console.error('Error ensuring usage reset:', err);
+            });
             setSubscription(mappedSubscription);
           } else {
             // No active subscription - create trial in memory only
@@ -339,6 +379,10 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
       };
 
       console.log('createTrialInMemory - setting trial subscription:', trialSubscription);
+      // Ensure usage reset marker is set for trial periods as well
+      ensureUsageResetIfNeeded(trialSubscription).catch((err) => {
+        console.error('Error ensuring usage reset for trial subscription:', err);
+      });
       setSubscription(trialSubscription);
     }).catch((error) => {
       console.error('createTrialInMemory - error checking trial usage:', error);
@@ -358,6 +402,10 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
         createdAt: userCreatedAt,
         updatedAt: now,
       };
+      // Ensure usage reset marker is set for trial periods as well (fallback path)
+      ensureUsageResetIfNeeded(trialSubscription).catch((err) => {
+        console.error('Error ensuring usage reset for trial subscription (fallback):', err);
+      });
       setSubscription(trialSubscription);
     });
   }, [user?.uid, user?.metadata?.creationTime]);

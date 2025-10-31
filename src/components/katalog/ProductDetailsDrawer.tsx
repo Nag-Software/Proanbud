@@ -212,7 +212,7 @@ export const ProductDetailsDrawer: React.FC<ProductDetailsDrawerProps> = ({
 
   return (
     <Drawer open={open} onOpenChange={handleClose}>
-      <DrawerContent className="max-h-[90vh]">
+      <DrawerContent className="max-h-[90vh] z-[400]">
         <DrawerHeader className="border-b">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -478,7 +478,7 @@ export const ProductDetailsDrawer: React.FC<ProductDetailsDrawerProps> = ({
                   <label className="block text-sm font-medium text-gray-500 mb-1">
                     Pris med påslag
                   </label>
-                  <p className="text-2xl font-bold text-blue-600">
+                  <p className="text-2xl font-bold text-primary">
                     {calculateFinalPrice(product.enhetspris, product.påslag).toLocaleString('no-NO')} kr
                   </p>
                 </div>

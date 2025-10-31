@@ -352,6 +352,7 @@ export default function KatalogPage() {
                                     data={filteredProducts}
                                     searchKey="produktnavn"
                                     searchPlaceholder="Søk etter produkter..."
+                                    onRowClick={handleProductClick}
                                 />
                             )}
                         </Card>

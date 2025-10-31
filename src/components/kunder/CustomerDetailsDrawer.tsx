@@ -179,7 +179,7 @@ export function CustomerDetailsDrawer({ customer, open, onOpenChange, onCustomer
       />
       
       {/* Drawer */}
-      <div className={`fixed right-0 top-0 h-full w-full max-w-2xl bg-white shadow-2xl z-[260] transform transition-all duration-300 ease-in-out ${
+      <div className={`fixed right-0 top-0 h-full w-full max-w-2xl bg-white shadow-2xl z-[400] transform transition-all duration-300 ease-in-out ${
         open ? 'translate-x-0' : 'translate-x-full'
       }`}>
         <div className="flex flex-col h-full">

@@ -118,6 +118,47 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
   const [selectedProducts, setSelectedProducts] = useState<Map<string, { product: Product; quantity: number }>>(new Map());
   const [catalogLoaded, setCatalogLoaded] = useState(false);
   const [unitPriceInputs, setUnitPriceInputs] = useState<Map<string, string>>(new Map());
+
+  // When the catalog dialog/drawer or edit dialog is open, hide any other full-screen overlays
+  // (e.g. the Drawer backdrop) so we don't get a doubled/darker backdrop.
+  // We target elements that match the common Tailwind overlay pattern '.fixed.inset-0'
+  // and hide those with z-index lower than our custom backdrop (z-450).
+  // Restore on close.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const markerAttr = 'data-hidden-by-dialogs';
+    const customBackdropZIndex = 450; // z-[450] for our custom backdrop
+
+    const isAnyDialogOpen = isCatalogDialogOpen || editDialogOpen;
+
+    if (isAnyDialogOpen) {
+      const overlays = Array.from(document.querySelectorAll<HTMLElement>('.fixed.inset-0'));
+      overlays.forEach(el => {
+        const computedZIndex = parseInt(getComputedStyle(el).zIndex, 10) || 0;
+        if (computedZIndex < customBackdropZIndex && el.style.display !== 'none') {
+          el.setAttribute(markerAttr, el.style.display || '');
+          el.style.display = 'none';
+        }
+      });
+    } else {
+      // restore any elements we hid
+      document.querySelectorAll<HTMLElement>(`[${markerAttr}]`).forEach(el => {
+        const prev = el.getAttribute(markerAttr) || '';
+        el.style.display = prev;
+        el.removeAttribute(markerAttr);
+      });
+    }
+
+    // cleanup on unmount
+    return () => {
+      document.querySelectorAll<HTMLElement>(`[${markerAttr}]`).forEach(el => {
+        const prev = el.getAttribute(markerAttr) || '';
+        el.style.display = prev;
+        el.removeAttribute(markerAttr);
+      });
+    };
+  }, [isCatalogDialogOpen, editDialogOpen]);
   
   // Load customers and catalog data when drawer opens
   useEffect(() => {
@@ -1694,7 +1735,7 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="max-h-[95vh] z-[250]">
+      <DrawerContent className="max-h-[95vh] z-[400]">
         <DrawerHeader className='max-h-[130px]'>
           <div className="flex items-center justify-between">
             <div>
@@ -1719,10 +1760,19 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
           {currentStep === 2 && renderStep2()}
           {currentStep === 3 && renderStep3()}
         </div>
+
       </DrawerContent>
 
+      {/* Backdrop for catalog dialog or edit dialog, placed above the Drawer content but below the dialogs */}
+      {(isCatalogDialogOpen || editDialogOpen) && (
+        <div
+          aria-hidden
+          className="fixed inset-0 bg-black/40 z-[450]"
+        />
+      )}
+
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className="z-[600]">
           <DialogHeader>
             <DialogTitle>
               Rediger {editingField === 'name' ? 'navn' : 'beskrivelse'}
@@ -1732,11 +1782,11 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            <input
-              type="text"
+            <textarea
               value={editValue}
               onChange={(e) => setEditValue(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+              rows={4}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
               placeholder={editingField === 'name' ? 'Skriv navn...' : 'Skriv beskrivelse...'}
             />
           </div>
@@ -1754,7 +1804,7 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
       {/* Catalog Dialog - Enhanced & Responsive */}
       {isMobile ? (
         <Drawer open={isCatalogDialogOpen} onOpenChange={setIsCatalogDialogOpen}>
-          <DrawerContent className="max-h-[95vh] flex flex-col z-[250]">
+          <DrawerContent className="max-h-[95vh] flex flex-col z-[500]">
             <DrawerHeader className="border-b">
               <div className="flex items-center justify-between">
                 <div>

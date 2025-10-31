@@ -132,7 +132,7 @@ export const NewCustomerDrawer: React.FC<NewCustomerDrawerProps> = ({
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="max-h-[90vh] z-[200]">
+      <DrawerContent className="max-h-[90vh] z-[400]">
         <div className="mx-auto w-full max-w-2xl">
           <DrawerHeader className="text-center pb-4">
             <DrawerTitle className="flex items-center justify-center gap-2 text-xl">

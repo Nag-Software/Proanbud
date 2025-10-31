@@ -186,7 +186,7 @@ export const NewProductDrawer: React.FC<NewProductDrawerProps> = ({
 
   return (
     <Drawer open={open} onOpenChange={handleClose}>
-      <DrawerContent className="max-h-[90vh]">
+      <DrawerContent className="max-h-[90vh] z-[400]">
         <DrawerHeader className="border-b">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">

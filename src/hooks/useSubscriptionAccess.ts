@@ -5,8 +5,6 @@ import { useSubscription } from '@/contexts/SubscriptionContextNew';
 export const useSubscriptionAccess = () => {
   const { subscription, loading } = useSubscription();
 
-  console.log(subscription);
-
   const isTrialing = subscription?.plan === 'free' && subscription?.status === 'active' && !!subscription?.trialEnd;
   const hasActiveSubscription = subscription?.status === 'active' && subscription?.plan !== 'free';
   const isFree = subscription?.plan === 'free' && subscription?.status === 'active' && !subscription?.trialEnd;

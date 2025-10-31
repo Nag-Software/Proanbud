@@ -211,11 +211,14 @@ async function getAIConfig() {
 }
 
 // Create the Agent with dynamic config
-async function createKomponentSKAgent() {
+async function createKomponentSKAgent(allowWebsearchOverride?: boolean) {
   const aiConfig = await getAIConfig();
 
+  // allowWebsearchOverride takes precedence when explicitly provided
+  const allowWebsearch = typeof allowWebsearchOverride === 'boolean' ? allowWebsearchOverride : aiConfig.allowWebsearch;
+
   const tools = [];
-  if (aiConfig.allowWebsearch) {
+  if (allowWebsearch) {
     tools.push(webSearchPreview);
   }
 
@@ -260,21 +263,49 @@ export const runWorkflow = async (workflow: WorkflowInput) => {
     const transformResult = {catalog: JSON.stringify(workflow.catalog), jobbbeskrivelse: workflow.prompt, bedrift: workflow.businessInfo};
     
     // Create agent with dynamic config from Sanity
-    const komponentSK = await createKomponentSKAgent();
-    
-    const komponentSKResultTemp = await runner.run(
-      komponentSK,
-      [
-        ...conversationHistory
-      ],
-      {
-        context: {
-          inputJobbbeskrivelse: transformResult.jobbbeskrivelse,
-          inputBedrift: transformResult.bedrift,
-          inputCatalog: transformResult.catalog
+    // Try to create the agent with websearch enabled (if allowed).
+    // If the model rejects hosted tools we'll retry without tools.
+    let komponentSK = await createKomponentSKAgent();
+    let komponentSKResultTemp;
+    try {
+      komponentSKResultTemp = await runner.run(
+        komponentSK,
+        [
+          ...conversationHistory
+        ],
+        {
+          context: {
+            inputJobbbeskrivelse: transformResult.jobbbeskrivelse,
+            inputBedrift: transformResult.bedrift,
+            inputCatalog: transformResult.catalog
+          }
         }
+      );
+    } catch (err: any) {
+      // If the model doesn't support hosted tools (web_search_preview), retry without tools
+      const message = err?.message || '';
+      const param = err?.param || '';
+      if (message.includes('Hosted tool') || param === 'tools' || (message && message.includes('not supported'))) {
+        console.warn('Agent run failed due to hosted tool support. Retrying without websearch tools. Error:', err);
+        // recreate agent with websearch disabled and retry
+        komponentSK = await createKomponentSKAgent(false);
+        komponentSKResultTemp = await runner.run(
+          komponentSK,
+          [
+            ...conversationHistory
+          ],
+          {
+            context: {
+              inputJobbbeskrivelse: transformResult.jobbbeskrivelse,
+              inputBedrift: transformResult.bedrift,
+              inputCatalog: transformResult.catalog
+            }
+          }
+        );
+      } else {
+        throw err;
       }
-    );
+    }
 
     if (!komponentSKResultTemp.finalOutput) {
         throw new Error("Agent result is undefined");
@@ -317,24 +348,29 @@ export async function POST(request: NextRequest) {
   console.log("POST /api/ai-pricing called");
   try {
     const body = await request.json();
-    const n8nWebhookUrl = "https://proanbud.app.n8n.cloud/webhook/f7666602-b37a-460f-a066-1dac1a92901c";
 
-    const n8nResponse = await fetch(n8nWebhookUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    });
+    // Expecting { prompt, businessInfo, catalog }
+    const prompt = body?.prompt ?? body?.jobbbeskrivelse ?? body?.jobbBeskrivelse;
+  const businessInfo = body?.businessInfo || body?.bedriftsprofil || body?.business || "";
+    const catalog = body?.catalog ?? body?.produktkatalog ?? body?.catalogue ?? {};
 
-    const data = await n8nResponse.json();
-    console.log('N8N Response:', data);
-    // Check if data has output field, if so return it, otherwise return data
-    const aiResponse = data.output || data;
-    console.log('AI Response:', aiResponse);
-    return NextResponse.json(aiResponse, { status: n8nResponse.status });
+    if (!prompt) {
+      return NextResponse.json({ error: 'Missing prompt in request body' }, { status: 400 });
+    }
+
+    const workflowInput = {
+      prompt,
+      businessInfo,
+      catalog,
+    } as WorkflowInput;
+
+    const result = await runWorkflow(workflowInput);
+
+    // Return the parsed output if available, otherwise the raw agent output
+    const responsePayload = result?.output_parsed ?? { output_text: result?.output_text ?? null };
+    return NextResponse.json(responsePayload, { status: 200 });
   } catch (error) {
-    console.log("Error in POST:", error);
+    console.error("Error in POST /api/ai-pricing:", error);
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }
 }
