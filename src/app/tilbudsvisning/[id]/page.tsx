@@ -31,18 +31,9 @@ export default function TilbudsvisningPage() {
   const [contactMessage, setContactMessage] = useState('');
   const [contactSubmitting, setContactSubmitting] = useState(false);
   const [showContactDialog, setShowContactDialog] = useState(false);
-  
-  // Debug time travel
-  const [debugDate, setDebugDate] = useState<Date | null>(null);
-  const [showDebug, setShowDebug] = useState(false);
 
-  // Check if deadline has expired (must be before useEffect hooks)
-  const deadlineExpired = quote ? (quote.svarfrist ? new Date(quote.svarfrist) < (debugDate || new Date()) : false) : false;
-
-  // Debug setDebugDate wrapper
-  const debugSetDebugDate = (date: Date | null) => {
-    setDebugDate(date);
-  };
+  // Check if deadline has expired
+  const deadlineExpired = quote ? (quote.svarfrist ? new Date(quote.svarfrist) < new Date() : false) : false;
 
   useEffect(() => {
     if (!token) {
@@ -53,20 +44,6 @@ export default function TilbudsvisningPage() {
 
     fetchQuote();
   }, [quoteId, token]);
-
-  // Debug logging
-  useEffect(() => {
-    if (debugDate && quote) {
-      console.log('🕐 Debug date set to:', debugDate.toLocaleDateString('nb-NO'));
-      console.log('📅 Svarfrist:', quote.svarfrist ? new Date(quote.svarfrist).toLocaleDateString('nb-NO') : 'Ikke satt');
-      console.log('⚡ Deadline expired:', deadlineExpired);
-    }
-  }, [debugDate, quote, deadlineExpired]);
-
-  // Log when deadline status changes
-  useEffect(() => {
-    console.log('🔄 Deadline status changed:', deadlineExpired ? 'EXPIRED' : 'ACTIVE', '| debugDate:', debugDate ? debugDate.toLocaleDateString('nb-NO') : 'null');
-  }, [deadlineExpired, debugDate]);
 
   const fetchQuote = async () => {
     try {
@@ -349,75 +326,6 @@ export default function TilbudsvisningPage() {
             )}
           </div>
         </div>
-
-        {/* Debug Time Travel */}
-        {showDebug && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-yellow-800 font-semibold flex items-center">
-                  🕐 Debug Time Travel
-                </h3>
-                <p className="text-yellow-700 text-sm mt-1">
-                  Simuler forskjellige datoer for å teste svarfrist-funksjonalitet
-                </p>
-              </div>
-              <div className="flex items-center space-x-2">
-                <input
-                  type="date"
-                  value={debugDate ? debugDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0]}
-                  onChange={(e) => debugSetDebugDate(e.target.value ? new Date(e.target.value) : null)}
-                  className="px-3 py-1 border border-yellow-300 rounded text-sm"
-                />
-                <Button
-                  onClick={() => {
-                    const newDate = quote.svarfrist ? new Date(new Date(quote.svarfrist).getTime() + 24 * 60 * 60 * 1000) : new Date();
-                    debugSetDebugDate(newDate);
-                  }}
-                  size="sm"
-                  variant="outline"
-                  className="text-yellow-700 border-yellow-300"
-                >
-                  Etter frist
-                </Button>
-                <Button
-                  onClick={() => debugSetDebugDate(null)}
-                  size="sm"
-                  variant="outline"
-                  className="text-yellow-700 border-yellow-300"
-                >
-                  Reset
-                </Button>
-                <Button
-                  onClick={() => setShowDebug(false)}
-                  size="sm"
-                  variant="outline"
-                  className="text-yellow-700 border-yellow-300"
-                >
-                  Skjul
-                </Button>
-              </div>
-            </div>
-            <div className="mt-3 text-xs text-yellow-600">
-              <p><strong>Nåværende dato:</strong> {debugDate ? debugDate.toLocaleDateString('nb-NO') : new Date().toLocaleDateString('nb-NO')}</p>
-              <p><strong>Svarfrist:</strong> {quote.svarfrist ? new Date(quote.svarfrist).toLocaleDateString('nb-NO') : 'Ikke satt'}</p>
-              <p><strong>Status:</strong> {deadlineExpired ? 'Utgått ❌' : 'Aktiv ✅'}</p>
-            </div>
-          </div>
-        )}
-
-        {!showDebug && (
-          <div className="mb-6 text-center">
-            <Button
-              onClick={() => setShowDebug(true)}
-              size="sm"
-              variant="outline"
-              className="text-xs text-slate-500"
-            >
-              🕐 Debug
-            </Button>
-          </div>
-        )}
 
         {/* Quote Description */}
         {quote.beskrivelse && (

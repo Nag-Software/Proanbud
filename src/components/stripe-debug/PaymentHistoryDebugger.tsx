@@ -239,22 +239,22 @@ export const PaymentHistoryDebugger: React.FC = () => {
         <h3 className="font-medium mb-3">Test Payment Tools</h3>
         <div className="flex space-x-2">
           <button
-            onClick={() => createTestPayment(299, 'succeeded')}
+            onClick={() => createTestPayment(699, 'succeeded')}
             className="bg-green-600 text-white px-3 py-2 rounded hover:bg-green-700 text-sm"
           >
-            Create Successful Payment (299 NOK)
+            Create Successful Payment (699 NOK)
           </button>
           <button
-            onClick={() => createTestPayment(799, 'succeeded')}
+            onClick={() => createTestPayment(1999, 'succeeded')}
             className="bg-green-600 text-white px-3 py-2 rounded hover:bg-green-700 text-sm"
           >
-            Create Successful Payment (799 NOK)
+            Create Successful Payment (1999 NOK)
           </button>
           <button
-            onClick={() => createTestPayment(299, 'failed')}
+            onClick={() => createTestPayment(699, 'failed')}
             className="bg-red-600 text-white px-3 py-2 rounded hover:bg-red-700 text-sm"
           >
-            Create Failed Payment (299 NOK)
+            Create Failed Payment (699 NOK)
           </button>
         </div>
       </div>

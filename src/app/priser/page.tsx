@@ -1,15 +1,100 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import * as Icons from 'lucide-react';
 import Logo from '@/components/shared/Logo';
 import { FaqSection } from '@/components/shared/FaqSection';
 import Footer from '@/components/shared/Footer';
 import Header from '@/components/shared/Header';
+import { getSubscriptionPlans } from '@/lib/stripe-client';
 
 export default function PricingPage() {
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly');
+  const [plans, setPlans] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Load plans from Stripe on component mount
+  useEffect(() => {
+    const loadPlans = async () => {
+      try {
+        const stripePlans = await getSubscriptionPlans();
+        setPlans(stripePlans);
+      } catch (error) {
+        console.error('Failed to load plans:', error);
+        // Fallback to hardcoded plans if API fails
+        setPlans([
+          {
+            id: 'free',
+            name: 'Gratis',
+            description: 'Test alle funksjoner gratis i 14 dager – ingen kredittkort nødvendig',
+            price: {
+              monthly: 0,
+              yearly: 0
+            },
+            features: [
+              'Inntil 3 tilbud',
+              'Inntil 1 kunder',
+              'E-post support',
+              'Grunnleggende statistikk'
+            ],
+            color: 'gray',
+            cta: 'Start prøveperiode',
+            popular: false
+          },
+          {
+            id: 'basic',
+            name: 'Basic',
+            description: 'For små bedrifter som trenger mer funksjonalitet',
+            price: {
+              monthly: 699,
+              yearly: 6990
+            },
+            features: [
+              'Inntil 15 tilbud per måned',
+              'Inntil 10 kunder',
+              'Grunnleggende rapporter',
+              'E-post support',
+              '1GB lagring',
+              'Tilpassbare maler',
+              'Kunde-database'
+            ],
+            color: 'blue',
+            cta: 'Velg Basic',
+            popular: false
+          },
+          {
+            id: 'pro',
+            name: 'Pro',
+            description: 'For voksende bedrifter med profesjonelle behov',
+            price: {
+              monthly: 1999,
+              yearly: 19990
+            },
+            features: [
+              'Ubegrenset tilbud',
+              'Ubegrenset kunder',
+              'Avanserte rapporter og analyser',
+              'Prioritert support',
+              '10GB lagring',
+              'API-tilgang',
+              'Tilpassede maler',
+              'Integrasjoner',
+              'Automasjon',
+              'Team-samarbeid'
+            ],
+            color: 'purple',
+            cta: 'Velg Pro',
+            popular: true
+          }
+        ]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadPlans();
+  }, []);
 
   const faqs = [
     {
@@ -30,72 +115,6 @@ export default function PricingPage() {
     }
   ];
 
-  const plans = [
-    {
-      id: 'free',
-      name: 'Gratis',
-      description: 'Test alle funksjoner gratis i 14 dager – ingen kredittkort nødvendig',
-      price: {
-        monthly: 0,
-        yearly: 0
-      },
-      features: [
-        'Inntil 3 tilbud',
-        'Inntil 1 kunder',
-        'E-post support',
-        'Grunnleggende statistikk'
-      ],
-      color: 'gray',
-      cta: 'Start prøveperiode',
-      popular: false
-    },
-    {
-      id: 'basic',
-      name: 'Basic',
-      description: 'For små bedrifter som trenger mer funksjonalitet',
-      price: {
-        monthly: 299,
-        yearly: 2990
-      },
-      features: [
-        'Inntil 15 tilbud per måned',
-        'Inntil 10 kunder',
-        'Grunnleggende rapporter',
-        'E-post support',
-        '1GB lagring',
-        'Tilpassbare maler',
-        'Kunde-database'
-      ],
-      color: 'blue',
-      cta: 'Velg Basic',
-      popular: false
-    },
-    {
-      id: 'pro',
-      name: 'Pro',
-      description: 'For voksende bedrifter med profesjonelle behov',
-      price: {
-        monthly: 799,
-        yearly: 7990
-      },
-      features: [
-        'Ubegrenset tilbud',
-        'Ubegrenset kunder',
-        'Avanserte rapporter og analyser',
-        'Prioritert support',
-        '10GB lagring',
-        'API-tilgang',
-        'Tilpassede maler',
-        'Integrasjoner',
-        'Automasjon',
-        'Team-samarbeid'
-      ],
-      color: 'purple',
-      cta: 'Velg Pro',
-      popular: true
-    }
-  ];
-
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('nb-NO', {
       style: 'currency',
@@ -109,7 +128,7 @@ export default function PricingPage() {
   };
 
   const getSavingsPercentage = () => {
-    return '17%'; // (299*12 - 2990) / (299*12) * 100 ≈ 17%
+    return '17%'; // (699*12 - 6990) / (699*12) * 100 ≈ 17%
   };
 
   return (
@@ -158,8 +177,25 @@ export default function PricingPage() {
       {/* Pricing Cards */}
       <section className="pb-16 px-4">
         <div className="container mx-auto max-w-6xl">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {plans.map((plan) => (
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="bg-white rounded-2xl shadow-lg p-8 animate-pulse">
+                  <div className="h-8 bg-gray-200 rounded mb-4"></div>
+                  <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                  <div className="h-4 bg-gray-200 rounded mb-6 w-3/4"></div>
+                  <div className="h-12 bg-gray-200 rounded mb-6"></div>
+                  <div className="space-y-3">
+                    {[1, 2, 3, 4].map((j) => (
+                      <div key={j} className="h-4 bg-gray-200 rounded"></div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {plans.map((plan) => (
               <div
                 key={plan.id}
                 className={`relative bg-white rounded-2xl shadow-lg overflow-hidden transition-all hover:shadow-xl ${
@@ -202,7 +238,7 @@ export default function PricingPage() {
                   </Link>
                   
                   <ul className="space-y-3">
-                    {plan.features.map((feature, index) => (
+                    {plan.features.map((feature: string, index: number) => (
                       <li key={index} className="flex items-start gap-3">
                         <Icons.Check className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
                         <span className="text-gray-700 text-sm">{feature}</span>
@@ -213,6 +249,7 @@ export default function PricingPage() {
               </div>
             ))}
           </div>
+          )}
         </div>
       </section>
 

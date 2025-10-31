@@ -183,9 +183,12 @@ export const createCustomer = async (customerData: CustomerFormData): Promise<st
 
     const customerCountRef = ref(db, `users/${userId}/kunderCount`);
     const snapshot = await get(customerCountRef);
-    if(snapshot.exists()) {
-      const currentCount = snapshot.val() as number;
+    if (snapshot.exists()) {
+      const currentCount = Number(snapshot.val()) || 0;
       await set(customerCountRef, currentCount + 1);
+    } else {
+      // Initialize count to 1 when first customer is created
+      await set(customerCountRef, 1);
     }
 
     return newCustomerRef.key!;
