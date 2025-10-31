@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { CheckCircle2, XCircle, MessageSquare, Building2, Mail, Phone, Calendar, FileText, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -17,6 +18,7 @@ export default function TilbudsvisningPage() {
   
   const quoteId = params.id as string;
   const token = searchParams.get('token');
+  const viewOnly = searchParams.get('viewOnly') === 'true';
   
   const [quote, setQuote] = useState<any>(null);
   const [businessSettings, setBusinessSettings] = useState<any>(null);
@@ -25,6 +27,13 @@ export default function TilbudsvisningPage() {
   const [feedbackMessage, setFeedbackMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [contactMessage, setContactMessage] = useState('');
+  const [contactSubmitting, setContactSubmitting] = useState(false);
+  const [showContactDialog, setShowContactDialog] = useState(false);
+
+  // Check if deadline has expired
+  const deadlineExpired = quote ? (quote.svarfrist ? new Date(quote.svarfrist) < new Date() : false) : false;
 
   useEffect(() => {
     if (!token) {
@@ -163,9 +172,90 @@ export default function TilbudsvisningPage() {
 
   const isCompleted = quote.status === 'vunnet' || quote.status === 'tapt';
 
+  const handleContactUs = () => {
+    setShowContactDialog(true);
+  };
+
+  const handleSendContactMessage = async () => {
+    if (!contactMessage.trim()) {
+      toast({
+        title: 'Melding mangler',
+        description: 'Vennligst skriv en melding før du sender.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setContactSubmitting(true);
+    try {
+      const response = await fetch(`/api/quotes/${quoteId}/feedback`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          token,
+          message: `(Melding fra kunde etter svarfristen har gått ut)\n\n${contactMessage}`,
+          type: 'question',
+          customerName: quote.kundenavn,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Kunne ikke sende melding');
+      }
+
+      setContactMessage('');
+      setShowContactDialog(false);
+      
+      toast({
+        title: 'Melding sendt!',
+        description: 'Din melding er sendt til håndverkeren. De vil kontakte deg snart.',
+      });
+
+      // Refresh quote data
+      await fetchQuote();
+    } catch (err: any) {
+      toast({
+        title: 'Feil',
+        description: err.message || 'Kunne ikke sende melding',
+        variant: 'destructive',
+      });
+    } finally {
+      setContactSubmitting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-8 px-4">
       <div className="max-w-4xl mx-auto">
+        {/* Expired Deadline Header */}
+        {deadlineExpired && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <XCircle className="w-5 h-5 text-red-600 mr-2" />
+                <div>
+                  <h3 className="text-red-800 font-semibold">Svarfristen har gått ut</h3>
+                  <p className="text-red-700 text-sm">
+                    Fristen for å svare på dette tilbudet var {new Date(quote.svarfrist).toLocaleDateString('nb-NO')}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center">
+                <Button
+                  onClick={handleContactUs}
+                  size="sm"
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  <Mail className="w-4 h-4 mr-1" />
+                  Kontakt oss
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
           <div className="flex items-start justify-between mb-4">
@@ -257,26 +347,27 @@ export default function TilbudsvisningPage() {
         {/* Price Breakdown */}
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle>Prisgrunnlag</CardTitle>
+            <CardTitle>Prisforslag</CardTitle>
             <CardDescription>Detaljert oversikt over kostnadene</CardDescription>
           </CardHeader>
           <CardContent>
             {quote.prisgrunnlag && quote.prisgrunnlag.length > 0 ? (
-              <div className="space-y-2">
-                <div className="overflow-x-auto">
+              <div className="space-y-4">
+                {/* Desktop Table View */}
+                <div className="hidden md:block">
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-slate-200">
-                        <th className="text-left py-3 px-1 text-xs sm:text-md font-semibold text-slate-700">
-                          Beskrivelse
+                        <th className="text-left py-3 px-2 font-semibold text-slate-700">
+                          Produkt
                         </th>
-                        <th className="text-center py-3 px-1 text-xs sm:text-md font-semibold text-slate-700">
-                          Antall
+                        <th className="text-right py-3 px-2 font-semibold text-slate-700">
+                          Mengde
                         </th>
-                        <th className="text-center py-3 px-1 text-xs sm:text-md font-semibold text-slate-700">
-                          Enhetspris
+                        <th className="text-right py-3 px-2 font-semibold text-slate-700">
+                          Pris
                         </th>
-                        <th className="text-right py-3 px-1 text-xs sm:text-md font-semibold text-slate-700">
+                        <th className="text-right py-3 px-2 font-semibold text-slate-700">
                           Beløp
                         </th>
                       </tr>
@@ -289,55 +380,119 @@ export default function TilbudsvisningPage() {
                         >
                           <td className="py-3 px-2">
                             <div>
-                              <div className="text-sm sm:text-md font-medium text-slate-900">
+                              <div className="font-medium text-slate-900">
                                 {item.name}
                               </div>
                               {item.description && (
-                                <div className="text-xs sm:text-sm text-slate-600">
+                                <div className="text-sm text-slate-600">
                                   {item.description}
                                 </div>
                               )}
                             </div>
                           </td>
-                          <td className="text-center text-xs sm:text-sm py-3 px-2 text-slate-700">
+                          <td className="text-right py-3 px-2 text-slate-700">
                             {item.quantity || 1} {item.unit || 'stk'}
                           </td>
-                          <td className="text-center text-xs sm:text-sm py-3 px-2 text-slate-700">
-                            {(item.unitPrice || 0).toLocaleString('nb-NO')} kr
+                          <td className="text-right py-3 px-2 text-slate-700">
+                            {Math.round((item.unitPrice || 0) * (1 + (item.priceMarkup || 0) / 100)).toLocaleString('nb-NO')} kr
                           </td>
-                          <td className="text-right text-xs sm:text-sm py-3 px-2 font-semibold text-slate-900">
+                          <td className="text-right py-3 px-2 font-semibold text-slate-900">
                             {item.amount.toLocaleString('nb-NO')} kr
                           </td>
                         </tr>
                       ))}
                     </tbody>
                     <tfoot>
-                      <tr className="border-t-2 border-slate-300">
-                        <td colSpan={3} className="py-2 px-2 text-sm text-right font-regular text-slate-900">
-                          total:
-                        </td>
-                        <td className="py-2 !pt-4 px-2 text-nowrap text-right font-bold text-sm sm:text-md text-primary">
-                          {parseInt(quote.belop).toLocaleString('nb-NO')} kr
-                        </td>
-                      </tr>
-                      <tr className="">
-                        <td colSpan={3} className="py-2 !pb-4 px-2 text-sm text-right font-regular text-slate-900">
-                          mva (25%):
-                        </td>
-                        <td className="py-2 px-2 text-nowrap text-right font-bold text-sm sm:text-md text-primary">
-                          {parseInt(quote.belop * 0.25).toLocaleString('nb-NO')} kr
+                      <tr>
+                        <td colSpan={4} className="border-t-2 pt-2 px-2">
+                          <div className="flex justify-between items-center">
+                            <span className="font-bold text-slate-900">Total:</span>
+                            <span className="font-bold text-primary">
+                              {Number(quote.belop).toLocaleString('nb-NO')} kr
+                            </span>
+                          </div>
                         </td>
                       </tr>
-                      <tr className='border-t-2 border-slate-100'>
-                        <td colSpan={3} className="py-4 px-2 text-right font-bold text-slate-900">
-                          Total:
+                      <tr>
+                        <td colSpan={4} className="pb-2 px-2">
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs text-slate-500">MVA (25%):</span>
+                            <span className="text-xs text-slate-500">
+                              {Number(quote.belop * 0.25).toLocaleString('nb-NO')} kr
+                            </span>
+                          </div>
                         </td>
-                        <td className="py-4 px-2 text-nowrap text-right font-bold underline text-xl sm:text-2xl text-primary">
-                          {parseInt(quote.belop * 1.25).toLocaleString('nb-NO')} kr
+                      </tr>
+                      <tr className="border-t-1 border-slate-100">
+                        <td colSpan={4} className="py-4 px-2">
+                          <div className="flex justify-between items-center">
+                            <span className="font-bold text-slate-900">Total inkl. MVA:</span>
+                            <span className="font-bold underline text-xl text-primary">
+                              {Number(quote.belop * 1.25).toLocaleString('nb-NO')} kr
+                            </span>
+                          </div>
                         </td>
                       </tr>
                     </tfoot>
                   </table>
+                </div>
+
+                {/* Mobile Card View */}
+                <div className="md:hidden space-y-3">
+                  {quote.prisgrunnlag.map((item: any, index: number) => (
+                    <Card 
+                      key={index} 
+                      className="px-4 py-2 cursor-pointer hover:bg-slate-50 transition-colors"
+                      onClick={() => setSelectedItem(item)}
+                    >
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-medium text-sm text-slate-900 truncate pr-2">
+                              {item.name}
+                            </h4>
+                            {item.description && (
+                              <p className="text-xs text-slate-600 mt-1 line-clamp-2">
+                                {item.description}
+                              </p>
+                            )}
+                          </div>
+                          <div className="text-right font-semibold text-slate-900 whitespace-nowrap">
+                            {item.amount.toLocaleString('nb-NO')} kr
+                          </div>
+                        </div>
+                        <div className="flex justify-between text-sm text-slate-600">
+                          <span>Mengde: {item.quantity || 1} {item.unit || 'stk'}</span>
+                          <span>Pris: {Math.round((item.unitPrice || 0) * (1 + (item.priceMarkup || 0) / 100)).toLocaleString('nb-NO')} kr</span>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                  
+                  {/* Mobile Totals */}
+                  <Card className="p-4 bg-slate-50">
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="font-medium text-slate-900">Total:</span>
+                        <span className="font-bold text-primary">
+                          {Number(quote.belop).toLocaleString('nb-NO')} kr
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-xs text-slate-500">
+                        <span>MVA (25%):</span>
+                        <span>
+                          {Number(quote.belop * 0.25).toLocaleString('nb-NO')} kr
+                        </span>
+                      </div>
+                      <Separator className="my-2" />
+                      <div className="flex justify-between">
+                        <span className="font-bold text-slate-900">Total inkl. MVA:</span>
+                        <span className="font-bold underline text-xl text-primary">
+                          {Number(quote.belop * 1.25).toLocaleString('nb-NO')} kr
+                        </span>
+                      </div>
+                    </div>
+                  </Card>
                 </div>
               </div>
             ) : (
@@ -348,8 +503,23 @@ export default function TilbudsvisningPage() {
           </CardContent>
         </Card>
 
+        {/* Notes */}
+        {quote.notater && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>Notater</CardTitle>
+              <CardDescription>Tilleggsinformasjon om prosjektet</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="p-4 bg-slate-50 rounded-lg">
+                <p className="text-slate-700 whitespace-pre-wrap">{quote.notater}</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Action Section */}
-        {!isCompleted && (
+        {!viewOnly && !isCompleted && !deadlineExpired && (
           <Card className="mb-6">
             <CardHeader>
               <CardTitle>Svar på tilbudet</CardTitle>
@@ -418,6 +588,23 @@ export default function TilbudsvisningPage() {
           </Card>
         )}
 
+        {/* Expired Deadline Message */}
+        {deadlineExpired && !isCompleted && !viewOnly && (
+          <Card className="mb-6 bg-amber-50 border-amber-200">
+            <CardContent className="pt-6">
+              <div className="text-center">
+                <Calendar className="w-12 h-12 text-amber-600 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-amber-800 mb-2">
+                  Svarfristen har gått ut
+                </h3>
+                <p className="text-amber-700 mb-4">
+                  Du kan fortsatt kontakte håndverkeren ved å bruke "Kontakt oss" knappen øverst på siden.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Feedback Confirmation */}
         {feedbackSubmitted && (
           <Card className="bg-green-50 border-green-200">
@@ -434,6 +621,87 @@ export default function TilbudsvisningPage() {
         <div className="text-center text-sm text-slate-600 mt-8">
           <p>Powered by Proanbud</p>
         </div>
+
+        {/* Contact Dialog */}
+        <Dialog open={showContactDialog} onOpenChange={setShowContactDialog}>
+          <DialogContent className="sm:max-w-md rounded-xl">
+            <DialogHeader>
+              <DialogTitle>Kontakt håndverker</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Melding
+                </label>
+                <Textarea
+                  value={contactMessage}
+                  onChange={(e) => setContactMessage(e.target.value)}
+                  placeholder="Skriv din melding til håndverkeren..."
+                  rows={4}
+                  className="w-full"
+                  disabled={contactSubmitting}
+                />
+              </div>
+              <div className="flex justify-end space-x-2">
+                <Button
+                  onClick={() => setShowContactDialog(false)}
+                  variant="outline"
+                  disabled={contactSubmitting}
+                >
+                  Avbryt
+                </Button>
+                <Button
+                  onClick={handleSendContactMessage}
+                  disabled={contactSubmitting || !contactMessage.trim()}
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  {contactSubmitting ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Mail className="w-4 h-4 mr-2" />
+                  )}
+                  Send melding
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Item Details Dialog */}
+        <Dialog open={!!selectedItem} onOpenChange={() => setSelectedItem(null)}>
+          <DialogContent className="sm:max-w-md rounded-xl max-w-xs">
+            <DialogHeader>
+              <DialogTitle>{selectedItem?.name}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              {selectedItem?.description && (
+                <div>
+                  <h4 className="font-medium text-slate-900 mb-2">Beskrivelse</h4>
+                  <p className="text-slate-600">{selectedItem.description}</p>
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <h4 className="font-medium text-slate-900">Mengde</h4>
+                  <p className="text-slate-600">{selectedItem?.quantity || 1} {selectedItem?.unit || 'stk'}</p>
+                </div>
+                <div>
+                  <h4 className="font-medium text-slate-900">Enhetspris</h4>
+                  <p className="text-slate-600">{parseFloat((selectedItem?.amount / selectedItem?.quantity || 0).toFixed(2)).toLocaleString('nb-NO')} kr</p>
+                </div>
+              </div>
+              <div className="border-t pt-4">
+                <div className="flex justify-between items-center">
+                  <h4 className="font-bold text-slate-900">Total beløp</h4>
+                  <p className="font-bold text-lg text-primary">{selectedItem?.amount.toLocaleString('nb-NO')} kr</p>
+                </div>
+              </div>
+              <Button onClick={() => setSelectedItem(null)} className="w-full">
+                Lukk
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

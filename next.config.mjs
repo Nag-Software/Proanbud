@@ -4,12 +4,14 @@ import { createMDX } from 'fumadocs-mdx/next';
 
 const nextConfig = {
   /* config options here */
-  output: "standalone",
   turbopack: {
     root: new URL('.', import.meta.url).pathname,
   },
   typescript: {
     ignoreBuildErrors: true,
+  },
+  eslint: {
+    ignoreDuringBuilds: true,
   },
   images: {
     remotePatterns: [

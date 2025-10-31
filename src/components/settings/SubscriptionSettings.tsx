@@ -1,21 +1,66 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/shared/Card';
 import * as Icons from 'lucide-react';
 import { BusinessSettings } from '@/lib/types';
 import { useSubscription } from '@/contexts/SubscriptionContextNew';
 import { useSubscriptionAccess } from '@/hooks/useSubscriptionAccess';
-import { SUBSCRIPTION_PLANS, formatPrice, getDaysRemaining } from '@/lib/stripe-client';
+import { getSubscriptionPlans, formatPrice, getDaysRemaining } from '@/lib/stripe-client';
 
 export const SubscriptionSettings = ({ businessSettings }: { businessSettings: BusinessSettings | null }) => {
   const { subscription, usage, createCheckoutSession, createCustomerPortalSession, cancelSubscription, resumeSubscription, syncSubscriptions, debugTimeOffset: contextDebugTimeOffset } = useSubscription();
   const { isLimited } = useSubscriptionAccess();
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly');
   const [isLoading, setIsLoading] = useState(false);
+  const [plans, setPlans] = useState<any[]>([]);
+  const [plansLoading, setPlansLoading] = useState(true);
 
   // Local state to ensure re-renders when debug offset changes
   const [localDebugOffset, setLocalDebugOffset] = useState(contextDebugTimeOffset);
+
+  // Load plans from Stripe on component mount
+  useEffect(() => {
+    const loadPlans = async () => {
+      try {
+        const stripePlans = await getSubscriptionPlans();
+        setPlans(stripePlans);
+      } catch (error) {
+        console.error('Failed to load plans:', error);
+        // Fallback to hardcoded plans if API fails
+        setPlans([
+          {
+            id: 'free',
+            name: 'Gratis',
+            price: { monthly: 0, yearly: 0 },
+            features: ['Inntil 3 tilbud', 'Inntil 1 kunder']
+          },
+          {
+            id: 'basic',
+            name: 'Basic',
+            price: { monthly: 699, yearly: 6990 },
+            features: ['Inntil 15 tilbud per måned', 'Inntil 10 kunder']
+          },
+          {
+            id: 'pro',
+            name: 'Pro',
+            price: { monthly: 1999, yearly: 19990 },
+            features: ['Ubegrenset tilbud', 'Ubegrenset kunder']
+          },
+          {
+            id: 'trial',
+            name: 'Prøveperiode',
+            price: { monthly: 0, yearly: 0 },
+            features: ['14 dager gratis']
+          }
+        ]);
+      } finally {
+        setPlansLoading(false);
+      }
+    };
+
+    loadPlans();
+  }, []);
 
   // Sync local state with context
   React.useEffect(() => {
@@ -91,14 +136,14 @@ export const SubscriptionSettings = ({ businessSettings }: { businessSettings: B
   };
 
   const getSavingsPercentage = () => {
-    return '17%'; // (299*12 - 2990) / (299*12) * 100 ≈ 17%
+    return '17%'; // (699*12 - 6990) / (699*12) * 100 ≈ 17%
   };
 
   const currentPlan = (subscription?.plan === 'free' && subscription?.status === 'active' && !!subscription?.trialEnd)
-    ? SUBSCRIPTION_PLANS.find(p => p.id === 'trial')
+    ? plans.find((p: any) => p.id === 'trial')
     : subscription 
-      ? SUBSCRIPTION_PLANS.find(p => p.id === subscription.plan) 
-      : SUBSCRIPTION_PLANS[0];
+      ? plans.find((p: any) => p.id === subscription.plan) 
+      : plans[0];
   const isTrial = subscription?.plan === 'free' && subscription?.status === 'active' && !!subscription?.trialEnd;
   const currentTime = Math.floor(Date.now() / 1000) + localDebugOffset;
   const daysRemaining = subscription?.trialEnd ? getDaysRemaining(subscription.trialEnd, currentTime) : 0;
@@ -231,7 +276,7 @@ export const SubscriptionSettings = ({ businessSettings }: { businessSettings: B
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {SUBSCRIPTION_PLANS.filter(plan => plan.id !== 'free' && plan.id !== 'trial').map((plan) => {
+            {plans.filter((plan: any) => plan.id !== 'free' && plan.id !== 'trial').map((plan: any) => {
               const isCurrentPlan = subscription?.plan === plan.id && subscription?.status === 'active';
               const canUpgrade = !isLoading && plan.stripePriceId?.[billingPeriod] && (subscription?.status !== 'active' || subscription?.plan !== plan.id);
               return (
@@ -285,7 +330,7 @@ export const SubscriptionSettings = ({ businessSettings }: { businessSettings: B
                     </button>
 
                     <ul className="space-y-2">
-                      {plan.features.map((feature, index) => (
+                      {plan.features.map((feature: string, index: number) => (
                         <li key={index} className="flex items-start gap-2">
                           <Icons.Check className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
                           <span className="text-gray-700 text-sm">{feature}</span>

@@ -26,7 +26,7 @@
       "@/*": [
         "./src/*"
       ],
-      "@/.source": [".source"]
+      "@/.source": ["./.source"]
     }
   },
   "include": [

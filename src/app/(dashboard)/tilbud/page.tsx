@@ -21,9 +21,27 @@ import { useSubscription } from '@/contexts/SubscriptionContextNew';
 import { AccessRestrictedBanner } from '@/components/subscription/AccessRestrictedBanner';
 import { getQuoteColumns } from '@/lib/table-columns/quotes-columns';
 
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkIsMobile = () => {
+      setIsMobile(window.innerWidth < 768); // md breakpoint
+    };
+
+    checkIsMobile();
+    window.addEventListener('resize', checkIsMobile);
+
+    return () => window.removeEventListener('resize', checkIsMobile);
+  }, []);
+
+  return isMobile;
+}
+
 export default function TilbudPage() {
 
   const router = useRouter();
+  const isMobile = useIsMobile();
   const { checkQuoteLimit, showUpgradeDialog, loading: limitsLoading } = useSubscriptionLimits();
   const { hasAccess, hasTrialAccess, isLimited } = useSubscriptionAccess();
   const { subscription, refreshUsage } = useSubscription();
@@ -184,19 +202,19 @@ export default function TilbudPage() {
   };
 
   const handleQuoteClick = (quote: Tilbud) => {
-    setSelectedQuote(quote);
-    setIsQuoteDetailsOpen(true);
+    if (isMobile) {
+      // On mobile, open drawer
+      setSelectedQuote(quote);
+      setIsQuoteDetailsOpen(true);
+    } else {
+      // On desktop, navigate to dedicated page
+      router.push(`/tilbud/${quote.id}`);
+    }
   };
 
   const handleOpenCustomerDrawer = (customer: Kunde) => {
     setSelectedCustomer(customer);
     setIsCustomerDetailsOpen(true);
-  };
-
-  const handleEditQuote = (quote: Tilbud) => {
-    setEditingQuote(quote);
-    setIsQuoteDetailsOpen(false);
-    setIsNewQuoteOpen(true);
   };
 
   const handleMarkAsWon = async (quote: Tilbud) => {
@@ -342,20 +360,16 @@ export default function TilbudPage() {
         editingQuote={editingQuote}
       />
       
-      <QuoteDetailsDrawer
-        quote={selectedQuote}
-        open={isQuoteDetailsOpen}
-        onOpenChange={setIsQuoteDetailsOpen}
-        onQuoteUpdated={handleTilbudCreated}
-        onOpenCustomerDrawer={handleOpenCustomerDrawer}
-        customers={customers}
-        onEditQuote={handleEditQuote}
-      />
-      
       <CustomerDetailsDrawer
         customer={selectedCustomer}
         open={isCustomerDetailsOpen}
         onOpenChange={setIsCustomerDetailsOpen}
+      />
+
+      <QuoteDetailsDrawer
+        quote={selectedQuote}
+        open={isQuoteDetailsOpen}
+        onOpenChange={setIsQuoteDetailsOpen}
       />
 
       <AlertDialog open={alertDialogOpen} onOpenChange={setAlertDialogOpen}>

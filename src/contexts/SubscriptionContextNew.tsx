@@ -76,14 +76,16 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
       // Get quotes count from Realtime Database
       const quotesRef = ref(db, `users/${user.uid}/tilbudCount`);
       const quotesSnapshot = await get(quotesRef);
-      // const quotesCount = quotesSnapshot.exists() ? Object.keys(quotesSnapshot.val()).length : 0;
-      const quotesCount = quotesSnapshot.exists() ? quotesSnapshot.val() : NaN;
+  // const quotesCount = quotesSnapshot.exists() ? Object.keys(quotesSnapshot.val()).length : 0;
+  // If the realtime entry doesn't exist, default to 0 (avoid NaN)
+  const quotesCount = quotesSnapshot.exists() ? Number(quotesSnapshot.val()) || 0 : 0;
 
       // Get customers count from Realtime Database
       const customersRef = ref(db, `users/${user.uid}/kunderCount`);
       const customersSnapshot = await get(customersRef);
-      // const customersCount = customersSnapshot.exists() ? Object.keys(customersSnapshot.val()).length : 0;
-      const customersCount = customersSnapshot.exists() ? customersSnapshot.val() : NaN;
+  // const customersCount = customersSnapshot.exists() ? Object.keys(customersSnapshot.val()).length : 0;
+  // If the realtime entry doesn't exist, default to 0 (avoid NaN)
+  const customersCount = customersSnapshot.exists() ? Number(customersSnapshot.val()) || 0 : 0;
 
       // Determine correct plan based on expiration
       let currentPlan = subscription?.plan || 'free';

@@ -575,24 +575,24 @@ export function QuoteDetailsDrawer({
     <>
       {/* Backdrop */}
       <div 
-        className={`fixed inset-0 bg-black/50 z-[200] transition-opacity duration-300 ${
+        className={`fixed inset-0 bg-black/50 z-[265] transition-opacity duration-300 ${
           open ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
         onClick={() => onOpenChange(false)}
       />
       
       {/* Drawer */}
-      <div className={`fixed right-0 top-0 h-full w-full max-w-3xl bg-white shadow-2xl z-[250] transform transition-all duration-300 ease-in-out ${
+      <div className={`fixed inset-0 ml-auto w-full max-w-sm sm:max-w-2xl lg:max-w-4xl bg-white shadow-2xl z-[270] transform transition-all duration-300 ease-in-out ${
         open ? 'translate-x-0' : 'translate-x-full'
       }`}>
         <div className="flex flex-col h-full">
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gray-50">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">{quote.prosjekt}</h2>
+          <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 bg-gray-50 flex-shrink-0">
+            <div className="min-w-0 flex-1">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 truncate">{quote.prosjekt}</h2>
               <p className="text-sm text-gray-600 mt-1">Tilbudsdetaljer</p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0 ml-4">
               {isEditing ? (
                 <>
                   <button
@@ -663,7 +663,7 @@ export function QuoteDetailsDrawer({
           </div>
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
             {/* Quote Information */}
             <Card>
               <div className="p-6">
@@ -672,8 +672,8 @@ export function QuoteDetailsDrawer({
                   Tilbudsinformasjon
                 </h3>
                 <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div className="min-w-0">
                       <label className="block text-sm font-medium text-gray-700 mb-1">Prosjekt</label>
                       {isEditing ? (
                         <input
@@ -684,10 +684,10 @@ export function QuoteDetailsDrawer({
                           placeholder="Prosjektnavn"
                         />
                       ) : (
-                        <p className="text-gray-900 font-medium">{quote.prosjekt}</p>
+                        <p className="text-gray-900 font-medium break-words">{quote.prosjekt}</p>
                       )}
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <label className="block text-sm font-medium text-gray-700 mb-1">Jobbtype</label>
                       {isEditing ? (
                         <input
@@ -698,11 +698,11 @@ export function QuoteDetailsDrawer({
                           placeholder="Jobbtype"
                         />
                       ) : (
-                        <p className="text-gray-900">{quote.jobbtype}</p>
+                        <p className="text-gray-900 break-words">{quote.jobbtype}</p>
                       )}
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Beløp</label>
                       {isEditing ? (
@@ -747,12 +747,12 @@ export function QuoteDetailsDrawer({
                   <User className="h-5 w-5 text-green-600" />
                   Kundeinformasjon
                 </h3>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-gray-900 font-medium text-lg">{quote.kundenavn}</p>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-gray-900 font-medium text-lg break-words">{quote.kundenavn}</p>
                     {relatedCustomer && (
                       <div className="text-sm text-gray-600 mt-2 space-y-1">
-                        <p>📧 {relatedCustomer.epost}</p>
+                        <p className="break-all">📧 {relatedCustomer.epost}</p>
                         <p>📞 {relatedCustomer.telefon}</p>
                         <p>📊 {relatedCustomer.antallVunnet}/{relatedCustomer.antallTilbud} tilbud vunnet</p>
                       </div>
@@ -761,7 +761,7 @@ export function QuoteDetailsDrawer({
                   {relatedCustomer && onOpenCustomerDrawer && (
                     <button
                       onClick={handleOpenCustomerDrawer}
-                      className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors"
+                      className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors flex-shrink-0"
                     >
                       <ExternalLink className="h-4 w-4" />
                       Se kunde
@@ -795,10 +795,10 @@ export function QuoteDetailsDrawer({
                     {isEditing ? (
                       // Edit mode - show editable fields
                       editedPriceComponents.map((component, index) => (
-                        <div key={component.id || index} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div key={component.id || index} className="p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-200">
+                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                             {/* Name */}
-                            <div>
+                            <div className="min-w-0">
                               <label className="block text-xs font-medium text-gray-700 mb-1">Navn</label>
                               <input
                                 type="text"
@@ -832,61 +832,61 @@ export function QuoteDetailsDrawer({
                               <textarea
                                 value={component.description}
                                 onChange={(e) => updatePriceComponent(index, 'description', e.target.value)}
-                                className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                                 placeholder="Beskrivelse av komponenten"
                                 rows={2}
                               />
                             </div>
                             
-                            {/* Quantity */}
-                            <div>
-                              <label className="block text-xs font-medium text-gray-700 mb-1">Antall</label>
-                              <input
-                                type="number"
-                                value={component.quantity || 0}
-                                onChange={(e) => updatePriceComponent(index, 'quantity', Number(e.target.value))}
-                                className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                min="0"
-                                step="0.01"
-                              />
+                            {/* Quantity and Unit */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Antall</label>
+                                <input
+                                  type="number"
+                                  value={component.quantity || 0}
+                                  onChange={(e) => updatePriceComponent(index, 'quantity', Number(e.target.value))}
+                                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  min="0"
+                                  step="0.01"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Enhet</label>
+                                <input
+                                  type="text"
+                                  value={component.unit || ''}
+                                  onChange={(e) => updatePriceComponent(index, 'unit', e.target.value)}
+                                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  placeholder="stk, m²"
+                                />
+                              </div>
                             </div>
                             
-                            {/* Unit */}
-                            <div>
-                              <label className="block text-xs font-medium text-gray-700 mb-1">Enhet</label>
-                              <input
-                                type="text"
-                                value={component.unit || ''}
-                                onChange={(e) => updatePriceComponent(index, 'unit', e.target.value)}
-                                className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                placeholder="stk, m², timer"
-                              />
-                            </div>
-                            
-                            {/* Unit Price */}
-                            <div>
-                              <label className="block text-xs font-medium text-gray-700 mb-1">Enhetspris (kr)</label>
-                              <input
-                                type="number"
-                                value={component.unitPrice || 0}
-                                onChange={(e) => updatePriceComponent(index, 'unitPrice', Number(e.target.value))}
-                                className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                min="0"
-                                step="0.01"
-                              />
-                            </div>
-                            
-                            {/* Total Amount */}
-                            <div>
-                              <label className="block text-xs font-medium text-gray-700 mb-1">Totalt beløp (kr)</label>
-                              <input
-                                type="number"
-                                value={component.amount || 0}
-                                onChange={(e) => updatePriceComponent(index, 'amount', Number(e.target.value))}
-                                className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold"
-                                min="0"
-                                step="0.01"
-                              />
+                            {/* Unit Price and Amount */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Enhetspris (kr)</label>
+                                <input
+                                  type="number"
+                                  value={component.unitPrice || 0}
+                                  onChange={(e) => updatePriceComponent(index, 'unitPrice', Number(e.target.value))}
+                                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  min="0"
+                                  step="0.01"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Totalt (kr)</label>
+                                <input
+                                  type="number"
+                                  value={component.amount || 0}
+                                  onChange={(e) => updatePriceComponent(index, 'amount', Number(e.target.value))}
+                                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold"
+                                  min="0"
+                                  step="0.01"
+                                />
+                              </div>
                             </div>
                             
                             {/* Price Markup */}
@@ -1121,7 +1121,7 @@ export function QuoteDetailsDrawer({
                   
                   {/* PDF Preview Container */}
                   <div className="border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
-                    <div className="h-96 flex items-center justify-center">
+                    <div className="h-64 sm:h-80 flex items-center justify-center">
                       <div className="text-center">
                         <div className="w-16 h-16 bg-red-100 rounded-lg flex items-center justify-center mx-auto mb-4">
                           <FileText className="h-8 w-8 text-red-600" />
@@ -1164,13 +1164,13 @@ export function QuoteDetailsDrawer({
 
       {/* Preview Dialog */}
       <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="max-w-5xl max-h-[95vh] overflow-hidden flex flex-col">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle>Tilbudsforhåndsvisning - {quote.prosjekt}</DialogTitle>
           </DialogHeader>
 
           {/* Template Selector */}
-          <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+          <div className="flex-shrink-0 mb-4 p-4 bg-gray-50 rounded-lg">
             <h3 className="text-sm font-medium text-gray-700 mb-3">Velg mal:</h3>
             <div className="flex gap-2">
               <button
@@ -1212,7 +1212,7 @@ export function QuoteDetailsDrawer({
             )}
           </div>
 
-          <div className="mt-4">
+          <div className="flex-1 overflow-y-auto min-h-0">
             <div
               className="bg-white border rounded-lg shadow-sm"
               dangerouslySetInnerHTML={{ __html: generatePreviewHtml() }}

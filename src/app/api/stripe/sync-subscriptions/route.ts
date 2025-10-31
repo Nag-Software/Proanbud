@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth } from '@/lib/firebaseAdmin';
+import { adminAuth, firestore, database } from '@/lib/firebaseAdmin';
 import { stripe } from '@/lib/stripe';
-import { firestore } from '@/lib/firebaseAdmin';
+
 
 export async function POST(request: NextRequest) {
   try {
@@ -91,6 +91,8 @@ export async function POST(request: NextRequest) {
       const plan = priceId === process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID ? 'pro' :
                    priceId === process.env.NEXT_PUBLIC_STRIPE_BASIC_PRICE_ID ? 'basic' : 'free';
 
+      const newPeriodEndSeconds = (subscription as any).current_period_end || Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60);
+
       const firestoreData = {
         id: subscription.id,
         customer: subscription.customer,
@@ -102,7 +104,7 @@ export async function POST(request: NextRequest) {
           seconds: (subscription as any).current_period_start || Math.floor(Date.now() / 1000),
         },
         current_period_end: {
-          seconds: (subscription as any).current_period_end || Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60),
+          seconds: newPeriodEndSeconds,
         },
         cancel_at_period_end: subscription.cancel_at_period_end,
         created: {
@@ -111,6 +113,30 @@ export async function POST(request: NextRequest) {
         createdAt: subscription.created || Date.now(),
         updatedAt: Date.now(),
       };
+
+      // Check existing subscription doc to decide if we should reset usage counters.
+      try {
+        const subDocRef = firestore.doc(`users/${userId}/subscriptions/${subscription.id}`);
+        const existingSubDoc = await subDocRef.get();
+        const prevPeriodEnd = existingSubDoc.exists ? existingSubDoc.data()?.current_period_end?.seconds : null;
+
+        // Reset counters when: first sync (no existing subscription doc) OR when the billing period end has advanced
+        if (prevPeriodEnd === null || newPeriodEndSeconds > prevPeriodEnd) {
+          if (database) {
+            try {
+              await database.ref(`users/${userId}/tilbudCount`).set(0);
+              await database.ref(`users/${userId}/kunderCount`).set(0);
+              console.log(`♻️ Reset tilbudCount and kunderCount for user ${userId} (subscription ${subscription.id})`);
+            } catch (dbErr) {
+              console.error('Failed to reset realtime DB usage counters for user', userId, dbErr);
+            }
+          } else {
+            console.warn('Realtime database not initialized; cannot reset usage counters for', userId);
+          }
+        }
+      } catch (checkErr) {
+        console.error('Error while checking existing subscription doc for reset logic', checkErr);
+      }
 
       await firestore.doc(`users/${userId}/subscriptions/${subscription.id}`).set(firestoreData, { merge: true });
       console.log(`✅ Updated subscription ${subscription.id} with status: ${subscription.status}`);

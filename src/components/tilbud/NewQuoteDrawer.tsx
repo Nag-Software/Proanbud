@@ -27,14 +27,12 @@ import {
   Upload, 
   Sparkles, 
   Zap,
-  Eye,
   Send,
   Edit3,
   X,
   Plus,
   Trash2,
-  Calculator,
-  Palette
+  Calculator
 } from 'lucide-react';
 import { createTilbud, updateTilbud, getTilbudById, TilbudFormData, getUniqueCategoriesFromQuotes } from '@/lib/services/tilbudService';
 import { getCustomers } from '@/lib/services/customerService';
@@ -57,34 +55,6 @@ import {
 import { ProductDetailsDrawer } from '../katalog';
 import { AlertDialog } from '../ui/alert-dialog';
 
-async function downloadTemplate(templateName: string): Promise<string> {
-  let url = "";
-  switch (templateName) {
-    case 'modern':
-      url = "/templates/template-modern.html";
-      break;
-    case 'classic':
-      url = "/templates/template-classic.html";
-      break;
-    case 'minimal':
-      url = "/templates/template-minimal.html";
-      break;
-    default:
-      url = "/templates/template-modern.html";
-  }
-
-  try {
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch template: ${response.statusText}`);
-    }
-    return await response.text();
-  } catch (error) {
-    console.error('Error loading template:', error);
-    return '<div>Error loading template</div>';
-  }
-}
-
 interface NewQuoteDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -104,7 +74,6 @@ const STEPS = [
   { id: 1, title: 'AI-Analyse', description: 'Beskriv jobben og last opp bilder', icon: Sparkles },
   { id: 2, title: 'Rediger prisforslag', description: 'Juster pris basert på AI-analyse', icon: Zap },
   { id: 3, title: 'Prissammendrag', description: 'Gjennomgå og bekreft prising', icon: Calculator },
-  { id: 4, title: 'Design', description: 'Velg mal og send tilbud', icon: Palette },
 ];
 
 export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChange, onTilbudCreated, editingQuote }) => {
@@ -130,16 +99,12 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
   const [customCategories, setCustomCategories] = useState<string[]>([]);
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
-  const [selectedTemplate, setSelectedTemplate] = useState<string>('modern');
   const [priceMarkup, setPriceMarkup] = useState<number>(0);
   const [materialMarkup, setMaterialMarkup] = useState<number>(0);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingComponent, setEditingComponent] = useState<PriceComponent | null>(null);
   const [editingField, setEditingField] = useState<'name' | 'description' | null>(null);
   const [editValue, setEditValue] = useState('');
-  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  const [templateHtml, setTemplateHtml] = useState('');
-  const [isLoadingTemplate, setIsLoadingTemplate] = useState(false);
   const [isCatalogDialogOpen, setIsCatalogDialogOpen] = useState(false);
   const [catalogProducts, setCatalogProducts] = useState<Product[]>([]);
   const [catalogCategories, setCatalogCategories] = useState<Category[]>([]);
@@ -154,95 +119,6 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
   const [catalogLoaded, setCatalogLoaded] = useState(false);
   const [unitPriceInputs, setUnitPriceInputs] = useState<Map<string, string>>(new Map());
   
-  // Preview functions
-  const handlePreview = async () => {
-    setIsLoadingTemplate(true);
-    try {
-      const template = await downloadTemplate(selectedTemplate);
-      setTemplateHtml(template);
-      setIsPreviewOpen(true);
-    } catch (error) {
-      console.error('Error loading template for preview:', error);
-    } finally {
-      setIsLoadingTemplate(false);
-    }
-  };
-
-  const generatePreviewHtml = () => {
-    if (!templateHtml) return '';
-
-    let html = templateHtml;
-    const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
-
-    // Replace quote placeholders
-    html = html.replace(/\{\{quote\.prosjekt\}\}/g, projectName || 'Prosjektnavn');
-    html = html.replace(/\{\{quote\.id\}\}/g, 'PREVIEW');
-    html = html.replace(/\{\{quote\.dato\}\}/g, new Date().toLocaleDateString('nb-NO'));
-    html = html.replace(/\{\{quote\.svarfrist\}\}/g, new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toLocaleDateString('nb-NO'));
-    html = html.replace(/\{\{quote\.status\}\}/g, 'Venter på svar');
-    html = html.replace(/\{\{quote\.kundenavn\}\}/g, selectedCustomer?.navn || 'Kundenavn');
-    html = html.replace(/\{\{quote\.jobbtype\}\}/g, 'Generell');
-    html = html.replace(/\{\{quote\.belop\}\}/g, `${quoteData.finalPrice.toLocaleString('nb-NO')} kr`);
-    // Handle conditional message block
-    const messageContent = quoteMessage || quoteData.jobDescription;
-    if (messageContent && messageContent.trim()) {
-      // Keep the message block
-      html = html.replace(/\{\{#quote\.beskrivelse\}\}([\s\S]*?)\{\{\/quote\.beskrivelse\}\}/g, '$1');
-      html = html.replace(/\{\{quote\.beskrivelse\}\}/g, messageContent);
-    } else {
-      // Remove the message block
-      html = html.replace(/\{\{#quote\.beskrivelse\}\}([\s\S]*?)\{\{\/quote\.beskrivelse\}\}/g, '');
-    }
-
-    // Generate price components table rows
-    let priceComponentsHtml = '';
-    if (quoteData.adjustedComponents && quoteData.adjustedComponents.length > 0) {
-      quoteData.adjustedComponents.forEach((component, index) => {
-        const rowStyle = index % 2 === 0 ? 'background: #f9fafb;' : '';
-        priceComponentsHtml += `
-          <tr style="${rowStyle}">
-            <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">${component.name}<br/><small style="color: #6b7280;">${component.description}</small></td>
-            <td style="padding: 12px; text-align: center; border-bottom: 1px solid #e5e7eb;">${component.quantity || 1}</td>
-            <td style="padding: 12px; text-align: center; border-bottom: 1px solid #e5e7eb;">${(component.unitPrice || 0).toLocaleString('nb-NO')} kr</td>
-            <td style="padding: 12px; text-align: right; border-bottom: 1px solid #e5e7eb; font-weight: 500;">${component.amount.toLocaleString('nb-NO')} kr</td>
-          </tr>
-        `;
-      });
-    } else {
-      priceComponentsHtml = `
-        <tr>
-          <td colspan="4" style="padding: 20px; text-align: center; color: #6b7280; border-bottom: 1px solid #e5e7eb;">
-            Ingen prisgrunnlag definert ennå
-          </td>
-        </tr>
-      `;
-    }
-    html = html.replace(/\{\{quote\.prisgrunnlag\}\}/g, priceComponentsHtml);
-
-    // Replace customer placeholders
-    if (selectedCustomer) {
-      html = html.replace(/\{\{customer\.epost\}\}/g, selectedCustomer.epost);
-      html = html.replace(/\{\{customer\.telefon\}\}/g, selectedCustomer.telefon);
-    } else {
-      html = html.replace(/\{\{customer\.epost\}\}/g, 'Ikke tilgjengelig');
-      html = html.replace(/\{\{customer\.telefon\}\}/g, 'Ikke tilgjengelig');
-    }
-
-    // Replace business placeholders (mock data for preview)
-    html = html.replace(/\{\{business\.name\}\}/g, 'Din Bedrift AS');
-    html = html.replace(/\{\{business\.orgnr\}\}/g, 'Org.nr: 123456789');
-    html = html.replace(/\{\{business\.address\}\}/g, 'Gateadresse 123');
-    html = html.replace(/\{\{business\.postalCode\}\}/g, '1234');
-    html = html.replace(/\{\{business\.city\}\}/g, 'By');
-    html = html.replace(/\{\{business\.phone\}\}/g, '+47 123 45 678');
-    html = html.replace(/\{\{business\.email\}\}/g, 'kontakt@dinbedrift.no');
-    html = html.replace(/\{\{business\.website\}\}/g, 'www.dinbedrift.no');
-    html = html.replace(/\{\{business\.logoUrl\}\}/g, '');
-    html = html.replace(/\{\{business\.bankAccount\}\}/g, 'Kontonummer: 1234 56 78901');
-
-    return html;
-  };
-
   // Load customers and catalog data when drawer opens
   useEffect(() => {
     if (open) {
@@ -287,7 +163,6 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
       // Set project details
       setProjectName(editingQuote.prosjekt);
       setQuoteMessage(editingQuote.beskrivelse || '');
-      setSelectedTemplate(editingQuote.template || 'modern');
       
       // Set quote data
       setQuoteData({
@@ -602,7 +477,6 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
         beskrivelse: quoteMessage || quoteData.jobDescription,
         notater: `AI-generert tilbud med ${quoteData.adjustedComponents.length} prisgrunnlagskomponenter (UTKAST)`,
         prisgrunnlag: quoteData.adjustedComponents,
-        template: selectedTemplate,
       };
 
       // Create or update the draft quote
@@ -624,7 +498,6 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
       setSelectedCustomerId('');
       setProjectName('');
       setQuoteMessage('');
-      setSelectedTemplate('modern');
       setUnitPriceInputs(new Map());
       onOpenChange(false);
       
@@ -661,7 +534,6 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
         beskrivelse: quoteMessage || quoteData.jobDescription,
         notater: `AI-generert tilbud med ${quoteData.adjustedComponents.length} prisgrunnlagskomponenter`,
         prisgrunnlag: quoteData.adjustedComponents,
-        template: selectedTemplate,
       };
 
       // Create or update the quote
@@ -1718,44 +1590,11 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
         </CardContent>
       </Card>
 
-      <div className="flex gap-3">
-        <Button 
-          variant="outline" 
-          className="flex-1 flex items-center justify-center gap-2"
-          onClick={handlePrevious}
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Tilbake
-        </Button>
-        {selectedCustomerId && projectName.trim().length > 0 && (
-          <Button 
-            variant="outline"
-            className="flex items-center justify-center gap-2 px-4"
-            onClick={handleSaveDraft}
-            disabled={isSubmitting}
-          >
-            <Edit3 className="w-4 h-4" />
-            {isSubmitting ? 'Lagrer...' : 'Lagre som utkast'}
-          </Button>
-        )}
-        <Button 
-          className="flex-1 flex items-center justify-center gap-2"
-          onClick={handleNext}
-        >
-          <ArrowRight className="w-4 h-4" />
-          Neste
-        </Button>
-      </div>
-    </div>
-  );
-
-  const renderStep4 = () => (
-    <div className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Palette className="w-5 h-5 text-primary" />
-            Design & Send
+            <Send className="w-5 h-5 text-primary" />
+            Send tilbud
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -1815,57 +1654,6 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
               Denne meldingen vil vises øverst i tilbudet
             </p>
           </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">
-              Velg mal
-            </label>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setSelectedTemplate('modern')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  selectedTemplate === 'modern'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-                }`}
-              >
-                Moderne
-              </button>
-              <button
-                onClick={() => setSelectedTemplate('classic')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  selectedTemplate === 'classic'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-                }`}
-              >
-                Klassisk
-              </button>
-              <button
-                onClick={() => setSelectedTemplate('minimal')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  selectedTemplate === 'minimal'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-                }`}
-              >
-                Minimal
-              </button>
-            </div>
-          </div>
-
-          {/* Preview Button */}
-          <div className="pt-4 border-t border-gray-200">
-            <Button
-              onClick={handlePreview}
-              disabled={isLoadingTemplate || !selectedCustomerId || !projectName}
-              variant="outline"
-              className="w-full flex items-center justify-center gap-2"
-            >
-              <Eye className="w-4 h-4" />
-              {isLoadingTemplate ? 'Laster forhåndsvisning...' : 'Forhåndsvis tilbud'}
-            </Button>
-          </div>
         </CardContent>
       </Card>
 
@@ -1902,8 +1690,6 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
   const currentStepData = STEPS.find(step => step.id === currentStep);
   const canProceed = currentStep === 1 
     ? quoteData.jobDescription.trim().length > 0 
-    : currentStep === 4 
-    ? selectedCustomerId && projectName.trim().length > 0
     : true;
 
   return (
@@ -1932,7 +1718,6 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
           {currentStep === 1 && renderStep1()}
           {currentStep === 2 && renderStep2()}
           {currentStep === 3 && renderStep3()}
-          {currentStep === 4 && renderStep4()}
         </div>
       </DrawerContent>
 
@@ -1961,29 +1746,6 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
             </Button>
             <Button onClick={saveEditDialog}>
               Lagre
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Preview Dialog */}
-      <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Forhåndsvisning av tilbud</DialogTitle>
-            <DialogDescription>
-              Dette er hvordan tilbudet vil se ut for kunden med den valgte malen.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="mt-4">
-            <div 
-              className="border rounded-lg p-4 bg-white"
-              dangerouslySetInnerHTML={{ __html: generatePreviewHtml() }}
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsPreviewOpen(false)}>
-              Lukk
             </Button>
           </DialogFooter>
         </DialogContent>

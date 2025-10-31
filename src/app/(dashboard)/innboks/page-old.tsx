@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,41 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Textarea } from '@/components/ui/textarea';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import {
-  Inbox,
-  Plus,
-  Search,
-  AlertCircle,
-  CheckCircle,
-  Send,
-  Eye,
-  MessageSquare,
-  XCircle,
-  Mail,
-  Flag,
-  FlagOff,
-  Reply,
-  Trash2,
-  Clock,
-  FileText,
-  Building2,
-  User,
-  FolderIcon,
-  Archive,
-  Filter,
-} from 'lucide-react';
+import { Inbox, Plus, Search, AlertCircle, CheckCircle } from 'lucide-react';
 import { CustomerDetailsDrawer } from '@/components/kunder/CustomerDetailsDrawer';
 import { QuoteDetailsDrawer } from '@/components/tilbud/QuoteDetailsDrawer';
 import { FolderSidebar } from '@/components/inbox/FolderSidebar';
@@ -55,21 +21,8 @@ import { MessageDetail } from '@/components/inbox/MessageDetail';
 import { ComposeMessage } from '@/components/inbox/ComposeMessage';
 import { useInbox } from '@/hooks/useInbox';
 import { useDragAndDrop } from '@/hooks/useDragAndDrop';
-import { Kunde, Tilbud, InboxMessage, Folder, ConversationEntry } from '@/lib/types';
-import { auth, db } from '@/lib/firebase';
-import { ref, onValue, push, set } from 'firebase/database';
-import { getCustomer } from '@/lib/services/customerService';
-import { getTilbudById } from '@/lib/services/tilbudService';
-import {
-  createFolder,
-  getFolders,
-  deleteFolder,
-  markMessageAsRead,
-  deleteInboxMessage,
-  unflagMessage,
-  flagMessage,
-  moveMessageToFolder,
-} from '@/lib/services/inboxService';
+import { Kunde, Tilbud } from '@/lib/types';
+import { auth } from '@/lib/firebase';
 
 const formatDate = (dateString: string) => {
   const date = new Date(dateString);
@@ -131,13 +84,6 @@ const getMessageTypeLabel = (type: InboxMessage['type']) => {
   }
 };
 
-const isQuoteRelatedMessage = (message: InboxMessage) => {
-  return (
-    message.quoteId ||
-    ['quote_sent', 'quote_opened', 'quote_question', 'quote_approved', 'quote_rejected', 'quote_conversation'].includes(message.type)
-  );
-};
-
 export default function InnboksPage() {
   const [messages, setMessages] = useState<InboxMessage[]>([]);
   const [selectedMessage, setSelectedMessage] = useState<InboxMessage | null>(null);
@@ -165,19 +111,6 @@ export default function InnboksPage() {
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [newFolderParent, setNewFolderParent] = useState<string>('none');
-
-  // Drag and drop functionality
-  const {
-    draggedMessage,
-    dragOverFolder,
-    handleDragStart,
-    handleDragEnd,
-    handleDragOver,
-    handleDragLeave,
-    handleDrop,
-  } = useDragAndDrop(async (messageId: string, folderName: string) => {
-    await handleMoveToFolder(messageId, folderName);
-  });
 
   const showDialog = (title: string, message: string, type: 'success' | 'error' = 'success') => {
     setDialogTitle(title);
@@ -226,12 +159,7 @@ export default function InnboksPage() {
 
   // Recursive folder rendering component
   const FolderItem = ({ folder, depth = 0 }: { folder: Folder; depth?: number }) => {
-    const folderMessages = messages.filter(m => {
-      const messageFolder = m.folder || 'innboks';
-      // Include 'sendt' messages in 'innboks' count since we removed the 'sendt' folder
-      const effectiveFolder = messageFolder === 'sendt' ? 'innboks' : messageFolder;
-      return effectiveFolder === folder.name;
-    });
+    const folderMessages = messages.filter(m => (m.folder || 'innboks') === folder.name);
     const folderUnreadCount = folderMessages.filter(m => !m.isRead).length;
     const [contextMenuOpen, setContextMenuOpen] = useState(false);
     const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
@@ -251,26 +179,16 @@ export default function InnboksPage() {
             className={`flex-1 text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center justify-between ${
               selectedFolder === folder.name
                 ? 'bg-primary text-primary-foreground'
-                : dragOverFolder === folder.name
-                ? 'bg-blue-100 border-2 border-blue-300 border-dashed'
                 : 'hover:bg-muted text-muted-foreground hover:text-foreground'
             }`}
             style={{ paddingLeft: `${12 + depth * 16}px` }}
-            onDragOver={(e) => {
-              e.preventDefault();
-              handleDragOver(folder.name);
-            }}
-            onDragLeave={handleDragLeave}
-            onDrop={(e) => {
-              e.preventDefault();
-              handleDrop(folder.name);
-            }}
           >
             <div className="flex items-center gap-2">
               {folder.name === 'innboks' && <Inbox className="h-4 w-4" />}
               {folder.name === 'tilbud' && <FolderIcon className="h-4 w-4" />}
+              {folder.name === 'sendt' && <Send className="h-4 w-4" />}
               {folder.name === 'arkiv' && <Archive className="h-4 w-4" />}
-              {!['innboks', 'arkiv', 'tilbud'].includes(folder.name) && <FolderIcon className="h-4 w-4" />}
+              {!['innboks', 'sendt', 'arkiv', 'tilbud'].includes(folder.name) && <FolderIcon className="h-4 w-4" />}
               <span className="capitalize">{folder.name}</span>
             </div>
             <div className="flex items-center gap-2">
@@ -308,7 +226,7 @@ export default function InnboksPage() {
                 <Inbox className="h-4 w-4 mr-2" />
                 Åpne
               </button>
-              {!['innboks', 'arkiv', 'tilbud'].includes(folder.name) && (
+              {!['innboks', 'sendt', 'arkiv', 'tilbud'].includes(folder.name) && (
                 <button
                   className="flex items-center w-full px-2 py-1.5 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground text-destructive"
                   onClick={() => {
@@ -679,7 +597,7 @@ export default function InnboksPage() {
         isRead: true,
         type: 'outgoing_reply',
         isFlagged: false,
-        folder: 'innboks',
+        folder: 'sendt',
         sentTo: newMessageTo,
         emailId: emailResult.messageId,
         opprettet: Date.now(),
@@ -687,7 +605,7 @@ export default function InnboksPage() {
       };
 
       await set(outgoingMessageRef, outgoingMessage);
-      console.log('✅ Outgoing message log created in "innboks" folder');
+      console.log('✅ Outgoing message log created in "sendt" folder');
 
       showDialog('Suksess', 'Melding sendt!', 'success');
       setIsCreatingMessage(false);
@@ -710,10 +628,7 @@ export default function InnboksPage() {
   };
 
   const filteredMessages = messages.filter(message => {
-    const messageFolder = message.folder || 'innboks';
-    // Show messages from 'sendt' folder in 'innboks' since we removed the 'sendt' folder
-    const effectiveFolder = messageFolder === 'sendt' ? 'innboks' : messageFolder;
-    const inCorrectFolder = effectiveFolder === selectedFolder;
+    const inCorrectFolder = (message.folder || 'innboks') === selectedFolder;
     const shouldShow = message.type !== 'outgoing_reply' || !message.relatedMessageId;
     return inCorrectFolder && shouldShow;
   });
@@ -832,24 +747,11 @@ export default function InnboksPage() {
                             : !message.isRead
                             ? 'bg-background'
                             : ''
-                        } ${isQuoteRelatedMessage(message) ? 'cursor-grab active:cursor-grabbing' : ''}`}
+                        }`}
                         onClick={() => handleMessageClick(message)}
-                        draggable={!!isQuoteRelatedMessage(message)}
-                        onDragStart={(e) => {
-                          if (isQuoteRelatedMessage(message)) {
-                            handleDragStart(message);
-                          }
-                        }}
-                        onDragEnd={handleDragEnd}
                       >
                         <CardContent className="p-3 h-34">
                           <div className="flex items-start gap-2">
-                            {isQuoteRelatedMessage(message) && (
-                              <div className="flex items-center mt-1">
-                                <div className="w-1 h-4 bg-gray-300 rounded-full mr-1"></div>
-                                <div className="w-1 h-4 bg-gray-300 rounded-full"></div>
-                              </div>
-                            )}
                             <Avatar className="h-8 w-8">
                               <AvatarFallback>
                                 {message.type === 'outgoing_reply' ? (
@@ -1094,7 +996,7 @@ export default function InnboksPage() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {getAllFolderNames(folders).filter(name => name && name.trim() && name !== 'sendt').map((folderName) => (
+                            {getAllFolderNames(folders).filter(name => name && name.trim()).map((folderName) => (
                               <SelectItem key={folderName} value={folderName}>
                                 {folderName}
                               </SelectItem>
@@ -1365,7 +1267,7 @@ export default function InnboksPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Ingen (rotmappe)</SelectItem>
-                  {getAllFolderNames(folders).filter(name => name && name.trim() && name !== 'sendt').map((folderName) => (
+                  {getAllFolderNames(folders).filter(name => name && name.trim()).map((folderName) => (
                     <SelectItem key={folderName} value={folderName}>
                       {folderName}
                     </SelectItem>
