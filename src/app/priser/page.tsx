@@ -35,7 +35,6 @@ export default function PricingPage() {
             features: [
               'Inntil 3 tilbud',
               'Inntil 1 kunder',
-              'E-post support',
               'Grunnleggende statistikk'
             ],
             color: 'gray',
@@ -56,8 +55,6 @@ export default function PricingPage() {
               'Grunnleggende rapporter',
               'E-post support',
               '1GB lagring',
-              'Tilpassbare maler',
-              'Kunde-database'
             ],
             color: 'blue',
             cta: 'Velg Basic',
@@ -77,11 +74,7 @@ export default function PricingPage() {
               'Avanserte rapporter og analyser',
               'Prioritert support',
               '10GB lagring',
-              'API-tilgang',
-              'Tilpassede maler',
               'Integrasjoner',
-              'Automasjon',
-              'Team-samarbeid'
             ],
             color: 'purple',
             cta: 'Velg Pro',
