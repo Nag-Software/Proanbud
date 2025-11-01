@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { verifyEmail, getAuthErrorMessage } from '@/lib/auth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/shared/Card';
@@ -9,7 +9,7 @@ import Logo from '@/components/shared/Logo';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 
-export default function VerifyEmailPage() {
+function VerifyEmailContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
@@ -148,3 +148,28 @@ export default function VerifyEmailPage() {
     </div>
   );
 }
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="fixed left-5 top-5">
+          <Logo size="lg" />
+        </div>
+        <div className="w-full max-w-md">
+          <Card>
+            <CardContent className="py-8">
+              <div className="text-center space-y-4">
+                <Loader2 className="w-10 h-10 text-blue-600 animate-spin mx-auto" />
+                <p className="text-muted-foreground">Laster...</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    }>
+      <VerifyEmailContent />
+    </Suspense>
+  );
+}
+

@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -63,7 +63,7 @@ interface SanityPost {
   }>;
 }
 
-export default function Home() {
+function HomeContent() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -453,3 +453,19 @@ export default function Home() {
     </div>
   );
 }
+
+export default function Home() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="flex items-center justify-center py-20">
+          <p className="text-muted-foreground">Laster...</p>
+        </div>
+      </div>
+    }>
+      <HomeContent />
+    </Suspense>
+  );
+}
+

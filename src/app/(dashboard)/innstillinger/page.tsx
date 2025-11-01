@@ -4,7 +4,7 @@ import { toast } from "@/hooks/use-toast";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { UserSettings, SubscriptionSettings } from "@/components/settings";
 import { LoadingRing } from "@/components/ui/loading-ring";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { getUserSettings, UserSettingsData } from '@/lib/services/userSettingsService';
 import { getBusinessSettings } from '@/lib/services/businessService';
@@ -17,7 +17,7 @@ import { useSubscription } from '@/contexts/SubscriptionContextNew';
 
 
 
-export default function SettingsPage() {
+function SettingsContent() {
     const { user } = useAuth();
     const { refetch } = useSubscription();
     const searchParams = useSearchParams();
@@ -191,5 +191,21 @@ export default function SettingsPage() {
                 <SubscriptionSettings businessSettings={businessSettings} />
             </div>
         </div>
+    );
+}
+
+export default function SettingsPage() {
+    return (
+        <Suspense fallback={
+            <div className="space-y-6 min-h-full w-full px-3 lg:px-6 pt-4 pb-3 lg:pb-6">
+                <PageHeader title="Innstillinger" />
+                <div className="flex flex-col 2xl:flex-row gap-4">
+                    <div className="animate-pulse bg-gray-200 h-64 rounded-lg"></div>
+                    <div className="animate-pulse bg-gray-200 h-96 rounded-lg"></div>
+                </div>
+            </div>
+        }>
+            <SettingsContent />
+        </Suspense>
     );
 }

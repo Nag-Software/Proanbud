@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { CheckCircle2, XCircle, MessageSquare, Building2, Mail, Phone, Calendar, FileText, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
-export default function TilbudsvisningPage() {
+function TilbudsvisningContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const { toast } = useToast();
@@ -706,3 +706,19 @@ export default function TilbudsvisningPage() {
     </div>
   );
 }
+
+export default function TilbudsvisningPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <Loader2 className="w-10 h-10 animate-spin mx-auto text-primary" />
+          <p className="text-muted-foreground">Laster tilbud...</p>
+        </div>
+      </div>
+    }>
+      <TilbudsvisningContent />
+    </Suspense>
+  );
+}
+
