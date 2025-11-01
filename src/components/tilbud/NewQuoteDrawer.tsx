@@ -32,7 +32,9 @@ import {
   X,
   Plus,
   Trash2,
-  Calculator
+  Calculator,
+  Check,
+  ChevronsUpDown
 } from 'lucide-react';
 import { createTilbud, updateTilbud, getTilbudById, TilbudFormData, getUniqueCategoriesFromQuotes } from '@/lib/services/tilbudService';
 import { getCustomers } from '@/lib/services/customerService';
@@ -52,8 +54,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
 import { ProductDetailsDrawer } from '../katalog';
 import { AlertDialog } from '../ui/alert-dialog';
+import { cn } from "@/lib/utils";
 
 interface NewQuoteDrawerProps {
   open: boolean;
@@ -93,6 +109,7 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
   const [skipAI, setSkipAI] = useState(false);
   const [customers, setCustomers] = useState<Kunde[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
+  const [openCustomerCombobox, setOpenCustomerCombobox] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [projectName, setProjectName] = useState('');
   const [quoteMessage, setQuoteMessage] = useState('');
@@ -1537,96 +1554,6 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
                 );
               })()}
             </div>
-
-            {/* Price Breakdown */}
-            <div>
-              <h4 className="text-lg font-semibold text-gray-900 mb-4">Prisgrunnlag</h4>
-              <div className="space-y-3">
-                {quoteData.adjustedComponents.map((component, index) => (
-                  <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-medium text-gray-900">{component.name}</span>
-                        {component.confidence > 0 && (
-                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                            component.confidence >= 80 ? 'bg-green-100 text-green-700' :
-                            component.confidence >= 60 ? 'bg-yellow-100 text-yellow-700' :
-                            'bg-red-100 text-red-700'
-                          }`}>
-                            {component.confidence}% sikkerhet
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-sm text-gray-600">{component.description}</p>
-                      <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
-                        <span>Kategori: {component.category.charAt(0).toUpperCase() + component.category.slice(1)}</span>
-                        {component.amount && component.unit && (
-                          <span>Antall: {component.amount} {component.unit}</span>
-                        )}
-                        {component.unitPrice && (
-                          <span>Enhetspris: kr {component.unitPrice.toLocaleString('nb-NO')}</span>
-                        )}
-                        {component.priceMarkup && component.priceMarkup > 0 && (
-                          <span>Prispåslag: {component.priceMarkup}%</span>
-                        )}
-                        {component.materialMarkup && component.materialMarkup > 0 && (
-                          <span>Materialpåslag: {component.materialMarkup}%</span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-semibold text-gray-900">
-                        kr {component.amount.toLocaleString('nb-NO')}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Summary Stats */}
-            <div className="grid grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-gray-900">{quoteData.adjustedComponents.length}</div>
-                <div className="text-sm text-gray-600">Priskomponenter</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-gray-900">
-                  {quoteData.adjustedComponents.filter(c => c.confidence > 0).length}
-                </div>
-                <div className="text-sm text-gray-600">AI-genererte</div>
-              </div>
-              <div className="text-center">
-                <div className={`text-2xl font-bold ${
-                  (() => {
-                    const totalProfit = quoteData.adjustedComponents.reduce((sum, c) => {
-                      const amount = c.amount || 0;
-                      const markupPercent = c.priceMarkup || 0;
-                      // Calculate base cost: amount / (1 + markup%)
-                      const baseCost = markupPercent > 0 ? amount / (1 + markupPercent / 100) : amount;
-                      // Profit = final amount - base cost
-                      const profit = amount - baseCost;
-                      return sum + profit;
-                    }, 0);
-                    return totalProfit >= 0 ? 'text-green-700' : 'text-red-700';
-                  })()
-                }`}>
-                  kr {(() => {
-                    const totalProfit = quoteData.adjustedComponents.reduce((sum, c) => {
-                      const amount = c.amount || 0;
-                      const markupPercent = c.priceMarkup || 0;
-                      // Calculate base cost: amount / (1 + markup%)
-                      const baseCost = markupPercent > 0 ? amount / (1 + markupPercent / 100) : amount;
-                      // Profit = final amount - base cost
-                      const profit = amount - baseCost;
-                      return sum + profit;
-                    }, 0);
-                    return totalProfit.toLocaleString('nb-NO');
-                  })()}
-                </div>
-                <div className="text-sm text-gray-600">Total profitt</div>
-              </div>
-            </div>
           </div>
         </CardContent>
       </Card>
@@ -1639,45 +1566,84 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Velg kunde
-            </label>
-            {customers.length === 0 ? (
-              <div className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50">
-                <p className="text-sm text-gray-600">
-                  Ingen kunder registrert. Gå til <a href="/kunder" className="text-blue-600 hover:underline">Kunder</a> for å opprette kunder først.
-                </p>
-              </div>
-            ) : (
-              <select
-                value={selectedCustomerId}
-                onChange={(e) => setSelectedCustomerId(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                required
-              >
-                <option value="">Velg en kunde...</option>
-                {customers.map((customer) => (
-                  <option key={customer.id} value={customer.id}>
-                    {customer.navn}
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Velg kunde
+              </label>
+              {customers.length === 0 ? (
+                <div className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50">
+                  <p className="text-sm text-gray-600">
+                    Ingen kunder registrert. Gå til <a href="/kunder" className="text-blue-600 hover:underline">Kunder</a> for å opprette kunder først.
+                  </p>
+                </div>
+              ) : (
+                <Popover open={openCustomerCombobox} onOpenChange={setOpenCustomerCombobox} modal={true}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={openCustomerCombobox}
+                      className="w-full justify-between px-3 py-2 h-auto border-gray-300 hover:bg-gray-50 text-left"
+                    >
+                      <span className="truncate">
+                        {selectedCustomerId
+                          ? customers.find((customer) => customer.id === selectedCustomerId)?.navn
+                          : "Velg en kunde..."}
+                      </span>
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent 
+                    className="w-[var(--radix-popover-trigger-width)] p-0" 
+                    align="start"
+                    style={{ zIndex: 9999 }}
+                  >
+                    <Command>
+                      <CommandInput placeholder="Søk etter kunde..." />
+                      <CommandList>
+                        <CommandEmpty>Ingen kunder funnet.</CommandEmpty>
+                        <CommandGroup>
+                          {customers.map((customer) => (
+                            <CommandItem
+                              key={customer.id}
+                              value={customer.navn}
+                              onSelect={() => {
+                                setSelectedCustomerId(customer.id);
+                                setOpenCustomerCombobox(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  selectedCustomerId === customer.id ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {customer.navn}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              )}
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Prosjektnavn
-            </label>
-            <input
-              type="text"
-              value={projectName}
-              onChange={(e) => setProjectName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-              placeholder="Skriv inn prosjektnavn..."
-              required
-            />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Prosjektnavn
+              </label>
+              <input
+                type="text"
+                value={projectName}
+                onChange={(e) => setProjectName(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                placeholder="Skriv inn prosjektnavn..."
+                required
+              />
+            </div>
           </div>
 
           <div>
