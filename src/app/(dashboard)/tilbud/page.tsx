@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { DataTable } from '@/components/ui/data-table';
-import { NewQuoteDrawer, QuoteDetailsDrawer } from '@/components/tilbud';
+import { NewQuoteDrawer } from '@/components/tilbud';
 import { CustomerDetailsDrawer, NewCustomerDrawer } from '@/components/kunder';
 import { getTilbud, updateTilbud } from '@/lib/services/tilbudService';
 import { getCustomers } from '@/lib/services/customerService';
@@ -47,9 +47,7 @@ export default function TilbudPage() {
   const { subscription, refreshUsage } = useSubscription();
 
   const [isNewQuoteOpen, setIsNewQuoteOpen] = useState(false);
-  const [isQuoteDetailsOpen, setIsQuoteDetailsOpen] = useState(false);
   const [isCustomerDetailsOpen, setIsCustomerDetailsOpen] = useState(false);
-  const [selectedQuote, setSelectedQuote] = useState<Tilbud | null>(null);
   const [selectedCustomer, setSelectedCustomer] = useState<Kunde | null>(null);
   const [tilbuds, setTilbuds] = useState<Tilbud[]>([]);
   const [customers, setCustomers] = useState<Kunde[]>([]);
@@ -202,14 +200,7 @@ export default function TilbudPage() {
   };
 
   const handleQuoteClick = (quote: Tilbud) => {
-    if (isMobile) {
-      // On mobile, open drawer
-      setSelectedQuote(quote);
-      setIsQuoteDetailsOpen(true);
-    } else {
-      // On desktop, navigate to dedicated page
-      router.push(`/tilbud/${quote.id}`);
-    }
+    router.push(`/tilbud/${quote.id}`);
   };
 
   const handleOpenCustomerDrawer = (customer: Kunde) => {
@@ -318,7 +309,7 @@ export default function TilbudPage() {
   }
 
   return (
-    <div>
+    <div className="w-full min-h-full px-3 lg:px-6 pt-4 pb-3 lg:pb-6">
       <PageHeader title="Alle Tilbud" />
 
       <AccessRestrictedBanner 
@@ -364,12 +355,6 @@ export default function TilbudPage() {
         customer={selectedCustomer}
         open={isCustomerDetailsOpen}
         onOpenChange={setIsCustomerDetailsOpen}
-      />
-
-      <QuoteDetailsDrawer
-        quote={selectedQuote}
-        open={isQuoteDetailsOpen}
-        onOpenChange={setIsQuoteDetailsOpen}
       />
 
       <AlertDialog open={alertDialogOpen} onOpenChange={setAlertDialogOpen}>

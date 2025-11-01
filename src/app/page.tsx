@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
@@ -66,7 +66,24 @@ interface SanityPost {
 export default function Home() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [blogPosts, setBlogPosts] = useState<SanityPost[]>([]);
+
+  // Check if this is a password reset or email verification request and redirect
+  useEffect(() => {
+    const mode = searchParams.get('mode');
+    const oobCode = searchParams.get('oobCode');
+
+    if (mode === 'resetPassword' && oobCode) {
+      // Redirect to the reset-password page with all parameters
+      const params = new URLSearchParams(searchParams.toString());
+      router.replace(`/reset-password?${params.toString()}`);
+    } else if (mode === 'verifyEmail' && oobCode) {
+      // Redirect to the verify-email page with all parameters
+      const params = new URLSearchParams(searchParams.toString());
+      router.replace(`/verify-email?${params.toString()}`);
+    }
+  }, [searchParams, router]);
 
   useEffect(() => {
     if (!loading && user) {

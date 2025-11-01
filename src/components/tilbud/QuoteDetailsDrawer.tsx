@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, User, FileText, Calendar, DollarSign, Briefcase, Clock, Edit3, Save, XCircle, ExternalLink, Eye, Download, Trash2, Plus, Play, RotateCcw, Send } from 'lucide-react';
 import { Tilbud, Kunde, BusinessSettings, PriceComponent } from '@/lib/types';
-import { Card } from '@/components/shared/Card';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/shared/Card';
 import { updateTilbud, deleteTilbud, TilbudFormData } from '@/lib/services/tilbudService';
 import { getBusinessSettings } from '@/lib/services/businessService';
 import {
@@ -12,6 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 
 
 async function downloadTemplate(templateName: string): Promise<string> {
@@ -663,113 +664,127 @@ export function QuoteDetailsDrawer({
           </div>
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
-            {/* Quote Information */}
-            <Card>
-              <div className="p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <FileText className="h-5 w-5 text-blue-600" />
-                  Tilbudsinformasjon
-                </h3>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    <div className="min-w-0">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Prosjekt</label>
-                      {isEditing ? (
-                        <input
-                          type="text"
-                          value={editedQuote.prosjekt || ''}
-                          onChange={(e) => setEditedQuote({ ...editedQuote, prosjekt: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          placeholder="Prosjektnavn"
-                        />
-                      ) : (
-                        <p className="text-gray-900 font-medium break-words">{quote.prosjekt}</p>
-                      )}
-                    </div>
-                    <div className="min-w-0">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Jobbtype</label>
-                      {isEditing ? (
-                        <input
-                          type="text"
-                          value={editedQuote.jobbtype || ''}
-                          onChange={(e) => setEditedQuote({ ...editedQuote, jobbtype: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          placeholder="Jobbtype"
-                        />
-                      ) : (
-                        <p className="text-gray-900 break-words">{quote.jobbtype}</p>
-                      )}
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Beløp</label>
-                      {isEditing ? (
-                        <input
-                          type="number"
-                          value={editedQuote.belop || ''}
-                          onChange={(e) => setEditedQuote({ ...editedQuote, belop: Number(e.target.value) })}
-                          className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          placeholder="Beløp"
-                        />
-                      ) : (
-                        <p className="text-gray-900 font-semibold text-lg">{formatCurrency(quote.belop)}</p>
-                      )}
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                      {isEditing ? (
-                        <select
-                          value={editedQuote.status || ''}
-                          onChange={(e) => setEditedQuote({ ...editedQuote, status: e.target.value as 'venter' | 'vunnet' | 'tapt' })}
-                          className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        >
-                          <option value="venter">Venter</option>
-                          <option value="vunnet">Vunnet</option>
-                          <option value="tapt">Tapt</option>
-                        </select>
-                      ) : (
-                        <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium border ${getStatusColor(quote.status)}`}>
-                          {getStatusText(quote.status)}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </Card>
-
-            {/* Customer Information */}
-            <Card>
-              <div className="p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <User className="h-5 w-5 text-green-600" />
-                  Kundeinformasjon
-                </h3>
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-gray-900 font-medium text-lg break-words">{quote.kundenavn}</p>
-                    {relatedCustomer && (
-                      <div className="text-sm text-gray-600 mt-2 space-y-1">
-                        <p className="break-all">📧 {relatedCustomer.epost}</p>
-                        <p>📞 {relatedCustomer.telefon}</p>
-                        <p>📊 {relatedCustomer.antallVunnet}/{relatedCustomer.antallTilbud} tilbud vunnet</p>
+          <div className="max-w-[1450px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div className="space-y-8">
+              {/* Grid for Quote and Customer Information */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* Quote Information */}
+                <Card className="shadow-sm border-slate-200">
+                  <CardHeader>
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-slate-100 rounded-lg">
+                        <FileText className="h-6 w-6 text-slate-600" />
                       </div>
-                    )}
-                  </div>
-                  {relatedCustomer && onOpenCustomerDrawer && (
-                    <button
-                      onClick={handleOpenCustomerDrawer}
-                      className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors flex-shrink-0"
-                    >
-                      <ExternalLink className="h-4 w-4" />
-                      Se kunde
-                    </button>
-                  )}
-                </div>
+                      <CardTitle>Tilbudsinformasjon</CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium text-slate-700">Prosjekt</label>
+                          {isEditing ? (
+                            <input
+                              type="text"
+                              value={editedQuote.prosjekt || ''}
+                              onChange={(e) => setEditedQuote({ ...editedQuote, prosjekt: e.target.value })}
+                              className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                              placeholder="Prosjektnavn"
+                            />
+                          ) : (
+                            <p className="text-slate-900 font-medium text-md leading-relaxed">{quote.prosjekt}</p>
+                          )}
+                        </div>
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium text-slate-700">Jobbtype</label>
+                          {isEditing ? (
+                            <input
+                              type="text"
+                              value={editedQuote.jobbtype || ''}
+                              onChange={(e) => setEditedQuote({ ...editedQuote, jobbtype: e.target.value })}
+                              className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                              placeholder="Jobbtype"
+                            />
+                          ) : (
+                            <p className="text-slate-700 text-lg">{quote.jobbtype}</p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium text-slate-700">Totalbeløp</label>
+                          {isEditing ? (
+                            <input
+                              type="number"
+                              value={editedQuote.belop || ''}
+                              onChange={(e) => setEditedQuote({ ...editedQuote, belop: Number(e.target.value) })}
+                              className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                              placeholder="Beløp"
+                            />
+                          ) : (
+                            <p className="text-slate-900 font-bold text-lg text-blue-600">{formatCurrency(quote.belop)}</p>
+                          )}
+                        </div>
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium text-slate-700">Status</label>
+                          {isEditing ? (
+                            <select
+                              value={editedQuote.status || ''}
+                              onChange={(e) => setEditedQuote({ ...editedQuote, status: e.target.value as 'venter' | 'vunnet' | 'tapt' })}
+                              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                            >
+                              <option value="venter">Venter</option>
+                              <option value="vunnet">Vunnet</option>
+                              <option value="tapt">Tapt</option>
+                            </select>
+                          ) : (
+                            <div className="flex items-center gap-3">
+                              <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${getStatusColor(quote.status)}`}>
+                                {getStatusText(quote.status)}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Customer Information */}
+                <Card className="shadow-sm border-slate-200">
+                  <CardHeader>
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-slate-100 rounded-lg">
+                        <User className="h-6 w-6 text-slate-600" />
+                      </div>
+                      <CardTitle>Kundeinformasjon</CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-3">
+                        <p className="text-slate-900 font-semibold text-xl">{quote.kundenavn}</p>
+                        {relatedCustomer && (
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2 text-slate-600">
+                              <span className="text-sm">📧</span>
+                              <span className="text-sm">{relatedCustomer.epost}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-slate-600">
+                              <span className="text-sm">📞</span>
+                              <span className="text-sm">{relatedCustomer.telefon}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-slate-600">
+                              <span className="text-sm">📊</span>
+                              <span className="text-sm">{relatedCustomer.antallVunnet}/{relatedCustomer.antallTilbud} tilbud vunnet</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
-            </Card>
 
             {/* Price Breakdown */}
             {((isEditing && editedPriceComponents.length > 0) || (!isEditing && quote.prisgrunnlag && quote.prisgrunnlag.length > 0)) && (
@@ -1018,7 +1033,7 @@ export function QuoteDetailsDrawer({
             )}
 
             {/* Timeline Information */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4">
               <Card>
                 <div className="p-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
@@ -1158,6 +1173,7 @@ export function QuoteDetailsDrawer({
                 </div>
               </div>
             </Card>
+            </div>
           </div>
         </div>
       </div>

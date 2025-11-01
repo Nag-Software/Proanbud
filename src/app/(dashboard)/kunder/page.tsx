@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { DataTable } from '@/components/ui/data-table';
 import { NewCustomerDrawer, CustomerDetailsDrawer } from '@/components/kunder';
-import { QuoteDetailsDrawer } from '@/components/tilbud';
 import { getCustomers, deleteCustomer } from '@/lib/services/customerService';
 import { getTilbud } from '@/lib/services/tilbudService';
 import { ref, onValue, off } from 'firebase/database';
@@ -17,17 +16,17 @@ import { useSubscriptionAccess } from '@/hooks/useSubscriptionAccess';
 import { useSubscription } from '@/contexts/SubscriptionContextNew';
 import { AccessRestrictedBanner } from '@/components/subscription/AccessRestrictedBanner';
 import { getCustomerColumns } from '@/lib/table-columns/customers-columns';
+import { useRouter } from 'next/navigation';
 
 export default function KunderPage() {
+  const router = useRouter();
   const { checkCustomerLimit, showUpgradeDialog, loading: limitsLoading } = useSubscriptionLimits();
   const { hasAccess, hasTrialAccess, isLimited } = useSubscriptionAccess();
   const { refreshUsage } = useSubscription();
   
   const [isNewCustomerOpen, setIsNewCustomerOpen] = useState(false);
   const [isCustomerDetailsOpen, setIsCustomerDetailsOpen] = useState(false);
-  const [isQuoteDetailsOpen, setIsQuoteDetailsOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Kunde | null>(null);
-  const [selectedQuote, setSelectedQuote] = useState<Tilbud | null>(null);
   const [customers, setCustomers] = useState<Kunde[]>([]); // Fallback to static data
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -163,8 +162,7 @@ export default function KunderPage() {
   };
 
   const handleQuoteClick = (quote: Tilbud) => {
-    setSelectedQuote(quote);
-    setIsQuoteDetailsOpen(true);
+    router.push(`/tilbud/${quote.id}`);
   };
 
   const handleNewCustomer = () => {
@@ -225,7 +223,7 @@ export default function KunderPage() {
   }
 
   return (
-    <div>
+    <div className="w-full min-h-full px-3 lg:px-6 pt-4 pb-3 lg:pb-6">
       <PageHeader title="Alle Kunder" />
 
       <AccessRestrictedBanner 
@@ -266,13 +264,6 @@ export default function KunderPage() {
         open={isCustomerDetailsOpen}
         onOpenChange={setIsCustomerDetailsOpen}
         onOpenQuoteDrawer={handleQuoteClick}
-      />
-      
-      <QuoteDetailsDrawer
-        quote={selectedQuote}
-        open={isQuoteDetailsOpen}
-        onOpenChange={setIsQuoteDetailsOpen}
-        customers={customers}
       />
     </div>
   );

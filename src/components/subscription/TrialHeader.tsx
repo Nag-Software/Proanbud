@@ -41,7 +41,7 @@ export const TrialHeader = () => {
   // Handle expired trial or no subscription
   if (!isTrialing || isExpired || isFree || isTrialExpired) {
     return (
-      <div className="bg-red-600 text-white py-3 px-4 text-center relative">
+      <div className="bg-red-600 text-white py-2 m-3 text-center relative rounded-lg">
         <div className="flex items-center justify-center gap-2">
           <Lock className="h-4 w-4" />
           <span className="text-sm font-medium">
@@ -59,6 +59,7 @@ export const TrialHeader = () => {
           onClick={() => setIsDismissed(true)}
           className="absolute right-4 top-1/2 transform -translate-y-1/2 hover:bg-white/20 rounded p-1"
           aria-label="Lukk varsel"
+          disabled
         >
           <X className="h-4 w-4" />
         </button>
@@ -100,7 +101,7 @@ export const TrialHeader = () => {
   const textColor = 'text-white';
 
   return (
-    <div className={`${bgColor} ${textColor} py-2 px-4 text-center relative rounded-lg my-2`}>
+    <div className={`${bgColor} ${textColor} py-2 px-4 text-center relative rounded-lg m-3`}>
       <div className="flex items-center justify-center gap-2">
         <AlertTriangle className="h-4 w-4" />
         <span className="text-sm font-medium">
@@ -117,6 +118,7 @@ export const TrialHeader = () => {
         </Link>
       </div>
       {/* Debug controls (development only) */}
+      {/*}
       {(process.env.NODE_ENV === 'development' || process.env.NEXT_PUBLIC_ENABLE_DEBUG_TIME_TRAVEL) && (
         <div className="absolute left-4 top-1/2 transform -translate-y-1/2 flex gap-1">
           <button
@@ -161,6 +163,7 @@ export const TrialHeader = () => {
           )}
         </div>
       )}
+        */}
       {/* Close button only for expired trials, not for active trials */}
       {(!isTrialing || isTrialExpired) && (
         <button

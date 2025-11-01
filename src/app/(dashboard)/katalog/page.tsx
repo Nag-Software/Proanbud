@@ -211,7 +211,7 @@ export default function KatalogPage() {
     }
 
     return (
-        <>
+        <div className="w-full min-h-full px-3 lg:px-6 pt-4 pb-3 lg:pb-6">
             <PageHeader title="Katalog">
                 <div className="flex gap-2">
                     <Button
@@ -392,6 +392,6 @@ export default function KatalogPage() {
                 message={errorDialog.message}
                 onClose={() => setErrorDialog({ isOpen: false, message: '' })}
             />
-        </>
+        </div>
     );
 }

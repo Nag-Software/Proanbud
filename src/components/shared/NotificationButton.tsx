@@ -160,12 +160,12 @@ export const NotificationButton = () => {
       </button>
 
       {isOpen && (
-        <div className="!z-9999">
+        <div>
           {/* Mobile: Full screen overlay */}
-          <div className="lg:hidden fixed inset-0 bg-black/20 backdrop-blur-sm" onClick={() => setIsOpen(false)} />
+          <div className="lg:hidden fixed inset-0 bg-black/20 backdrop-blur-sm z-[9999]" onClick={() => setIsOpen(false)} />
           
           {/* Notification dropdown */}
-          <div className="fixed lg:absolute left-2 right-2 lg:left-0 lg:right-auto top-16 lg:top-auto mt-0 lg:mt-2 w-auto lg:w-80 max-w-md lg:max-w-none bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+          <div className="fixed lg:absolute left-2 right-2 lg:left-0 lg:right-auto top-16 lg:top-auto mt-0 lg:mt-2 w-auto lg:w-80 max-w-md lg:max-w-none bg-white rounded-lg shadow-lg border border-gray-200 z-[9999]">
             <div className="p-4 border-b border-gray-200">
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold text-text">Varsler</h3>

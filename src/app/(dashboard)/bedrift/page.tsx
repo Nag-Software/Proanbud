@@ -236,7 +236,7 @@ export default function BedriftPage() {
   }
 
   return (
-    <>
+    <div className="w-full min-h-full px-3 lg:px-6 pt-4 pb-3 lg:pb-6">
       <PageHeader title="Min Bedrift" />
       
       <div className="space-y-6 grid grid-cols-1 xl:grid-cols-2 gap-4">
@@ -895,6 +895,6 @@ export default function BedriftPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 }

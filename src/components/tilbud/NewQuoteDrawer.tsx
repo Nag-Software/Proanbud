@@ -516,7 +516,7 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
         dato: new Date().toISOString().split('T')[0],
         svarfrist: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 14 days from now
         beskrivelse: quoteMessage || quoteData.jobDescription,
-        notater: `AI-generert tilbud med ${quoteData.adjustedComponents.length} prisgrunnlagskomponenter (UTKAST)`,
+        notater: ``,
         prisgrunnlag: quoteData.adjustedComponents,
       };
 
@@ -573,7 +573,7 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
         dato: new Date().toISOString().split('T')[0],
         svarfrist: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 14 days from now
         beskrivelse: quoteMessage || quoteData.jobDescription,
-        notater: `AI-generert tilbud med ${quoteData.adjustedComponents.length} prisgrunnlagskomponenter`,
+        notater: ``,
         prisgrunnlag: quoteData.adjustedComponents,
       };
 

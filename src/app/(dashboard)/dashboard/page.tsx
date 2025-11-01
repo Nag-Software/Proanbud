@@ -9,7 +9,6 @@ import { QuotesDataTable } from '@/components/dashboard/QuotesDataTable';
 import { CustomersDataTable } from '@/components/dashboard/CustomersDataTable';
 import { QuickStatsWidget } from '@/components/dashboard/QuickStatsWidget';
 import { CustomerDetailsDrawer } from '@/components/kunder';
-import { QuoteDetailsDrawer } from '@/components/tilbud';
 import { getDashboardKPIsWithChange } from '@/lib/services/analyticsService';
 import { getUserSettings, updateUserSettings, initializeUserSettings } from '@/lib/services/userSettingsService';
 import { useAuth } from '@/contexts/AuthContext';
@@ -57,9 +56,7 @@ export default function DashboardPage() {
 
   // State for detail drawers
   const [selectedCustomer, setSelectedCustomer] = useState<Kunde | null>(null);
-  const [selectedQuote, setSelectedQuote] = useState<Tilbud | null>(null);
   const [isCustomerDetailsOpen, setIsCustomerDetailsOpen] = useState(false);
-  const [isQuoteDetailsOpen, setIsQuoteDetailsOpen] = useState(false);
 
   // Callback functions for table actions
   const handleEditCustomer = (customer: Kunde) => {
@@ -121,14 +118,7 @@ export default function DashboardPage() {
   };
 
   const handleQuoteRowClick = (quote: Tilbud) => {
-    // On desktop (lg/md breakpoints), navigate to dedicated page
-    if (currentBreakpoint === 'lg' || currentBreakpoint === 'md') {
-      router.push(`/tilbud/${quote.id}`);
-    } else {
-      // On mobile (sm/xs/xxs breakpoints), open drawer
-      setSelectedQuote(quote);
-      setIsQuoteDetailsOpen(true);
-    }
+    router.push(`/tilbud/${quote.id}`);
   };
 
   // Get current layout based on breakpoint
@@ -657,7 +647,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen rounded-xl">
+    <div className="min-h-screen rounded-xl px-3 lg:px-6 pt-4 pb-3 lg:pb-6">
       {/* Authentication Error Banner */}
       {authError && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 mx-4 mt-4">
@@ -827,7 +817,7 @@ export default function DashboardPage() {
               verticalCompact={true}
             >
               {getCurrentLayout().map((item) => (
-                <div key={item.i} className={`overflow-auto transition-all duration-200 flex flex-col h-full ${isEditMode ? 'ring-2 ring-blue-200 ring-opacity-50' : ''}`}>
+                <div key={item.i} className={`transition-all duration-200 flex flex-col h-full ${isEditMode ? 'ring-2 ring-blue-200 ring-opacity-50' : ''}`}>
                   {isEditMode && (
                     <div className="drag-handle bg-slate-50 px-4 py-2 border-b border-slate-200 cursor-move flex items-center gap-2 flex-shrink-0">
                       <div className="flex gap-1">
@@ -840,7 +830,7 @@ export default function DashboardPage() {
                       </span>
                     </div>
                   )}
-                  <div className={`flex-1 flex flex-col ${item.i === 'kpi-cards' ? '' : isEditMode ? '' : 'h-full'} ${item.i === 'kpi-cards' ? '' : 'p-0'}`}>
+                  <div className={`flex-1 overflow-auto flex flex-col ${item.i === 'kpi-cards' ? '' : isEditMode ? '' : 'h-full'} ${item.i === 'kpi-cards' ? '' : 'p-0'}`}>
                     {getComponentById(item.i)}
                   </div>
                 </div>
@@ -863,17 +853,6 @@ export default function DashboardPage() {
           onOpenChange={(open) => {
             setIsCustomerDetailsOpen(open);
             if (!open) setSelectedCustomer(null);
-          }}
-        />
-      )}
-
-      {selectedQuote && (
-        <QuoteDetailsDrawer
-          quote={selectedQuote}
-          open={isQuoteDetailsOpen}
-          onOpenChange={(open) => {
-            setIsQuoteDetailsOpen(open);
-            if (!open) setSelectedQuote(null);
           }}
         />
       )}

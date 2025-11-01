@@ -859,7 +859,7 @@ export default function QuoteDetailsPage() {
   };
 
   return (
-    <div className="min-h-full bg-background rounded-lg">
+    <div className="min-h-full bg-background rounded-lg px-3 lg:px-6 pt-4 pb-3 lg:pb-6">
       {/* Header */}
       <div className="bg-white shadow-sm border-b rounded-xl border-slate-100 sticky top-0 z-10">
         <div className="max-w-[1450px] mx-auto px-4 sm:px-6 lg:px-8">
@@ -878,7 +878,13 @@ export default function QuoteDetailsPage() {
                   <p className="text-sm text-slate-600">Tilbudsdetaljer</p>
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(quote.status)}`}>
                     {getStatusText(quote.status)}
+                    
                   </span>
+                  {daysUntilDeadline > 0 && (
+                          <span className="text-xs text-slate-600">
+                            {daysUntilDeadline} dager igjen
+                          </span>
+                        )}
                 </div>
                 <h1 className="text-xl font-bold text-slate-900 leading-tight">{quote.prosjekt}</h1>
               </div>
@@ -1039,7 +1045,7 @@ export default function QuoteDetailsPage() {
                         placeholder="Prosjektnavn"
                       />
                     ) : (
-                      <p className="text-slate-900 font-medium text-lg leading-relaxed">{quote.prosjekt}</p>
+                      <p className="text-slate-900 font-medium text-md leading-relaxed">{quote.prosjekt}</p>
                     )}
                   </div>
                   <div className="space-y-2">
@@ -1069,7 +1075,7 @@ export default function QuoteDetailsPage() {
                         placeholder="Beløp"
                       />
                     ) : (
-                      <p className="text-slate-900 font-bold text-2xl text-blue-600">{formatCurrency(quote.belop)}</p>
+                      <p className="text-slate-900 font-bold text-lg text-blue-600">{formatCurrency(quote.belop)}</p>
                     )}
                   </div>
                   <div className="space-y-2">
@@ -1078,7 +1084,7 @@ export default function QuoteDetailsPage() {
                       <select
                         value={editedQuote.status || ''}
                         onChange={(e) => setEditedQuote({ ...editedQuote, status: e.target.value as 'venter' | 'vunnet' | 'tapt' })}
-                        className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                       >
                         <option value="venter">Venter</option>
                         <option value="vunnet">Vunnet</option>
@@ -1086,14 +1092,9 @@ export default function QuoteDetailsPage() {
                       </select>
                     ) : (
                       <div className="flex items-center gap-3">
-                        <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium border ${getStatusColor(quote.status)}`}>
+                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${getStatusColor(quote.status)}`}>
                           {getStatusText(quote.status)}
                         </span>
-                        {daysUntilDeadline > 0 && (
-                          <span className="text-sm text-slate-600">
-                            {daysUntilDeadline} dager igjen
-                          </span>
-                        )}
                       </div>
                     )}
                   </div>
@@ -1130,19 +1131,13 @@ export default function QuoteDetailsPage() {
                         <span className="text-sm">📊</span>
                         <span className="text-sm">{relatedCustomer.antallVunnet}/{relatedCustomer.antallTilbud} tilbud vunnet</span>
                       </div>
+                      <div className="flex items-center gap-2 text-slate-600">
+                        <span className="text-sm">🏢</span>
+                        <span className="text-sm">{relatedCustomer.addresser}</span>
+                      </div>
                     </div>
                   )}
                 </div>
-                {relatedCustomer && (
-                  <Button
-                    variant="outline"
-                    onClick={handleOpenCustomerDrawer}
-                    className="border-slate-300 text-slate-700 hover:bg-slate-50"
-                  >
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    Se kunde
-                  </Button>
-                )}
               </div>
             </CardContent>
           </Card>

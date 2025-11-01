@@ -411,11 +411,53 @@ export const initializeUserData = async (): Promise<void> => {
       
       await set(userRef, initialData);
     } else {
-      // Update last login
-      const profileRef = ref(db, `users/${userId}/profile`);
-      await update(profileRef, {
-        lastLogin: serverTimestamp(),
-      });
+      // User data exists - update/add missing fields without overwriting existing data
+      const existingData = snapshot.val();
+      
+      // Initialize profile if it doesn't exist
+      if (!existingData.profile) {
+        const profileRef = ref(db, `users/${userId}/profile`);
+        await set(profileRef, {
+          createdAt: existingData.createdAt || serverTimestamp(),
+          lastLogin: serverTimestamp(),
+        });
+      } else {
+        // Update last login
+        const profileRef = ref(db, `users/${userId}/profile`);
+        await update(profileRef, {
+          lastLogin: serverTimestamp(),
+        });
+      }
+      
+      // Initialize kunder if it doesn't exist
+      if (!existingData.kunder) {
+        const kunderRef = ref(db, `users/${userId}/kunder`);
+        await set(kunderRef, {});
+      }
+      
+      // Initialize tilbud if it doesn't exist
+      if (!existingData.tilbud) {
+        const tilbudRef = ref(db, `users/${userId}/tilbud`);
+        await set(tilbudRef, {});
+      }
+      
+      // Initialize analytics if it doesn't exist
+      if (!existingData.analytics) {
+        const analyticsRef = ref(db, `users/${userId}/analytics`);
+        await set(analyticsRef, {
+          totalCustomers: 0,
+          totalTilbud: 0,
+          vunnetTilbud: 0,
+          totalRevenue: 0,
+          winRate: 0,
+          lastUpdated: Date.now(),
+          monthlyData: [],
+          jobbypeStats: [],
+        });
+      }
+      
+      // Preserve businessSettings, email, displayName, and other existing fields
+      // by NOT overwriting them
     }
   } catch (error) {
     throw handleDatabaseError(error, 'initialisere brukerdata');

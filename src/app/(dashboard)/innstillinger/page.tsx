@@ -180,7 +180,7 @@ export default function SettingsPage() {
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 min-h-full w-full px-3 lg:px-6 pt-4 pb-3 lg:pb-6">
             <PageHeader title="Innstillinger" />
             
             <div className="flex flex-col 2xl:flex-row gap-4">
