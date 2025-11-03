@@ -38,9 +38,9 @@ export const NAV_ITEMS: any[] = [
         description: "Lær hva Proanbud gjør og hvordan løsningen hjelper deg."
       },
       {
-        title: "Kom i gang",
-        href: "/signup",
-        description: "Steg-for-steg onboarding, sjekkliste og korte videoer for å komme i gang raskt."
+        title: "Sparekalkulator",
+        href: "/kalkulator",
+        description: "Sjekk hvor mye tid og penger du kan spare med Proanbud.",
       },
       {
         title: "Pilotprogram",
@@ -100,11 +100,6 @@ export const NAV_ITEMS: any[] = [
     description: "Planer for bedrifter og håndverkere — fleksible avtaler.",
   },
   {
-    title: "Showcase",
-    href: "/showcase",
-    description: "Eksempler på faktiske tilbud og kunde-caser.",
-  },
-  {
     title: "Blogg",
     href: "/blogg",
     description: "Tips, guider og bransjenyheter for håndverkere.",
@@ -123,10 +118,9 @@ export const NAV_ITEMS: any[] = [
     ],
   },
   {
-    title: "Pilotavtale",
-    href: "/pilot",
-    description: "Bli pilotkunde — prøv full funksjonalitet i en periode.",
-    cta: true,
+    title: "Om oss",
+    href: "/om-oss",
+    description: "Møt teamet og historien bak Proanbud.",
   },
   // interne/bruker-relaterte linker (eksempel)
   {
@@ -208,19 +202,6 @@ export default function Header({ currentPage }: HeaderProps) {
               </NavigationMenuItem>
               <NavigationMenuItem>
                 <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
-                  <a
-                    href={currentPage === 'home' ? '#showcase' : '/#showcase'}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleNavClick(currentPage === 'home' ? '#showcase' : '/#showcase');
-                    }}
-                  >
-                    Plattform
-                  </a>
-                </NavigationMenuLink>
-              </NavigationMenuItem>
-              <NavigationMenuItem>
-                <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
                   <Link href="/priser">
                     Priser
                   </Link>
@@ -237,6 +218,13 @@ export default function Header({ currentPage }: HeaderProps) {
                 <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
                   <Link href="/blogg">
                     Blogg
+                  </Link>
+                </NavigationMenuLink>
+              </NavigationMenuItem>
+              <NavigationMenuItem>
+                <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
+                  <Link href="/om-oss">
+                    Om oss
                   </Link>
                 </NavigationMenuLink>
               </NavigationMenuItem>

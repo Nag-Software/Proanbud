@@ -8,6 +8,7 @@ import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/shared/Card';
 import { FeatureSection } from '@/components/shared/Features';
+import {NewHero} from '@/components/NewHero';
 import { 
   Zap, 
   Sparkles, 
@@ -35,6 +36,7 @@ import Header from '@/components/shared/Header';
 import { client, allPostsQuery, formatDate, urlForImage } from '@/lib/sanity';
 import { BlogSection1 } from '@/components/pro-blocks/landing-page/blog-sections/blog-section-1';
 import { ShowcaseFeature } from '@/components/shared/ShowcaseFeature';
+import { SavingsCalculator } from '@/components/SavingsCalculator';
 
 
 interface SanityPost {
@@ -173,218 +175,181 @@ function HomeContent() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white via-[#82ffb2]/5 to-[#82b2ff]/5">
+    <div className="min-h-screen bg-white">
       <Header currentPage="home" />
 
-      {/* Hero Section with Video */}
-      <section className="relative overflow-hidden py-10 lg:py-15 bg-white mt-5 mx-auto">
-        <div className="mx-auto px-4 sm:px-6 lg:px-8 relative max-w-7xl">
-          <div className="grid grid-cols-1 lg:grid-cols-[55%_45%] gap-12 items-center">
-            <div className="text-center lg:text-left space-y-7">
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#82ffb2]/10 rounded-full border border-[#82ffb2]/20">
-                <Sparkles className="w-4 h-4 text-[#82ffb2]" />
-                <span className="text-sm font-medium text-gray-700">Norges første AI-drevne tilbudsplattform</span>
+      <NewHero />
+
+      {/* Before/After Section */}
+      <section className="py-40 bg-gray-50/50">
+        <div className="max-w-6xl mx-auto px-6 sm:px-8 lg:px-12">
+          <div className="text-center mb-16">
+            <h2 
+              className="text-4xl md:text-5xl font-normal text-gray-900 tracking-tight mb-4"
+              style={{ fontFamily: 'var(--font-lora), serif' }}
+            >
+              Fra kaos til kontroll
+            </h2>
+            <p className="text-gray-600 text-lg md:text-xl font-light max-w-2xl mx-auto">
+              Se forskjellen Proanbud gjør i din arbeidshverdag
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-8 md:gap-12">
+            {/* BEFORE */}
+            <div className="relative">
+              <div className="absolute -top-4 -left-4 bg-red-400 text-white px-4 py-2 rounded-lg font-semibold text-sm shadow-lg z-10">
+                ❌ Før Proanbud
               </div>
-
-              <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold text-gray-900">
-                Send tilbud på
-                <span className="bg-gradient-to-r from-[#82ffb2] to-[#82b2ff] bg-clip-text text-transparent"> minutter</span>
-                , ikke timer, <span className="italic">med AI</span>
-              </h1>
-
-              <p className="text-xl text-gray-600 leading-relaxed max-w-5xl px-10 lg:px-0">
-                Din komplette tilbudsplattform for håndverkere. Bruk AI til å prissete riktig, send profesjonelle tilbud fra mobil eller PC, og vinn flere oppdrag.
-              </p>
-              
-              <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start" id="bli-pilot">
-                <Link
-                  href="/pilot"
-                  className="group bg-primary text-primary-foreground px-8 py-2.5 rounded-xl hover:bg-primary/90 transition-all font-semibold text-md hover:shadow-md flex items-center justify-center gap-2"
-                >
-                  Bli Pilotkunde
-                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                </Link>
-                <Link
-                  href="/login"
-                  className="bg-white text-gray-900 px-8 py-2.5 rounded-xl hover:bg-gray-50 transition-all font-semibold text-md border-2 border-gray-200 flex items-center justify-center gap-2"
-                >
-                  Se demo
-                </Link>
-              </div>
-
-              <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-8 pt-0 justify-center lg:justify-start">
-                <div className="flex items-center gap-2">
-                  <Check className="w-5 h-5 text-[#82ffb2]" />
-                  <span className="text-sm text-gray-600">Gratis i 14 dager</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Check className="w-5 h-5 text-[#82ffb2]" />
-                  <span className="text-sm text-gray-600">Ingen kredittkort</span>
+              <div className="bg-white border-2 border-red-200 rounded-2xl p-8 pt-12 shadow-sm">
+                <div className="space-y-6">
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0 mt-1">
+                      <Clock className="w-4 h-4 text-red-600" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-1">1-3 timer per tilbud</h4>
+                      <p className="text-gray-600 text-sm">Manuell kalkulering, Excel-ark og formattering tar lang tid</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0 mt-1">
+                      <FileText className="w-4 h-4 text-red-600" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-1">Uprofesjonelle tilbud</h4>
+                      <p className="text-gray-600 text-sm">Word-dokumenter som ser hjemmelagde ut</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0 mt-1">
+                      <TrendingUp className="w-4 h-4 text-red-600" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-1">Usikker prissetting</h4>
+                      <p className="text-gray-600 text-sm">Gjetting på priser - taper oppdrag eller tjener for lite</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0 mt-1">
+                      <Users className="w-4 h-4 text-red-600" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-1">Kaotisk kundeoppfølging</h4>
+                      <p className="text-gray-600 text-sm">Mister oversikten over hvem du har sendt til og når</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Interactive Platform Showcase */}
-            <div className="relative hidden md:block ml-0 lg:ml-10">
-              <div className="bg-white rounded-2xl shadow-2xl p-6 border border-gray-100 max-h-[28rem] overflow-hidden w-full lg:w-[120%] lg:-ml-[10%]">
-                {/* Platform Preview Tabs */}
-                <div className="flex space-x-1 mb-4 bg-gray-50 p-1 rounded-xl !cursor-none">
-                  <button className="flex-1 px-3 py-2 text-xs font-semibold text-white bg-primary rounded-lg transition-all shadow-sm">
-                    Dashboard
-                  </button>
-                  <button className="flex-1 px-3 py-2 text-xs font-medium text-gray-600 rounded-lg">
-                    Tilbud
-                  </button>
-                  <button className="flex-1 px-3 py-2 text-xs font-medium text-gray-600 rounded-lg">
-                    Analyse
-                  </button>
-                </div>
-
-                {/* Dashboard Preview */}
-                <div className="space-y-3">
-                  {/* Header */}
-                  <div className="flex items-center justify-between">
+            {/* AFTER */}
+            <div className="relative">
+              <div className="absolute -top-4 -left-4 text-primary bg-[#82ffb2] text-gray-900 px-4 py-2 rounded-lg font-semibold text-sm shadow-lg z-10">
+                ✅ Med Proanbud
+              </div>
+              <div className="bg-white border-2 border-[#82ffb2] rounded-2xl p-8 pt-12 shadow-lg">
+                <div className="space-y-6">
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-full bg-[#82ffb2] flex items-center justify-center flex-shrink-0 mt-1">
+                      <Zap className="w-4 h-4 text-gray-900" />
+                    </div>
                     <div>
-                      <h3 className="text-lg font-bold text-gray-900">Dashboard</h3>
-                      <p className="text-xs text-gray-600">Nøkkeltall og aktivitet</p>
-                    </div>
-                    <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center shadow-lg">
-                      <Users className="w-5 h-5 text-slate-600" />
+                      <h4 className="font-semibold text-gray-900 mb-1">5 minutter per tilbud</h4>
+                      <p className="text-gray-600 text-sm">AI kalkulerer automatisk - du godkjenner og sender</p>
                     </div>
                   </div>
-
-                  {/* Stats Cards - Using actual KPI Card design */}
-                  <div className="grid grid-cols-3 gap-3">
-                    <Card className="h-full px-2 py-0 border-slate-200/60 flex flex-col max-h-29">
-                      <CardHeader className="flex flex-row items-center justify-between pb-2 flex-shrink-0">
-                        <CardTitle className="font-medium text-slate-600 text-xs leading-tight">
-                          OMSETNING
-                        </CardTitle>
-                        <div className="bg-slate-100 rounded-lg flex-shrink-0 p-1.5">
-                          <TrendingUp className="w-3 h-3 text-slate-600" />
-                        </div>
-                      </CardHeader>
-                      <CardContent className="pt-1 !px-3 flex-1 flex flex-col justify-between">
-                        <div className="font-bold text-slate-800 mb-0.5 ml-2 text-lg leading-tight">
-                          +24%
-                        </div>
-                        <div className="flex items-center gap-1 pt-2 flex-nowrap">
-                          <div className="font-medium px-1.5 py-0.5 rounded-full flex-shrink-0 text-xs bg-green-50 text-green-700 border border-green-200">
-                            +12%
-                          </div>
-                          <span className="text-slate-500 text-xs leading-tight whitespace-nowrap">
-                            fra forrige måned
-                          </span>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card className="h-full px-2 py-0 border-slate-200/60 flex flex-col max-h-29">
-                      <CardHeader className="flex flex-row items-center justify-between pb-2 flex-shrink-0">
-                        <CardTitle className="font-medium text-slate-600 text-xs leading-tight">
-                          TILBUD
-                        </CardTitle>
-                        <div className="bg-slate-100 rounded-lg flex-shrink-0 p-1.5">
-                          <FileText className="w-3 h-3 text-slate-600" />
-                        </div>
-                      </CardHeader>
-                      <CardContent className="pt-1 !px-3 flex-1 flex flex-col justify-between">
-                        <div className="font-bold text-slate-800 mb-0.5 ml-2 text-lg leading-tight">
-                          12
-                        </div>
-                        <div className="flex items-center gap-1 pt-2 flex-nowrap">
-                          <div className="font-medium px-1.5 py-0.5 rounded-full flex-shrink-0 text-xs bg-green-50 text-green-700 border border-green-200">
-                            +3
-                          </div>
-                          <span className="text-slate-500 text-xs leading-tight whitespace-nowrap">
-                            fra forrige måned
-                          </span>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card className="h-full px-2 py-0 border-slate-200/60 flex flex-col max-h-29">
-                      <CardHeader className="flex flex-row items-center justify-between pb-2 flex-shrink-0">
-                        <CardTitle className="font-medium text-slate-600 text-xs leading-tight">
-                          VUNNET
-                        </CardTitle>
-                        <div className="bg-slate-100 rounded-lg flex-shrink-0 p-1.5">
-                          <Check className="w-3 h-3 text-slate-600" />
-                        </div>
-                      </CardHeader>
-                      <CardContent className="pt-1 !px-3 flex-1 flex flex-col justify-between">
-                        <div className="font-bold text-slate-800 mb-0.5 ml-2 text-lg leading-tight">
-                          8
-                        </div>
-                        <div className="flex items-center pt-2 gap-1 flex-nowrap">
-                          <div className="font-medium px-1.5 py-0.5 rounded-full flex-shrink-0 text-xs bg-green-50 text-green-700 border border-green-200">
-                            +2
-                          </div>
-                          <span className="text-slate-500 text-xs leading-tight whitespace-nowrap">
-                            fra forrige måned
-                          </span>
-                        </div>
-                      </CardContent>
-                    </Card>
+                  
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-full bg-[#82ffb2] flex items-center justify-center flex-shrink-0 mt-1">
+                      <Sparkles className="w-4 h-4 text-gray-900" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-1">Interaktive tilbud</h4>
+                      <p className="text-gray-600 text-sm">Polerte, oversiktlige tilbud som imponerer kunder</p>
+                    </div>
                   </div>
-
-                  {/* Recent Activity - Using actual ActivityFeed design */}
-                  <Card className="h-full flex flex-col max-h-34">
-                    <CardHeader className="flex-shrink-0 pb-2">
-                      <CardTitle className="text-sm">Siste Aktivitet</CardTitle>
-                    </CardHeader>
-                    <CardContent className="flex-1 overflow-hidden p-3">
-                      <div className="h-full overflow-y-auto">
-                        <div className="space-y-2">
-                          <div className="flex items-start gap-2 p-2 rounded-lg">
-                            <div className="flex-shrink-0 mt-0.5">
-                              <Sparkles className="h-4 w-4 text-blue-500" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium text-xs text-gray-900 truncate">AI-prissetting fullført</p>
-                              <p className="text-xs text-gray-600 line-clamp-1">Kjøkkenrenovering - Prosjekt</p>
-                              <p className="text-xs text-gray-500 mt-0.5">2 min siden</p>
-                            </div>
-                          </div>
-                          <div className="flex items-start gap-2 p-2 rounded-lg">
-                            <div className="flex-shrink-0 mt-0.5">
-                              <Mail className="h-4 w-4 text-blue-500" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium text-xs text-gray-900 truncate">Tilbud sendt</p>
-                              <p className="text-xs text-gray-600 line-clamp-1">Badrenovering - Kunde</p>
-                              <p className="text-xs text-gray-500 mt-0.5">15 min siden</p>
-                            </div>
-                          </div>
-                          <div className="flex items-start gap-2 p-2 rounded-lg">
-                            <div className="flex-shrink-0 mt-0.5">
-                              <Check className="h-4 w-4 text-green-500" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium text-xs text-gray-900 truncate">Tilbud vunnet</p>
-                              <p className="text-xs text-gray-600 line-clamp-1">Stueombygging - Bedrift</p>
-                              <p className="text-xs text-gray-500 mt-0.5">2 timer siden</p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {/* Floating Action Button */}
-                <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-primary rounded-full flex items-center justify-center shadow-xl border-4 border-white">
-                  <Zap className="w-8 h-8 text-white" />
+                  
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-full bg-[#82ffb2] flex items-center justify-center flex-shrink-0 mt-1">
+                      <Brain className="w-4 h-4 text-gray-900" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-1">AI-drevet prissetting</h4>
+                      <p className="text-gray-600 text-sm">Konkurransedyktige priser basert på markedsdata og dine leverandører</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-full bg-[#82ffb2] flex items-center justify-center flex-shrink-0 mt-1">
+                      <BarChart3 className="w-4 h-4 text-gray-900" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-1">Full kontroll & oversikt</h4>
+                      <p className="text-gray-600 text-sm">Se alle tilbud, kunder og konverteringsrate på ett sted</p>
+                    </div>
+                  </div>
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Stats Below */}
+          <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-8">
+            <div className="text-center">
+              <div className="text-4xl font-bold text-gray-900 mb-2" style={{ fontFamily: 'var(--font-lora), serif' }}>
+                96%
+              </div>
+              <div className="text-sm text-gray-600">Mindre tid brukt</div>
+            </div>
+            <div className="text-center">
+              <div className="text-4xl font-bold text-gray-900 mb-2" style={{ fontFamily: 'var(--font-lora), serif' }}>
+                5 min
+              </div>
+              <div className="text-sm text-gray-600">Per tilbud</div>
+            </div>
+            <div className="text-center">
+              <div className="text-4xl font-bold text-gray-900 mb-2" style={{ fontFamily: 'var(--font-lora), serif' }}>
+                21x
+              </div>
+              <div className="text-sm text-gray-600">Flere tilbud sendt</div>
+            </div>
+            <div className="text-center">
+              <div className="text-4xl font-bold text-gray-900 mb-2" style={{ fontFamily: 'var(--font-lora), serif' }}>
+                100%
+              </div>
+              <div className="text-sm text-gray-600">Mer profesjonelt</div>
             </div>
           </div>
         </div>
       </section>
 
+      {/* Savings Calculator Section */}
+      <section className="py-32 bg-white">
+        <div className="max-w-4xl mx-auto px-6 sm:px-8 lg:px-12">
+          <div className="text-center mb-12">
+            <h2 
+              className="text-4xl md:text-5xl font-normal text-gray-900 tracking-tight mb-4"
+              style={{ fontFamily: 'var(--font-lora), serif' }}
+            >
+              Sjekk hvor mye du kan spare
+            </h2>
+            <p className="text-gray-600 text-lg md:text-xl font-light max-w-2xl mx-auto">
+              Se hvor mye tid og penger du kan spare ved å bytte til Proanbud
+            </p>
+          </div>
+          <SavingsCalculator variant="full" />
+        </div>
+      </section>
+
       <ShowcaseFeature />
 
+      {/* Features Section
       <FeatureSection />
+      */}
 
       {/* FAQ Section */}
       <FaqSection faqs={faqs} />
@@ -394,45 +359,39 @@ function HomeContent() {
       <BlogSection1 />
 
       {/* CTA Section */}
-      <section className="py-24 bg-[#82ffb2] relative overflow-hidden">
-        {/* Grainy texture overlay */}
-        <div 
-          className="absolute inset-0 opacity-20 pointer-events-none"
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
-            backgroundRepeat: 'repeat',
-            backgroundSize: '200px 200px'
-          }}
-        />
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-8 relative z-10">
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-900">
+      <section className="py-28 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 relative overflow-hidden">
+        <div className="max-w-4xl mx-auto px-6 sm:px-8 lg:px-12 text-center space-y-10 relative z-10">
+          <h2 
+            className="text-4xl md:text-6xl font-normal text-white tracking-tight"
+            style={{ fontFamily: 'var(--font-lora), serif' }}
+          >
             Klar til å effektivisere tilbudsprosessen?
           </h2>
-          <p className="text-xl text-gray-800 mb-10">
+          <p className="text-xl text-gray-300 font-light max-w-2xl mx-auto">
             Bli med tusenvis av håndverkere som allerede bruker Proanbud
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
             <Link
               href="/signup"
-              className="group bg-gray-900 text-white px-6 py-2 rounded-lg hover:bg-gray-800 transition-all font-semibold text-md shadow-xl flex items-center justify-center gap-2"
+              className="group bg-white text-gray-900 px-8 py-3.5 rounded-xl hover:bg-gray-50 transition-all font-semibold text-md shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
             >
-              Start gratis i dag
+              Kom i gang gratis
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </Link>
             <Link
-              href="mailto:casper@nagsoftware.no"
-              className="bg-white text-gray-900 px-6 py-2 rounded-lg hover:bg-gray-50 transition-all font-semibold text-md flex items-center justify-center gap-2"
+              href="/login"
+              className="bg-transparent text-white px-8 py-3.5 rounded-xl hover:bg-white/10 transition-all font-semibold text-md border-2 border-white/20 hover:border-white/40 flex items-center justify-center gap-2"
             >
-              Kontakt salg
+              Logg inn
             </Link>
           </div>
-          <div className="flex items-center justify-center gap-8 pt-4 text-sm text-gray-800">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-8 pt-2 text-sm text-gray-300 font-light">
             <div className="flex items-center gap-2">
-              <Check className="w-5 h-5" />
+              <Check className="w-5 h-5 text-[#82ffb2]" />
               <span>14 dagers gratis prøveperiode</span>
             </div>
             <div className="flex items-center gap-2">
-              <Check className="w-5 h-5" />
+              <Check className="w-5 h-5 text-[#82ffb2]" />
               <span>Ingen binding</span>
             </div>
           </div>

@@ -8,5 +8,6 @@ import post from './post'
 import author from './author'
 import pilot from './pilot'
 import aiConfig from './aiConfig'
+import aboutPage from './aboutPage'
 
-export const schemaTypes = [post, author, category, blockContent, pilot, aiConfig]
+export const schemaTypes = [post, author, category, blockContent, pilot, aiConfig, aboutPage]

@@ -43,7 +43,7 @@ export default function Footer() {
             <div>
               <h3 className="text-white font-bold mb-4">Selskap</h3>
               <ul className="space-y-3">
-                <li><a href="#" className="hover:text-[#82ffb2] transition-colors">Om oss</a></li>
+                <li><a href="/om-oss" className="hover:text-[#82ffb2] transition-colors">Om oss</a></li>
                 <li><Link href="/blogg" className="hover:text-[#82ffb2] transition-colors">Blogg</Link></li>
                 <li><a href="#" className="hover:text-[#82ffb2] transition-colors">Karriere</a></li>
                 <li><a href="#" className="hover:text-[#82ffb2] transition-colors">Presse</a></li>

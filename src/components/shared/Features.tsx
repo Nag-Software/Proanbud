@@ -75,7 +75,7 @@ const FeatureSection = ({
   buttonUrl = "/docs/funksjoner",
 }: Feature43Props) => {
   return (
-    <section className="px-10 lg:px-0 py-32">
+    <section className="px-10 lg:px-0 py-32 bg-white">
       <div className="container mx-auto max-w-3xl lg:max-w-4xl">
         {title && (
           <div className="container-padding-x mb-15 mx-auto flex max-w-2xl flex-col gap-8 md:gap-10">
@@ -84,11 +84,15 @@ const FeatureSection = ({
               {/* Category Tag */}
               <Tagline>Funksjoner</Tagline>
               {/* Main Title */}
-              <h1 id="features-heading" className="heading-lg text-foreground">
+              <h1 
+                id="features-heading" 
+                className="text-4xl md:text-5xl lg:text-6xl font-normal text-gray-900 tracking-tight"
+                style={{ fontFamily: 'var(--font-lora), serif' }}
+              >
                 {title}
               </h1>
               {/* Section Description */}
-              <p className="text-muted-foreground max-w-lg">
+              <p className="text-gray-600 text-lg md:text-xl font-light max-w-lg">
                 {subtitle}{"  "}
               </p>
             </div>

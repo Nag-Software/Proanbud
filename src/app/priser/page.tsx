@@ -129,7 +129,7 @@ export default function PricingPage() {
       <Header currentPage="priser" />
 
       {/* Hero Section */}
-      <section className="py-16 px-4">
+      <section className="py-20 px-4">
         <div className="container mx-auto text-center max-w-4xl">
           <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
             Enkel prising for enhver bedrift

@@ -63,12 +63,18 @@ const Feature197 = ({
   const [activeImage, setActiveImage] = useState<string>(features[0].image);
 
   return (
-    <section className="py-25 bg-[#dbb89a]/5">
+    <section className="py-32 bg-gray-50/50">
       <div className="container mx-auto max-w-7xl px-6">
-        <h1 id="showcase-heading" className="heading-lg mx-auto text-center mb-4 text-foreground">
-          Oppdag plattformen
+        <h1 
+          id="showcase-heading" 
+          className="text-4xl md:text-5xl lg:text-6xl font-normal mx-auto text-center mb-6 text-gray-900 tracking-tight"
+          style={{ fontFamily: 'var(--font-lora), serif' }}
+        >
+          Alt du trenger i én plattform
         </h1>
-        <h3 className="text-muted-foreground text-center text-md mb-10">Intuitiv, kraftig og designet for å gjøre jobben din enklere</h3>
+        <p className="text-gray-600 text-center text-lg md:text-xl mb-16 font-light max-w-2xl mx-auto">
+          Effektiviser anbudsprosessen: intuitivt, kraftig og designet for å gjøre håndverkerens hverdag enklere med smarte verktøy.
+        </p>
         <div className="mb-12 flex w-full items-start justify-between gap-12">
           <div className="w-full md:w-1/2">
             <Accordion type="single" className="w-full" defaultValue="item-1">
@@ -116,8 +122,8 @@ const Feature197 = ({
                   </div>
                 </div>
               </div>
-              <div className="absolute -top-8 -left-8 w-32 h-32 bg-[#ff82d0]/20 rounded-full blur-3xl"></div>
-              <div className="absolute -bottom-8 -right-8 w-40 h-40 bg-[#82b2ff]/20 rounded-full blur-3xl"></div>
+              <div className="absolute -top-8 -left-8 w-32 h-32 bg-[#ff82d0]/10 rounded-full blur-3xl"></div>
+              <div className="absolute -bottom-8 -right-8 w-40 h-40 bg-[#82b2ff]/10 rounded-full blur-3xl"></div>
             </div>
           </div>
         </div>

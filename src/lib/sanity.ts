@@ -92,6 +92,37 @@ export const allPostSlugsQuery = `
   }
 `
 
+// Hent Om Oss-siden
+export const aboutPageQuery = `
+  *[_type == "aboutPage"][0] {
+    heroTitle,
+    heroDescription,
+    founderName,
+    founderTitle,
+    founderImage {
+      asset,
+      alt
+    },
+    founderLinkedin,
+    founderEmail,
+    founderStoryTitle,
+    founderStory,
+    founderQuote,
+    missionTitle,
+    missionDescription,
+    visionTitle,
+    visionDescription,
+    valuesTitle,
+    valuesSubtitle,
+    values,
+    techStackTitle,
+    techStackSubtitle,
+    technologies,
+    ctaTitle,
+    ctaDescription
+  }
+`
+
 // Hent AI-konfigurasjon
 export const aiConfigQuery = `
   *[_type == "aiConfig"][0] {

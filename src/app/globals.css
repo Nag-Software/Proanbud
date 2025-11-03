@@ -46,10 +46,27 @@
 body {
   font-family: var(--font-geist), sans-serif;
   scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
+/* Lora font for headings on marketing pages */
 h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-geist), "geist-fallback", sans-serif;
+  font-family: var(--font-lora), serif;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+/* Geist font for headings in dashboard */
+[data-dashboard] h1,
+[data-dashboard] h2,
+[data-dashboard] h3,
+[data-dashboard] h4,
+[data-dashboard] h5,
+[data-dashboard] h6 {
+  font-family: var(--font-geist), sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 html {

@@ -33,22 +33,26 @@ export const FaqSection: React.FC<FaqSectionProps> = ({
 
   return (
     <section
-      className="bg-background section-padding-y"
+      className="bg-gray-50/50 py-32"
       aria-labelledby="faq-heading"
     >
-      <div className="container-padding-x mx-auto flex max-w-3xl flex-col gap-10 md:gap-12">
+      <div className="container-padding-x mx-auto flex max-w-3xl flex-col gap-10 md:gap-12 px-6">
         {/* Section Header */}
         <div className="section-title-gap-lg flex flex-col items-center text-center">
           {/* Category Tag */}
           <Tagline>FAQ seksjon</Tagline>
           {/* Main Title */}
-          <h1 id="faq-heading" className="heading-lg text-foreground">
+          <h1 
+            id="faq-heading" 
+            className="text-4xl md:text-5xl lg:text-6xl font-normal text-gray-900 tracking-tight"
+            style={{ fontFamily: 'var(--font-lora), serif' }}
+          >
             {title}
           </h1>
           {/* Section Description */}
-          <p className="text-muted-foreground max-w-lg">
+          <p className="text-gray-600 text-lg md:text-xl font-light max-w-lg">
             {subtitle}{"  "}
-            <Link href="mailto:post@proanbud.no" className="text-primary underline">
+            <Link href="mailto:post@proanbud.no" className="text-primary underline hover:no-underline transition-all">
               Kontakt oss.
             </Link>
           </p>
@@ -69,22 +73,26 @@ export const FaqSection: React.FC<FaqSectionProps> = ({
         </Accordion>
 
         {/* CTA Card */}
-        <div className="bg-muted/60 flex w-full flex-col items-center gap-6 rounded-xl p-6 md:p-8">
-          <div className="flex flex-col gap-2 text-center">
-            <h2 className="text-foreground text-2xl font-bold">
+        <div className="bg-white border border-gray-200 flex w-full flex-col items-center gap-6 rounded-2xl p-8 md:p-10 shadow-sm">
+          <div className="flex flex-col gap-3 text-center">
+            <h2 
+              className="text-gray-900 text-3xl md:text-4xl font-normal tracking-tight"
+              style={{ fontFamily: 'var(--font-lora), serif' }}
+            >
               Fant du ikke svaret du lette etter?
             </h2>
-            <p className="text-muted-foreground text-base">
+            <p className="text-gray-600 text-base md:text-lg font-light">
               Har du spørsmål eller trenger hjelp? Teamet vårt er her for å hjelpe!
             </p>
           </div>
-          <Button
-            variant="default"
-            aria-label="Contact our support team">
-              <Link href="mailto:post@proanbud.no">
+          <Link href="mailto:post@proanbud.no">
+            <Button
+              variant="default"
+              className="px-8 py-2.5 rounded-xl"
+              aria-label="Contact our support team">
                 Kontakt oss
-              </Link>
-          </Button>
+            </Button>
+          </Link>
         </div>
       </div>
     </section>
