@@ -38,7 +38,7 @@ export function NewHero() {
           </h1>
           
           <p className="text-gray-600 text-lg md:text-xl leading-relaxed max-w-2xl mx-auto font-light">
-            Din komplette tilbudsplattform for håndverkere. Bruk AI til å prissete riktig, send profesjonelle tilbud fra mobil eller PC, og vinn flere oppdrag.
+            Din komplette tilbudsplattform for håndverkere. Bruk AI til å prissete riktig, send profesjonelle tilbud fra nettbrett eller PC, og vinn flere oppdrag.
           </p>
           
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">

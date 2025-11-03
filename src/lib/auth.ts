@@ -32,55 +32,83 @@ export const signupWithEmail = async (
     businessType?: string;
   }
 ) => {
+  let userCreated = null;
+  
   try {
+    // Step 1: Create the user account
     const result = await createUserWithEmailAndPassword(auth, email, password);
+    userCreated = result.user;
+    console.log('User created in Firebase Auth:', userCreated.uid);
     
-    // Update display name if provided
+    // Step 2: Update display name if provided
     if (displayName && result.user) {
-      await updateProfile(result.user, { displayName });
-    }
-    
-    // Wait a bit for auth token to propagate
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Save user data to Realtime Database with proper structure
-    const userRef = ref(db, `users/${result.user.uid}`);
-    const userData: any = {
-      email: result.user.email,
-      displayName,
-      profile: {
-        createdAt: Date.now(),
-        lastLogin: Date.now(),
-      },
-      kunder: {},
-      tilbud: {},
-      analytics: {
-        totalCustomers: 0,
-        totalTilbud: 0,
-        vunnetTilbud: 0,
-        totalRevenue: 0,
-        totalProfit: 0,
-        winRate: 0,
-        lastUpdated: Date.now(),
-        monthlyData: [],
-        jobbypeStats: [],
+      try {
+        await updateProfile(result.user, { displayName });
+        console.log('Display name updated:', displayName);
+      } catch (profileError) {
+        console.error('Error updating profile:', profileError);
+        // Continue anyway - this is not critical
       }
-    };
-
-    // Add business settings if provided
-    if (businessSettings && (businessSettings.companyName || businessSettings.organizationNumber)) {
-      userData.businessSettings = {
-        companyName: businessSettings.companyName || '',
-        organizationNumber: businessSettings.organizationNumber || '',
-        businessType: businessSettings.businessType || ''
+    }
+    
+    // Step 3: Wait for auth token to propagate
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    // Step 4: Try to save user data to Realtime Database
+    try {
+      const userRef = ref(db, `users/${result.user.uid}`);
+      const userData: any = {
+        email: result.user.email,
+        displayName,
+        profile: {
+          createdAt: Date.now(),
+          lastLogin: Date.now(),
+        },
+        kunder: {},
+        tilbud: {},
+        analytics: {
+          totalCustomers: 0,
+          totalTilbud: 0,
+          vunnetTilbud: 0,
+          totalRevenue: 0,
+          totalProfit: 0,
+          winRate: 0,
+          lastUpdated: Date.now(),
+          monthlyData: [],
+          jobbypeStats: [],
+        }
       };
+
+      // Add business settings if provided
+      if (businessSettings && (businessSettings.companyName || businessSettings.organizationNumber)) {
+        userData.businessSettings = {
+          companyName: businessSettings.companyName || '',
+          organizationNumber: businessSettings.organizationNumber || '',
+          businessType: businessSettings.businessType || ''
+        };
+      }
+
+      await set(userRef, userData);
+      console.log('User data saved to database successfully');
+    } catch (dbError: any) {
+      console.error('Database write error (user still created):', dbError);
+      // Don't fail the signup if database write fails
+      // The user account is already created, just log the error
+      // The database entry will be created on first login if needed
     }
 
-    await set(userRef, userData);
-
+    // Return success with the user object
     return { user: result.user, error: null };
+    
   } catch (error: any) {
     console.error('signupWithEmail error:', error);
+    
+    // If user was created but something else failed, still return the user
+    if (userCreated) {
+      console.log('User was created despite error, returning user');
+      return { user: userCreated, error: null };
+    }
+    
     // Return the error code if available, otherwise the message
     return { user: null, error: error.code || error.message };
   }

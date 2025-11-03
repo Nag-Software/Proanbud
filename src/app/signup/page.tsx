@@ -157,11 +157,12 @@ function SignupForm() {
       if (authError) {
         console.error('Signup error:', authError);
         const errorMessage = getAuthErrorMessage(authError);
-        setStatus(errorMessage, 'error');
 
         // Special handling for email already in use
         if (authError === 'auth/email-already-in-use') {
           setStatus('Det finnes allerede en konto med denne e-postadressen. Prøv å logg inn i stedet.', 'error');
+        } else {
+          setStatus(errorMessage, 'error');
         }
         setLoading(false);
         return;
@@ -178,6 +179,11 @@ function SignupForm() {
         setTimeout(() => {
           router.push('/dashboard');
         }, 2000);
+      } else {
+        // No user and no error - something went wrong
+        console.error('No user returned from signup');
+        setStatus('En uventet feil oppstod. Prøv igjen.', 'error');
+        setLoading(false);
       }
     } catch (error) {
       console.error('Unexpected signup error:', error);
