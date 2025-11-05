@@ -4,12 +4,12 @@ import { stripe } from '@/lib/stripe';
 export async function GET(request: NextRequest) {
   try {
     // Get price IDs from environment variables
-    const basicPriceId = process.env.NEXT_PUBLIC_STRIPE_BASIC_PRICE_ID;
-    const proPriceId = process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID;
-    const basicYearlyPriceId = process.env.NEXT_PUBLIC_STRIPE_BASIC_YEARLY_PRICE_ID;
-    const proYearlyPriceId = process.env.NEXT_PUBLIC_STRIPE_PRO_YEARLY_PRICE_ID;
+    const standardPriceId = process.env.NEXT_PUBLIC_STRIPE_BASIC_PRICE_ID;
+    const proffPriceId = process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID;
+    const standardYearlyPriceId = process.env.NEXT_PUBLIC_STRIPE_BASIC_YEARLY_PRICE_ID;
+    const proffYearlyPriceId = process.env.NEXT_PUBLIC_STRIPE_PRO_YEARLY_PRICE_ID;
 
-    if (!basicPriceId || !proPriceId) {
+    if (!standardPriceId || !proffPriceId) {
       return NextResponse.json(
         { error: 'Stripe price IDs not configured' },
         { status: 500 }
@@ -17,9 +17,9 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch all price objects from Stripe
-    const priceIds = [basicPriceId, proPriceId];
-    if (basicYearlyPriceId) priceIds.push(basicYearlyPriceId);
-    if (proYearlyPriceId) priceIds.push(proYearlyPriceId);
+    const priceIds = [standardPriceId, proffPriceId];
+    if (standardYearlyPriceId) priceIds.push(standardYearlyPriceId);
+    if (proffYearlyPriceId) priceIds.push(proffYearlyPriceId);
 
     const prices = await Promise.all(
       priceIds.map(priceId => stripe.prices.retrieve(priceId))
@@ -32,23 +32,23 @@ export async function GET(request: NextRequest) {
       const amount = price.unit_amount || 0; // Amount in cents/øre
       const amountInNOK = amount / 100; // Convert to NOK
 
-      if (price.id === basicPriceId) {
-        priceData.basic = {
+      if (price.id === standardPriceId) {
+        priceData.standard = {
           monthly: amountInNOK,
           yearly: amountInNOK * 12 // This will be overridden if yearly price exists
         };
-      } else if (price.id === proPriceId) {
-        priceData.pro = {
+      } else if (price.id === proffPriceId) {
+        priceData.proff = {
           monthly: amountInNOK,
           yearly: amountInNOK * 12 // This will be overridden if yearly price exists
         };
-      } else if (price.id === basicYearlyPriceId) {
-        if (priceData.basic) {
-          priceData.basic.yearly = amountInNOK;
+      } else if (price.id === standardYearlyPriceId) {
+        if (priceData.standard) {
+          priceData.standard.yearly = amountInNOK;
         }
-      } else if (price.id === proYearlyPriceId) {
-        if (priceData.pro) {
-          priceData.pro.yearly = amountInNOK;
+      } else if (price.id === proffYearlyPriceId) {
+        if (priceData.proff) {
+          priceData.proff.yearly = amountInNOK;
         }
       }
     });

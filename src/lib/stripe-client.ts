@@ -2,30 +2,30 @@
 // This file can be safely imported by client-side code
 
 export const PRICE_IDS = {
-  BASIC: process.env.NEXT_PUBLIC_STRIPE_BASIC_PRICE_ID!,
-  PRO: process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID!,
-  BASIC_YEARLY: process.env.NEXT_PUBLIC_STRIPE_BASIC_YEARLY_PRICE_ID,
-  PRO_YEARLY: process.env.NEXT_PUBLIC_STRIPE_PRO_YEARLY_PRICE_ID,
+  STANDARD: process.env.NEXT_PUBLIC_STRIPE_BASIC_PRICE_ID!,
+  PROFF: process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID!,
+  STANDARD_YEARLY: process.env.NEXT_PUBLIC_STRIPE_BASIC_YEARLY_PRICE_ID,
+  PROFF_YEARLY: process.env.NEXT_PUBLIC_STRIPE_PRO_YEARLY_PRICE_ID,
 } as const;
 
-export type Plan = 'free' | 'trial' | 'basic' | 'pro';
+export type Plan = 'free' | 'trial' | 'standard' | 'proff';
 
 export const getPlanFromPriceId = (priceId: string): Plan | null => {
-  if (priceId === PRICE_IDS.BASIC || priceId === PRICE_IDS.BASIC_YEARLY) return 'basic';
-  if (priceId === PRICE_IDS.PRO || priceId === PRICE_IDS.PRO_YEARLY) return 'pro';
+  if (priceId === PRICE_IDS.STANDARD || priceId === PRICE_IDS.STANDARD_YEARLY) return 'standard';
+  if (priceId === PRICE_IDS.PROFF || priceId === PRICE_IDS.PROFF_YEARLY) return 'proff';
   return null;
 };
 
 export const getPriceIdFromPlan = (plan: Plan, billingPeriod: 'monthly' | 'yearly' = 'monthly'): string | null => {
   switch (plan) {
-    case 'basic':
-      return billingPeriod === 'yearly' && PRICE_IDS.BASIC_YEARLY
-        ? PRICE_IDS.BASIC_YEARLY
-        : PRICE_IDS.BASIC;
-    case 'pro':
-      return billingPeriod === 'yearly' && PRICE_IDS.PRO_YEARLY
-        ? PRICE_IDS.PRO_YEARLY
-        : PRICE_IDS.PRO;
+    case 'standard':
+      return billingPeriod === 'yearly' && PRICE_IDS.STANDARD_YEARLY
+        ? PRICE_IDS.STANDARD_YEARLY
+        : PRICE_IDS.STANDARD;
+    case 'proff':
+      return billingPeriod === 'yearly' && PRICE_IDS.PROFF_YEARLY
+        ? PRICE_IDS.PROFF_YEARLY
+        : PRICE_IDS.PROFF;
     default:
       return null;
   }
@@ -44,8 +44,8 @@ export const fetchStripePrices = async () => {
     console.error('Error fetching prices from Stripe:', error);
     // Fallback to hardcoded prices if API fails
     return {
-      basic: { monthly: 699, yearly: 6990 },
-      pro: { monthly: 1999, yearly: 19990 }
+      standard: { monthly: 699, yearly: 6990 },
+      proff: { monthly: 1999, yearly: 19990 }
     };
   }
 };
@@ -91,33 +91,33 @@ export const getSubscriptionPlans = async (): Promise<SubscriptionPlanDetails[]>
       limits: { quotes: 3, customers: 1, storage: 0 },
     },
     {
-      id: 'basic',
-      name: 'Basic',
+      id: 'standard',
+      name: 'Standard',
       description: 'For små bedrifter som trenger mer funksjonalitet',
-      price: prices.basic || { monthly: 699, yearly: 6990 },
+      price: prices.standard || { monthly: 699, yearly: 6990 },
       features: ['Inntil 15 tilbud per måned', 'Inntil 10 kunder', 'Grunnleggende rapporter', 'E-post support', '1GB lagring', 'Tilpassbare maler', 'Kunde-database'],
       color: 'blue',
-      cta: 'Velg Basic',
+      cta: 'Velg Standard',
       popular: false,
       limits: { quotes: 15, customers: 10, storage: 1 },
       stripePriceId: {
-        monthly: PRICE_IDS.BASIC,
-        yearly: PRICE_IDS.BASIC_YEARLY
+        monthly: PRICE_IDS.STANDARD,
+        yearly: PRICE_IDS.STANDARD_YEARLY
       }
     },
     {
-      id: 'pro',
-      name: 'Pro',
+      id: 'proff',
+      name: 'Proff',
       description: 'For voksende bedrifter med profesjonelle behov',
-      price: prices.pro || { monthly: 1999, yearly: 19990 },
+      price: prices.proff || { monthly: 1999, yearly: 19990 },
       features: ['Ubegrenset tilbud', 'Ubegrenset kunder', 'Avanserte rapporter og analyser', 'Prioritert support', '10GB lagring', 'API-tilgang', 'Tilpassede maler', 'Integrasjoner', 'Automasjon', 'Team-samarbeid'],
       color: 'purple',
-      cta: 'Velg Pro',
+      cta: 'Velg Proff',
       popular: true,
       limits: { quotes: -1, customers: -1, storage: 10 },
       stripePriceId: {
-        monthly: PRICE_IDS.PRO,
-        yearly: PRICE_IDS.PRO_YEARLY
+        monthly: PRICE_IDS.PROFF,
+        yearly: PRICE_IDS.PROFF_YEARLY
       }
     }
   ];
@@ -137,33 +137,33 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlanDetails[] = [
     limits: { quotes: 3, customers: 1, storage: 0 },
   },
   {
-    id: 'basic',
-    name: 'Basic',
+    id: 'standard',
+    name: 'Standard',
     description: 'For små bedrifter som trenger mer funksjonalitet',
     price: { monthly: 699, yearly: 6990 },
     features: ['Inntil 15 tilbud per måned', 'Inntil 10 kunder', 'Grunnleggende rapporter', 'E-post support', '1GB lagring', 'Tilpassbare maler', 'Kunde-database'],
     color: 'blue',
-    cta: 'Velg Basic',
+    cta: 'Velg Standard',
     popular: false,
     limits: { quotes: 15, customers: 10, storage: 1 },
     stripePriceId: {
-      monthly: PRICE_IDS.BASIC,
-      yearly: PRICE_IDS.BASIC_YEARLY
+      monthly: PRICE_IDS.STANDARD,
+      yearly: PRICE_IDS.STANDARD_YEARLY
     }
   },
   {
-    id: 'pro',
-    name: 'Pro',
+    id: 'proff',
+    name: 'Proff',
     description: 'For voksende bedrifter med profesjonelle behov',
     price: { monthly: 1999, yearly: 19990 },
     features: ['Ubegrenset tilbud', 'Ubegrenset kunder', 'Avanserte rapporter og analyser', 'Prioritert support', '10GB lagring', 'API-tilgang', 'Tilpassede maler', 'Integrasjoner', 'Automasjon', 'Team-samarbeid'],
     color: 'purple',
-    cta: 'Velg Pro',
+    cta: 'Velg Proff',
     popular: true,
     limits: { quotes: -1, customers: -1, storage: 10 },
     stripePriceId: {
-      monthly: PRICE_IDS.PRO,
-      yearly: PRICE_IDS.PRO_YEARLY
+      monthly: PRICE_IDS.PROFF,
+      yearly: PRICE_IDS.PROFF_YEARLY
     }
   }
 ];
@@ -179,7 +179,7 @@ export const calculateTrialEndDate = (startDate: Date = new Date()): Date => {
 export const formatPrice = (price: number, period: 'monthly' | 'yearly' = 'monthly'): string => {
   const formatted = Math.round(price).toString();
 
-  return period === 'yearly' ? `${formatted}/år` : `${formatted}/måned`;
+  return period === 'yearly' ? `${formatted}/år` : `${formatted} kr`;
 };
 
 export const getDaysRemaining = (trialEnd: number, currentTime?: number): number => {

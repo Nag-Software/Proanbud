@@ -17,7 +17,7 @@ interface SubscriptionGuardProps {
 
 export const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({
   children,
-  requiredPlan = 'basic',
+  requiredPlan = 'standard',
   feature,
   fallback
 }) => {
@@ -64,12 +64,12 @@ function checkSubscriptionAccess(
   // Check if subscription is active
   if (subscription.status !== 'active') return false;
 
-  // Check plan hierarchy: free < trial < basic < pro
+  // Check plan hierarchy: free < trial < standard < proff
   const planHierarchy: Record<SubscriptionPlan, number> = {
     free: 0,
     trial: 1,
-    basic: 2,
-    pro: 3
+    standard: 2,
+    proff: 3
   };
 
   const userPlanLevel = planHierarchy[subscription.plan as SubscriptionPlan] || 0;
@@ -168,7 +168,7 @@ const UpgradePrompt: React.FC<UpgradePromptProps> = ({ requiredPlan, feature }) 
 };
 
 // Hook for checking subscription access in components
-export const useSubscriptionAccess = (requiredPlan: SubscriptionPlan = 'basic') => {
+export const useSubscriptionAccess = (requiredPlan: SubscriptionPlan = 'standard') => {
   const { subscription, loading } = useSubscription();
   
   return {

@@ -162,12 +162,12 @@ async function handleCheckoutSessionCompleted(session: any) {
 
     // Determine plan from price ID
     const priceId = subscription.items.data[0]?.price?.id;
-    let plan = 'basic'; // default
+    let plan = 'standard'; // default
     
     if (priceId === process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID) {
-      plan = 'pro';
+      plan = 'proff';
     } else if (priceId === process.env.NEXT_PUBLIC_STRIPE_BASIC_PRICE_ID) {
-      plan = 'basic';
+      plan = 'standard';
     }
 
     console.log('📋 Determined plan:', plan);
@@ -248,12 +248,12 @@ async function handleSubscriptionCreated(subscription: any) {
 
     // Determine plan from price ID
     const priceId = subscription.items.data[0]?.price?.id;
-    let plan = 'basic';
+    let plan = 'standard';
     
     if (priceId === process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID) {
-      plan = 'pro';
+      plan = 'proff';
     } else if (priceId === process.env.NEXT_PUBLIC_STRIPE_BASIC_PRICE_ID) {
-      plan = 'basic';
+      plan = 'standard';
     }
 
     const subscriptionData = {

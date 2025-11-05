@@ -9,5 +9,6 @@ import author from './author'
 import pilot from './pilot'
 import aiConfig from './aiConfig'
 import aboutPage from './aboutPage'
+import launchSpecialBanner from './launchSpecialBanner'
 
-export const schemaTypes = [post, author, category, blockContent, pilot, aiConfig, aboutPage]
+export const schemaTypes = [post, author, category, blockContent, pilot, aiConfig, aboutPage, launchSpecialBanner]

@@ -9,24 +9,24 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
 });
 
 export const PRICE_IDS = {
-  BASIC: process.env.NEXT_PUBLIC_STRIPE_BASIC_PRICE_ID!,
-  PRO: process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID!,
+  STANDARD: process.env.NEXT_PUBLIC_STRIPE_BASIC_PRICE_ID!,
+  PROFF: process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID!,
 } as const;
 
-export type Plan = 'trial' | 'basic' | 'pro';
+export type Plan = 'trial' | 'standard' | 'proff';
 
 export const getPlanFromPriceId = (priceId: string): Plan | null => {
-  if (priceId === PRICE_IDS.BASIC) return 'basic';
-  if (priceId === PRICE_IDS.PRO) return 'pro';
+  if (priceId === PRICE_IDS.STANDARD) return 'standard';
+  if (priceId === PRICE_IDS.PROFF) return 'proff';
   return null;
 };
 
 export const getPriceIdFromPlan = (plan: Plan): string | null => {
   switch (plan) {
-    case 'basic':
-      return PRICE_IDS.BASIC;
-    case 'pro':
-      return PRICE_IDS.PRO;
+    case 'standard':
+      return PRICE_IDS.STANDARD;
+    case 'proff':
+      return PRICE_IDS.PROFF;
     default:
       return null;
   }

@@ -40,7 +40,7 @@ export function BlogSection1() {
 
   return (
     <section
-      className="transparent max-w-7xl mx-auto section-padding-y"
+      className="transparent max-w-7xl mx-auto py-20 xs:py-28"
       aria-labelledby="blog-section-heading"
     >
       <div className="container-padding-x container mx-auto gap-10 md:gap-12">

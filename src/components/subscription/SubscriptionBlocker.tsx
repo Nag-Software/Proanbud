@@ -92,7 +92,7 @@ const SubscriptionExpiredPrompt: React.FC<SubscriptionExpiredPromptProps> = ({ s
   const handleUpgrade = async () => {
     setUpgrading(true);
     try {
-      // Default to basic plan if no preference
+      // Default to standard plan if no preference
       const priceId = process.env.NEXT_PUBLIC_STRIPE_BASIC_PRICE_ID;
       if (!priceId) {
         console.error('No price ID configured');

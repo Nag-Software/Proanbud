@@ -211,8 +211,8 @@ export const createTilbud = async (tilbudData: TilbudFormData): Promise<string> 
         const quotesData = userData.tilbud || {};
         const quotesCount = Object.keys(quotesData).length;
         
-        // Only enforce limits for non-pro plans
-        if (subscription?.plan !== 'pro') {
+        // Only enforce limits for non-proff plans
+        if (subscription?.plan !== 'proff') {
           const plan = subscription?.plan || 'free';
           const { SUBSCRIPTION_PLANS } = await import('@/lib/stripe');
           const planDetails = SUBSCRIPTION_PLANS.find(p => p.id === plan);

@@ -181,7 +181,7 @@ function HomeContent() {
       <NewHero />
 
       {/* Before/After Section */}
-      <section className="py-40 bg-gray-50/50">
+      <section className="py-20 xs:py-28 bg-gray-50/50">
         <div className="max-w-6xl mx-auto px-6 sm:px-8 lg:px-12">
           <div className="text-center mb-16">
             <h2 
@@ -328,7 +328,7 @@ function HomeContent() {
       </section>
 
       {/* Savings Calculator Section */}
-      <section className="py-32 bg-white">
+      <section className="py-20 xs:py-32 bg-white">
         <div className="max-w-4xl mx-auto px-6 sm:px-8 lg:px-12">
           <div className="text-center mb-12">
             <h2 
@@ -359,7 +359,7 @@ function HomeContent() {
       <BlogSection1 />
 
       {/* CTA Section */}
-      <section className="py-28 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 relative overflow-hidden">
+      <section className="py-20 xs:py-28 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 relative overflow-hidden">
         <div className="max-w-4xl mx-auto px-6 sm:px-8 lg:px-12 text-center space-y-10 relative z-10">
           <h2 
             className="text-4xl md:text-6xl font-normal text-white tracking-tight"

@@ -120,7 +120,7 @@ event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
 ```typescript
 // Eksempel: checkout.session.completed
 await updateUserSubscription(firebaseUserId, {
-  plan: 'pro',
+  plan: 'proff',
   status: 'active',
   stripeCustomerId: 'cus_...',
   stripeSubscriptionId: 'sub_...',

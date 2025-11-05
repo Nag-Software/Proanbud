@@ -1,4 +1,4 @@
-export type SubscriptionPlan = 'free' | 'trial' | 'basic' | 'pro';
+export type SubscriptionPlan = 'free' | 'trial' | 'standard' | 'proff';
 
 export interface SubscriptionPlanDetails {
   id: SubscriptionPlan;

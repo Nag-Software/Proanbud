@@ -128,8 +128,8 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
       let planDetails = SUBSCRIPTION_PLANS.find(p => p.id === currentPlan);
       const now = getCurrentTime();
 
-      // If subscription is basic/pro and expired, downgrade to free
-      if ((currentPlan === 'basic' || currentPlan === 'pro') && subscription) {
+      // If subscription is standard/proff and expired, downgrade to free
+      if ((currentPlan === 'standard' || currentPlan === 'proff') && subscription) {
         if (subscription.currentPeriodEnd < now || subscription.status === 'unpaid') {
           currentPlan = 'free';
           planDetails = SUBSCRIPTION_PLANS.find(p => p.id === currentPlan);
@@ -225,7 +225,7 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
 
             // Handle canceled subscriptions - keep canceled status
             const now = getCurrentTime();
-            if ((mappedSubscription.plan === 'basic' || mappedSubscription.plan === 'pro')) {
+            if ((mappedSubscription.plan === 'standard' || mappedSubscription.plan === 'proff')) {
               if (mappedSubscription.status === 'canceled' || mappedSubscription.status === 'unpaid' || mappedSubscription.currentPeriodEnd < now) {
                 mappedSubscription = {
                   ...mappedSubscription,
@@ -299,10 +299,10 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
     if (!priceId) return 'free';
     
     const planMapping: Record<string, SubscriptionPlan> = {
-      [process.env.NEXT_PUBLIC_STRIPE_BASIC_PRICE_ID || '']: 'basic',
-      [process.env.NEXT_PUBLIC_STRIPE_BASIC_YEARLY_PRICE_ID || '']: 'basic',
-      [process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID || '']: 'pro',
-      [process.env.NEXT_PUBLIC_STRIPE_PRO_YEARLY_PRICE_ID || '']: 'pro',
+      [process.env.NEXT_PUBLIC_STRIPE_BASIC_PRICE_ID || '']: 'standard',
+      [process.env.NEXT_PUBLIC_STRIPE_BASIC_YEARLY_PRICE_ID || '']: 'standard',
+      [process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID || '']: 'proff',
+      [process.env.NEXT_PUBLIC_STRIPE_PRO_YEARLY_PRICE_ID || '']: 'proff',
     };
     
     return planMapping[priceId] || 'free';

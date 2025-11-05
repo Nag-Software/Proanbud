@@ -1,32 +1,55 @@
+'use client';
+
 import Link from "next/link";
 import dashboardImage from "../../public/assets/4.jpg";
 import Image from "next/image";
 import { ArrowRight, Check } from "lucide-react";
+import { useEffect, useState } from "react";
+import { getLaunchSpecialBanner, getDiscountTypeLabel, LaunchSpecialBanner } from "@/lib/sanity/launchBanner";
 
 export function NewHero() {
+  const [banner, setBanner] = useState<LaunchSpecialBanner | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchBanner = async () => {
+      try {
+        const data = await getLaunchSpecialBanner();
+        setBanner(data);
+      } catch (error) {
+        console.error('Failed to fetch banner:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBanner();
+  }, []);
   return (
     <section className="w-full py-20 md:py-28 bg-white">
       <div className="max-w-6xl mx-auto px-6 sm:px-8 lg:px-12">
         {/* Launch Special Banner */}
         <div className="mb-10 mx-auto max-w-2xl">
-          <div className="bg-gradient-to-r from-[#82ffb2] via-[#82ffb2] to-[#66ff9f] rounded-2xl p-[1px] shadow-lg">
-            <div className="bg-white rounded-xl px-6 py-3">
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 text-center sm:text-left">
-                <span className="text-2xl">🎉</span>
-                <div className="flex-1">
-                  <p className="text-gray-900 font-semibold text-md">
-                    Lanseringstilbud
-                  </p>
-                  <p className="text-gray-600 text-xs">
-                    De første 50 kundene får <span className="font-bold text-gray-900">50% rabatt på livstid!</span>
-                  </p>
-                </div>
-                <div className="bg-[#82ffb2] text-primary px-4 py-2 rounded-lg font-semibold text-xs whitespace-nowrap">
-                  Kun 43 plasser igjen
+          {banner && banner.isActive && (
+            <div className="bg-gradient-to-r from-[#82ffb2] via-[#82ffb2] to-[#66ff9f] rounded-2xl p-[1px] shadow-lg">
+              <div className="bg-white rounded-xl px-6 py-3">
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-2 text-center sm:text-left">
+                  <span className="text-2xl">🎉</span>
+                  <div className="flex-1">
+                    <p className="text-gray-900 font-semibold text-md">
+                      Lanseringstilbud
+                    </p>
+                    <p className="text-gray-600 text-xs">
+                      De første {banner.totalPlaces} kundene får <span className="font-bold text-gray-900">{banner.discountPercentage}% rabatt {getDiscountTypeLabel(banner.discountType)}!</span>
+                    </p>
+                  </div>
+                  <div className="bg-[#82ffb2] text-primary px-4 py-2 rounded-lg font-semibold text-xs whitespace-nowrap">
+                    Kun {banner.availablePlaces} plasser igjen
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
 
         <div className="text-center max-w-4xl mx-auto mb-16 space-y-8">

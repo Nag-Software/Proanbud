@@ -36,7 +36,7 @@ Dette sikrer at vi får **alle** felter fra subscription objektet, inkludert:
 Samme prosess som før, men nå skal det fungere:
 
 1. Gå til http://localhost:3000/innstillinger
-2. Velg Basic eller Pro plan
+2. Velg Standard eller Proff plan
 3. Bruk test card: `4242 4242 4242 4242`
 4. Fullfør betalingen
 

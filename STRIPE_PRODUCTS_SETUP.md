@@ -5,8 +5,8 @@ This guide will help you set up the required Stripe products and prices for Proa
 
 ## Required Products & Prices
 
-### 1. Basic Plan
-**Product Name:** Proanbud Basic
+### 1. Standard Plan
+**Product Name:** Proanbud Standard
 **Description:** For små bedrifter som trenger mer funksjonalitet
 
 **Monthly Price:**
@@ -19,8 +19,8 @@ This guide will help you set up the required Stripe products and prices for Proa
 - Recurring: Yearly
 - Price ID should match: `NEXT_PUBLIC_STRIPE_BASIC_YEARLY_PRICE_ID`
 
-### 2. Pro Plan
-**Product Name:** Proanbud Pro
+### 2. Proff Plan
+**Product Name:** Proanbud Proff
 **Description:** For voksende bedrifter med profesjonelle behov
 
 **Monthly Price:**

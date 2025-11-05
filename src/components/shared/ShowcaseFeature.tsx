@@ -63,7 +63,7 @@ const Feature197 = ({
   const [activeImage, setActiveImage] = useState<string>(features[0].image);
 
   return (
-    <section className="py-32 bg-gray-50/50">
+    <section className="py-20 xs:py-32 bg-gray-50/50" id="showcase">
       <div className="container mx-auto max-w-7xl px-6">
         <h1 
           id="showcase-heading" 

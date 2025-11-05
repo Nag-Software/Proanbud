@@ -35,7 +35,7 @@ export default function KalkulatorPage() {
       <Header />
 
       {/* Hero Section */}
-      <section className="py-16 md:py-20 bg-gradient-to-br from-gray-50 to-white">
+      <section className="py-16 pb-10 sm:py-20 bg-gradient-to-br from-gray-50 to-white">
         <div className="max-w-4xl mx-auto px-6 sm:px-8 lg:px-12 text-center">
           <h1 
             className="text-4xl md:text-5xl lg:text-6xl font-normal text-gray-900 tracking-tight leading-[1.1] mb-4"
@@ -50,7 +50,7 @@ export default function KalkulatorPage() {
       </section>
 
       {/* Calculator Section */}
-      <section className="py-22 bg-white">
+      <section className="py-6 sm:py-12 bg-white">
         <div className="max-w-4xl mx-auto px-6 sm:px-8 lg:px-12">
           <SavingsCalculator variant="full" />
         </div>
@@ -67,7 +67,6 @@ export default function KalkulatorPage() {
               Hvorfor Proanbud?
             </h2>
           </div>
-
           <div className="grid md:grid-cols-3 gap-8">
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
               <div className="w-12 h-12 bg-gray-50 rounded-lg flex items-center justify-center mb-4">

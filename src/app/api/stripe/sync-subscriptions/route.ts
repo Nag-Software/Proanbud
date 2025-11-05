@@ -148,8 +148,8 @@ export async function POST(request: NextRequest) {
     // Update each subscription in Firestore
     for (const subscription of subscriptions.data) {
       const priceId = subscription.items.data[0]?.price.id;
-      const plan = priceId === process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID ? 'pro' :
-                   priceId === process.env.NEXT_PUBLIC_STRIPE_BASIC_PRICE_ID ? 'basic' : 'free';
+      const plan = priceId === process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID ? 'proff' :
+                   priceId === process.env.NEXT_PUBLIC_STRIPE_BASIC_PRICE_ID ? 'standard' : 'free';
 
       const newPeriodEndSeconds = normalizeSeconds((subscription as any).current_period_end) || Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60);
 

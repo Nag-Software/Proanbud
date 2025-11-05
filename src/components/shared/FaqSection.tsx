@@ -33,7 +33,7 @@ export const FaqSection: React.FC<FaqSectionProps> = ({
 
   return (
     <section
-      className="bg-gray-50/50 py-32"
+      className="bg-gray-50/50 py-20 sm:py-32"
       aria-labelledby="faq-heading"
     >
       <div className="container-padding-x mx-auto flex max-w-3xl flex-col gap-10 md:gap-12 px-6">

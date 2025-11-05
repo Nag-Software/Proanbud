@@ -36,14 +36,14 @@ export const SubscriptionSettings = ({ businessSettings }: { businessSettings: B
             features: ['Inntil 3 tilbud', 'Inntil 1 kunder']
           },
           {
-            id: 'basic',
-            name: 'Basic',
+            id: 'standard',
+            name: 'Standard',
             price: { monthly: 699, yearly: 6990 },
             features: ['Inntil 15 tilbud per måned', 'Inntil 10 kunder']
           },
           {
-            id: 'pro',
-            name: 'Pro',
+            id: 'proff',
+            name: 'Proff',
             price: { monthly: 1999, yearly: 19990 },
             features: ['Ubegrenset tilbud', 'Ubegrenset kunder']
           },
@@ -305,7 +305,7 @@ export const SubscriptionSettings = ({ businessSettings }: { businessSettings: B
                       </div>
                       {billingPeriod === 'yearly' && plan.price.yearly > 0 && (
                         <p className="text-sm text-green-600 mt-1">
-                          {formatPrice(Math.round(plan.price.yearly / 12))}/måned fakturert årlig
+                          {formatPrice(Math.round(plan.price.yearly / 12))}/mnd
                         </p>
                       )}
                     </div>

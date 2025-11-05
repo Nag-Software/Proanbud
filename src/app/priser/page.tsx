@@ -19,6 +19,7 @@ export default function PricingPage() {
     const loadPlans = async () => {
       try {
         const stripePlans = await getSubscriptionPlans();
+        console.log(stripePlans);
         setPlans(stripePlans);
       } catch (error) {
         console.error('Failed to load plans:', error);
@@ -42,8 +43,8 @@ export default function PricingPage() {
             popular: false
           },
           {
-            id: 'basic',
-            name: 'Basic',
+            id: 'standard',
+            name: 'Standard',
             description: 'For små bedrifter som trenger mer funksjonalitet',
             price: {
               monthly: 699,
@@ -57,12 +58,12 @@ export default function PricingPage() {
               '1GB lagring',
             ],
             color: 'blue',
-            cta: 'Velg Basic',
+            cta: 'Velg Standard',
             popular: false
           },
           {
-            id: 'pro',
-            name: 'Pro',
+            id: 'proff',
+            name: 'Proff',
             description: 'For voksende bedrifter med profesjonelle behov',
             price: {
               monthly: 1999,
@@ -77,7 +78,7 @@ export default function PricingPage() {
               'Integrasjoner',
             ],
             color: 'purple',
-            cta: 'Velg Pro',
+            cta: 'Velg Proff',
             popular: true
           }
         ]);

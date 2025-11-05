@@ -13,11 +13,11 @@ jest.mock('../../../lib/stripe', () => ({
       create: jest.fn(),
     },
   },
-  PRICE_BASIC_ID: 'price_basic_123',
-  PRICE_PRO_ID: 'price_pro_456',
+  PRICE_STANDARD_ID: 'price_standard_123',
+  PRICE_PROFF_ID: 'price_proff_456',
   getPriceIdFromPlan: jest.fn((plan) => {
-    if (plan === 'basic') return 'price_basic_123';
-    if (plan === 'pro') return 'price_pro_456';
+    if (plan === 'standard') return 'price_standard_123';
+    if (plan === 'proff') return 'price_proff_456';
     return undefined;
   }),
 }));
@@ -68,13 +68,13 @@ describe('/api/create-checkout-session', () => {
     updateUserStripeCustomerId.mockResolvedValue(undefined);
   });
 
-  it('should create a checkout session for basic plan', async () => {
+  it('should create a checkout session for standard plan', async () => {
     const mockSession = { id: 'cs_test_123', url: 'https://checkout.stripe.com/pay/cs_test_123' };
     stripe.checkout.sessions.create.mockResolvedValue(mockSession);
 
     const request = new NextRequest('http://localhost:3000/api/create-checkout-session', {
       method: 'POST',
-      body: JSON.stringify({ plan: 'basic', uid: 'user123' }),
+      body: JSON.stringify({ plan: 'standard', uid: 'user123' }),
     });
 
     const response = await POST(request);
@@ -88,7 +88,7 @@ describe('/api/create-checkout-session', () => {
         payment_method_types: ['card'],
         line_items: [
           {
-            price: 'price_basic_123',
+            price: 'price_standard_123',
             quantity: 1,
           },
         ],
@@ -97,17 +97,17 @@ describe('/api/create-checkout-session', () => {
         cancel_url: 'http://localhost:3000/dashboard?canceled=true',
         metadata: { uid: 'user123' },
       },
-      { idempotencyKey: expect.stringContaining('checkout_user123_price_basic_123_') }
+      { idempotencyKey: expect.stringContaining('checkout_user123_price_standard_123_') }
     );
   });
 
-  it('should create a checkout session for pro plan', async () => {
+  it('should create a checkout session for proff plan', async () => {
     const mockSession = { id: 'cs_test_456', url: 'https://checkout.stripe.com/pay/cs_test_456' };
     stripe.checkout.sessions.create.mockResolvedValue(mockSession);
 
     const request = new NextRequest('http://localhost:3000/api/create-checkout-session', {
       method: 'POST',
-      body: JSON.stringify({ plan: 'pro', uid: 'user456' }),
+      body: JSON.stringify({ plan: 'proff', uid: 'user456' }),
     });
 
     const response = await POST(request);
@@ -150,7 +150,7 @@ describe('/api/create-checkout-session', () => {
   it('should return 400 for missing uid', async () => {
     const request = new NextRequest('http://localhost:3000/api/create-checkout-session', {
       method: 'POST',
-      body: JSON.stringify({ plan: 'basic' }),
+      body: JSON.stringify({ plan: 'standard' }),
     });
 
     const response = await POST(request);
@@ -165,7 +165,7 @@ describe('/api/create-checkout-session', () => {
 
     const request = new NextRequest('http://localhost:3000/api/create-checkout-session', {
       method: 'POST',
-      body: JSON.stringify({ plan: 'basic', uid: 'nonexistent' }),
+      body: JSON.stringify({ plan: 'standard', uid: 'nonexistent' }),
     });
 
     const response = await POST(request);
@@ -180,7 +180,7 @@ describe('/api/create-checkout-session', () => {
 
     const request = new NextRequest('http://localhost:3000/api/create-checkout-session', {
       method: 'POST',
-      body: JSON.stringify({ plan: 'basic', uid: 'user123' }),
+      body: JSON.stringify({ plan: 'standard', uid: 'user123' }),
     });
 
     const response = await POST(request);

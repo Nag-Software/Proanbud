@@ -19,8 +19,8 @@ export function SavingsCalculator({ variant = 'full', showEmailCapture = false }
   const [hourlyRate, setHourlyRate] = useState(900);
   const [scenario, setScenario] = useState<ScenarioType>('minimum');
   const [prices, setPrices] = useState({
-    basic: { monthly: 699, yearly: 6990 },
-    pro: { monthly: 1999, yearly: 19990 }
+    standard: { monthly: 699, yearly: 6990 },
+    proff: { monthly: 1999, yearly: 19990 }
   });
   
   const [savings, setSavings] = useState({
@@ -239,11 +239,11 @@ export function SavingsCalculator({ variant = 'full', showEmailCapture = false }
                 <p className="text-sm text-gray-700 leading-snug">
                   {quotesPerMonth <= 15 ? (
                     <>
-                      <span className="font-semibold text-blue-900">Basic plan</span> ({prices.basic.monthly.toLocaleString('nb-NO')} kr/mnd) passer perfekt for ditt behov ({quotesPerMonth} tilbud/mnd)
+                      <span className="font-semibold text-blue-900">Standard plan</span> ({prices.standard.monthly.toLocaleString('nb-NO')} kr/mnd) passer perfekt for ditt behov ({quotesPerMonth} tilbud/mnd)
                     </>
                   ) : (
                     <>
-                      <span className="font-semibold text-blue-900">Pro plan</span> ({prices.pro.monthly.toLocaleString('nb-NO')} kr/mnd) anbefales for ditt volum ({quotesPerMonth} tilbud/mnd)
+                      <span className="font-semibold text-blue-900">Proff plan</span> ({prices.proff.monthly.toLocaleString('nb-NO')} kr/mnd) anbefales for ditt volum ({quotesPerMonth} tilbud/mnd)
                     </>
                   )}
                 </p>

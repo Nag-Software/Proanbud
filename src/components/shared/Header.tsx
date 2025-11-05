@@ -256,14 +256,14 @@ export default function Header({ currentPage }: HeaderProps) {
               <DrawerContent showOverlay={false}>
                 <div className="px-4 py-4 space-y-4">
                   <a
-                    href={currentPage === 'home' ? '#features' : '/#features'}
+                    href="/"
                     onClick={(e) => {
                       e.preventDefault();
                       handleNavClick(currentPage === 'home' ? '#features' : '/#features');
                     }}
                     className="block text-gray-700 hover:text-[#00b85b] transition-colors font-medium py-2"
                   >
-                    Funksjoner
+                    Hjem
                   </a>
                   <a
                     href={currentPage === 'home' ? '#showcase' : '/#showcase'}
@@ -273,7 +273,7 @@ export default function Header({ currentPage }: HeaderProps) {
                     }}
                     className="block text-gray-700 hover:text-[#00b85b] transition-colors font-medium py-2"
                   >
-                    Plattform
+                    Funksjoner
                   </a>
                   <Link
                     href="/priser"
@@ -282,22 +282,26 @@ export default function Header({ currentPage }: HeaderProps) {
                   >
                     Priser
                   </Link>
-                  <a
-                    href={currentPage === 'home' ? '#faq' : '/#faq'}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleNavClick(currentPage === 'home' ? '#faq' : '/#faq');
-                    }}
-                    className="block text-gray-700 hover:text-[#00b85b] transition-colors font-medium py-2"
-                  >
-                    FAQ
-                  </a>
                   <Link
                     href="/blogg"
                     onClick={() => setIsMobileMenuOpen(false)}
                     className="block text-gray-700 hover:text-[#00b85b] transition-colors font-medium py-2"
                   >
                     Blogg
+                  </Link>
+                  <Link
+                    href="/docs"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="block text-gray-700 hover:text-[#00b85b] transition-colors font-medium py-2"
+                  >
+                    Ressurser
+                  </Link>
+                  <Link
+                    href="/om-oss"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="block text-gray-700 hover:text-[#00b85b] transition-colors font-medium py-2"
+                  >
+                    Om oss
                   </Link>
                   <div className="pt-4 border-t border-gray-200 space-y-3">
                     <Link
