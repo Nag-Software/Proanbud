@@ -38,7 +38,7 @@ export default function RootLayout({
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="description" content="AI-drevet tilbudssystem for håndverkere" />
       </head>
-      <body className={`${geist.variable} ${lora.variable} font-sans bg-background text-foreground overflow-x-hidden`} suppressHydrationWarning>
+      <body className={`${geist.variable} ${lora.variable} font-serif bg-background text-foreground overflow-x-hidden`} suppressHydrationWarning>
         {gaId && <GoogleAnalytics gaId={gaId} />}
         <AuthProvider>
           <SubscriptionProvider>

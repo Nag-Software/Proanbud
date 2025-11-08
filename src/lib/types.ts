@@ -50,6 +50,7 @@ export interface InboxMessage {
   quoteTitle?: string;
   isFlagged?: boolean;
   folder?: string;
+  archivedAt?: number; // Timestamp when message was archived
   hasReply?: boolean;
   relatedMessageId?: string; // Link to original message for replies
   sentTo?: string; // Email address for outgoing messages

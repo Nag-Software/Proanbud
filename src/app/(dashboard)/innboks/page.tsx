@@ -45,6 +45,7 @@ import {
   Building2,
   User,
   Filter,
+  Archive,
 } from 'lucide-react';
 import { CustomerDetailsDrawer } from '@/components/kunder/CustomerDetailsDrawer';
 import { MessageList } from '@/components/inbox/MessageList';
@@ -58,7 +59,8 @@ import { getCustomer } from '@/lib/services/customerService';
 import { getTilbudById } from '@/lib/services/tilbudService';
 import {
   markMessageAsRead,
-  deleteInboxMessage,
+  archiveInboxMessage,
+  unarchiveInboxMessage,
   unflagMessage,
   flagMessage,
 } from '@/lib/services/inboxService';
@@ -152,6 +154,11 @@ export default function InnboksPage() {
   const [dialogMessage, setDialogMessage] = useState('');
   const [dialogType, setDialogType] = useState<'success' | 'error'>('success');
   const [isMessageDetailOpen, setIsMessageDetailOpen] = useState(false);
+  const [currentFolder, setCurrentFolder] = useState<'innboks' | 'arkiv'>('innboks');
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [messageToArchive, setMessageToArchive] = useState<string | null>(null);
+  const [confirmUnarchiveDialogOpen, setConfirmUnarchiveDialogOpen] = useState(false);
+  const [messageToUnarchive, setMessageToUnarchive] = useState<string | null>(null);
 
   const showDialog = (title: string, message: string, type: 'success' | 'error' = 'success') => {
     setDialogTitle(title);
@@ -352,24 +359,72 @@ export default function InnboksPage() {
   };
 
   const handleDeleteMessage = async (messageId: string) => {
-    // Prevent deletion of tilbud messages as they represent important business records
-    const message = messages.find(m => m.id === messageId);
-    if (message?.folder === 'tilbud') {
-      showDialog('Feil', 'Tilbud-meldinger kan ikke slettes da de representerer viktige forretningsoppføringer.', 'error');
-      return;
-    }
+    console.log('🗑️ Archive button clicked for message:', messageId);
+    setMessageToArchive(messageId);
+    setConfirmDialogOpen(true);
+  };
 
-    if (!confirm('Er du sikker på at du vil slette denne meldingen?')) return;
+  const confirmArchiveMessage = async () => {
+    if (!messageToArchive) return;
 
     try {
-      await deleteInboxMessage(messageId);
-      setMessages(prev => prev.filter(m => m.id !== messageId));
-      if (selectedMessage?.id === messageId) {
+      console.log('🔄 Attempting to archive message:', messageToArchive);
+      await archiveInboxMessage(messageToArchive);
+      console.log('✅ Message archived successfully');
+      
+      // Update the message in state to reflect archive folder
+      setMessages(prev =>
+        prev.map(m =>
+          m.id === messageToArchive ? { ...m, folder: 'arkiv' } : m
+        )
+      );
+      if (selectedMessage?.id === messageToArchive) {
         setSelectedMessage(null);
       }
+      
+      setConfirmDialogOpen(false);
+      setMessageToArchive(null);
+      showDialog('Suksess', 'Melding arkivert', 'success');
     } catch (error) {
-      console.error('Error deleting message:', error);
-      showDialog('Feil', 'Kunne ikke slette meldingen. Prøv igjen.', 'error');
+      console.error('❌ Error archiving message:', error);
+      setConfirmDialogOpen(false);
+      setMessageToArchive(null);
+      showDialog('Feil', 'Kunne ikke arkivere meldingen. Prøv igjen.', 'error');
+    }
+  };
+
+  const handleUnarchiveMessage = async (messageId: string) => {
+    console.log('📥 Unarchive button clicked for message:', messageId);
+    setMessageToUnarchive(messageId);
+    setConfirmUnarchiveDialogOpen(true);
+  };
+
+  const confirmUnarchiveMessage = async () => {
+    if (!messageToUnarchive) return;
+
+    try {
+      console.log('🔄 Attempting to unarchive message:', messageToUnarchive);
+      await unarchiveInboxMessage(messageToUnarchive);
+      console.log('✅ Message unarchived successfully');
+      
+      // Update the message in state to reflect inbox folder
+      setMessages(prev =>
+        prev.map(m =>
+          m.id === messageToUnarchive ? { ...m, folder: 'innboks', archivedAt: undefined } : m
+        )
+      );
+      if (selectedMessage?.id === messageToUnarchive) {
+        setSelectedMessage(null);
+      }
+      
+      setConfirmUnarchiveDialogOpen(false);
+      setMessageToUnarchive(null);
+      showDialog('Suksess', 'Melding flyttet til innboks', 'success');
+    } catch (error) {
+      console.error('❌ Error unarchiving message:', error);
+      setConfirmUnarchiveDialogOpen(false);
+      setMessageToUnarchive(null);
+      showDialog('Feil', 'Kunne ikke flytte meldingen til innboks. Prøv igjen.', 'error');
     }
   };
 
@@ -476,10 +531,16 @@ export default function InnboksPage() {
 
   const filteredMessages = messages.filter(message => {
     const shouldShow = message.type !== 'outgoing_reply' || !message.relatedMessageId;
-    return shouldShow;
+    
+    // Treat all folders except 'arkiv' as 'innboks'
+    const messageFolder = message.folder === 'arkiv' ? 'arkiv' : 'innboks';
+    const inCorrectFolder = messageFolder === currentFolder;
+    
+    return shouldShow && inCorrectFolder;
   });
 
-  const unreadCount = filteredMessages.filter(m => !m.isRead).length;
+  const unreadCount = messages.filter(m => !m.isRead && m.folder !== 'arkiv').length;
+  const archivedCount = messages.filter(m => m.folder === 'arkiv').length;
 
   if (isLoading) {
     return (
@@ -542,23 +603,78 @@ export default function InnboksPage() {
           <div className="flex flex-col lg:flex-row min-h-0">
             {/* Message List */}
             <div className="lg:w-2/5 border-r flex flex-col min-h-0">
-              <div className="p-4 border-b">
+              <div className="p-4 border-b space-y-3">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-semibold">Innboks</h2>
-                  {unreadCount > 0 && (
+                  <h2 className="text-lg font-semibold">
+                    {currentFolder === 'innboks' ? 'Innboks' : 'Arkiv'}
+                  </h2>
+                  {currentFolder === 'innboks' && unreadCount > 0 && (
                     <Badge variant="secondary">
                       {unreadCount} ulest
                     </Badge>
                   )}
+                  {currentFolder === 'arkiv' && archivedCount > 0 && (
+                    <Badge variant="secondary">
+                      {archivedCount} arkivert
+                    </Badge>
+                  )}
+                </div>
+                
+                {/* Folder Tabs */}
+                <div className="flex gap-2">
+                  <Button
+                    variant={currentFolder === 'innboks' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => {
+                      setCurrentFolder('innboks');
+                      setSelectedMessage(null);
+                    }}
+                    className="flex-1"
+                  >
+                    <Inbox className="h-4 w-4 mr-2" />
+                    Innboks
+                    {unreadCount > 0 && (
+                      <Badge variant="secondary" className="ml-2">
+                        {unreadCount}
+                      </Badge>
+                    )}
+                  </Button>
+                  <Button
+                    variant={currentFolder === 'arkiv' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => {
+                      setCurrentFolder('arkiv');
+                      setSelectedMessage(null);
+                    }}
+                    className="flex-1"
+                  >
+                    <Archive className="h-4 w-4 mr-2" />
+                    Arkiv
+                    {archivedCount > 0 && (
+                      <Badge variant="secondary" className="ml-2">
+                        {archivedCount}
+                      </Badge>
+                    )}
+                  </Button>
                 </div>
               </div>
 
               <ScrollArea className="flex-1 max-h-[calc(100vh-200px)]">
                 {filteredMessages.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
-                    <Inbox className="h-12 w-12 mb-4" />
-                    <p className="text-lg font-medium">Ingen meldinger</p>
-                    <p className="text-sm">Nye meldinger vil dukke opp her</p>
+                    {currentFolder === 'innboks' ? (
+                      <>
+                        <Inbox className="h-12 w-12 mb-4" />
+                        <p className="text-lg font-medium">Ingen meldinger</p>
+                        <p className="text-sm">Nye meldinger vil dukke opp her</p>
+                      </>
+                    ) : (
+                      <>
+                        <Archive className="h-12 w-12 mb-4" />
+                        <p className="text-lg font-medium">Ingen arkiverte meldinger</p>
+                        <p className="text-sm">Arkiverte meldinger vil dukke opp her</p>
+                      </>
+                    )}
                   </div>
                 ) : (
                   <div className="p-3 grid grid-cols-1 gap-2 w-full">
@@ -568,6 +684,8 @@ export default function InnboksPage() {
                         className={`cursor-pointer transition-all w-full hover:shadow-md ${
                           selectedMessage?.id === message.id
                             ? 'ring-2 ring-primary bg-background'
+                            : message.isFlagged
+                            ? 'bg-yellow-50 dark:bg-yellow-950/20 border-yellow-500 border-l-4'
                             : !message.isRead
                             ? 'bg-gray-100 border-gray-300'
                             : ''
@@ -649,17 +767,40 @@ export default function InnboksPage() {
                               )}
                               <div className="flex items-center justify-end mt-2">
                                 <div className="flex items-center gap-1">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleDeleteMessage(message.id);
-                                    }}
-                                    className="h-6 w-6 sm:h-8 sm:w-8 p-0 text-muted-foreground hover:text-destructive"
-                                  >
-                                    <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
-                                  </Button>
+                                  {currentFolder === 'innboks' && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        console.log('Archive button clicked, message ID:', message.id);
+                                        handleDeleteMessage(message.id);
+                                      }}
+                                      className="h-6 w-6 sm:h-8 sm:w-8 p-0 text-muted-foreground hover:text-primary"
+                                      type="button"
+                                      title="Arkiver melding"
+                                    >
+                                      <Archive className="h-3 w-3 sm:h-4 sm:w-4" />
+                                    </Button>
+                                  )}
+                                  {currentFolder === 'arkiv' && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        console.log('Unarchive button clicked, message ID:', message.id);
+                                        handleUnarchiveMessage(message.id);
+                                      }}
+                                      className="h-6 w-6 sm:h-8 sm:w-8 p-0 text-muted-foreground hover:text-green-600"
+                                      type="button"
+                                      title="Flytt til innboks"
+                                    >
+                                      <Inbox className="h-3 w-3 sm:h-4 sm:w-4" />
+                                    </Button>
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -809,14 +950,38 @@ export default function InnboksPage() {
                         >
                           {!selectedMessage.isFlagged ? <Flag className="h-4 w-4" /> : <FlagOff className="h-4 w-4" />}
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteMessage(selectedMessage.id)}
-                          className="text-muted-foreground hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {currentFolder === 'innboks' && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              console.log('Archive button clicked from detail view');
+                              handleDeleteMessage(selectedMessage.id);
+                            }}
+                            className="text-muted-foreground hover:text-primary"
+                            type="button"
+                            title="Arkiver melding"
+                          >
+                            <Archive className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {currentFolder === 'arkiv' && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              console.log('Unarchive button clicked from detail view');
+                              handleUnarchiveMessage(selectedMessage.id);
+                            }}
+                            className="text-muted-foreground hover:text-green-600"
+                            type="button"
+                            title="Flytt til innboks"
+                          >
+                            <Inbox className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -1102,14 +1267,38 @@ export default function InnboksPage() {
                     >
                       {!selectedMessage.isFlagged ? <Flag className="h-4 w-4" /> : <FlagOff className="h-4 w-4" />}
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeleteMessage(selectedMessage.id)}
-                      className="text-muted-foreground hover:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    {currentFolder === 'innboks' && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          console.log('Archive button clicked from mobile dialog');
+                          handleDeleteMessage(selectedMessage.id);
+                        }}
+                        className="text-muted-foreground hover:text-primary"
+                        type="button"
+                        title="Arkiver melding"
+                      >
+                        <Archive className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {currentFolder === 'arkiv' && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          console.log('Unarchive button clicked from mobile dialog');
+                          handleUnarchiveMessage(selectedMessage.id);
+                        }}
+                        className="text-muted-foreground hover:text-green-600"
+                        type="button"
+                        title="Flytt til innboks"
+                      >
+                        <Inbox className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 )}
               </div>
@@ -1295,6 +1484,75 @@ export default function InnboksPage() {
               </ScrollArea>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirmation Dialog for Archive */}
+      <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Arkiver melding</DialogTitle>
+            <DialogDescription>
+              Er du sikker på at du vil arkivere denne meldingen? Du kan finne den igjen i arkiv-mappen.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setConfirmDialogOpen(false);
+                setMessageToArchive(null);
+              }}
+            >
+              Avbryt
+            </Button>
+            <Button onClick={confirmArchiveMessage}>
+              Arkiver
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirmation Dialog for Unarchive */}
+      <Dialog open={confirmUnarchiveDialogOpen} onOpenChange={setConfirmUnarchiveDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Flytt til innboks</DialogTitle>
+            <DialogDescription>
+              Er du sikker på at du vil flytte denne meldingen tilbake til innboks?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setConfirmUnarchiveDialogOpen(false);
+                setMessageToUnarchive(null);
+              }}
+            >
+              Avbryt
+            </Button>
+            <Button onClick={confirmUnarchiveMessage}>
+              Flytt til innboks
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Success/Error Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{dialogTitle}</DialogTitle>
+            <DialogDescription>
+              {dialogMessage}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={() => setDialogOpen(false)}>
+              OK
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

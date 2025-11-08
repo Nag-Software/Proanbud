@@ -81,10 +81,23 @@ export async function GET(
     // Get business settings for the user
     let businessSettings = null;
     if (foundUserId) {
-      const settingsRef = db.ref(`users/${foundUserId}/innstillinger/bedrift`);
-      const settingsSnapshot = await settingsRef.once('value');
+      // Try new location first
+      let settingsRef = db.ref(`users/${foundUserId}/businessSettings`);
+      let settingsSnapshot = await settingsRef.once('value');
+      
       if (settingsSnapshot.exists()) {
         businessSettings = settingsSnapshot.val();
+        console.log('✅ Business settings found at businessSettings');
+      } else {
+        // Fallback to old location for backwards compatibility
+        settingsRef = db.ref(`users/${foundUserId}/innstillinger/bedrift`);
+        settingsSnapshot = await settingsRef.once('value');
+        if (settingsSnapshot.exists()) {
+          businessSettings = settingsSnapshot.val();
+          console.log('✅ Business settings found at innstillinger/bedrift');
+        } else {
+          console.log('⚠️ No business settings found for user:', foundUserId);
+        }
       }
     }
 

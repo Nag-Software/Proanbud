@@ -55,6 +55,8 @@ function TilbudsvisningContent() {
       }
 
       const data = await response.json();
+      console.log('📊 Received data:', data);
+      console.log('🏢 Business settings:', data.businessSettings);
       setQuote(data.quote);
       setBusinessSettings(data.businessSettings);
     } catch (err: any) {
@@ -227,7 +229,7 @@ function TilbudsvisningContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-8 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-8 px-4" data-dashboard>
       <div className="max-w-4xl mx-auto">
         {/* Expired Deadline Header */}
         {deadlineExpired && (
@@ -256,250 +258,294 @@ function TilbudsvisningContent() {
           </div>
         )}
 
-        {/* Header */}
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              {businessSettings?.logoUrl && (
-                <img 
-                  src={businessSettings.logoUrl} 
-                  alt={businessSettings.companyName} 
-                  className="h-12 mb-4"
-                />
-              )}
-              <h1 className="text-3xl font-bold text-slate-900">
-                {businessSettings?.companyName || 'Tilbud'}
-              </h1>
-              <p className="text-slate-600 mt-1">
-                {businessSettings?.organizationNumber && `Org.nr: ${businessSettings.organizationNumber}`}
-              </p>
-            </div>
-            <Badge className={statusColor}>
-              {statusText}
-            </Badge>
-          </div>
-          
-          <Separator className="my-4" />
-          
-          <div className="grid md:grid-cols-2 gap-4">
-            <div>
-              <h2 className="text-xl font-semibold text-slate-900 mb-2">
-                {quote.prosjekt}
-              </h2>
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center text-slate-600">
-                  <Building2 className="w-4 h-4 mr-2" />
-                  <span>{quote.kundenavn}</span>
+        {/* Company Header - Professional Branding */}
+        {businessSettings && (
+          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 mb-6">
+            <div className="flex items-start justify-between">
+              <div className="flex items-start space-x-4 flex-1">
+                {businessSettings.logoUrl && (
+                  <img 
+                    src={businessSettings.logoUrl} 
+                    alt={businessSettings.companyName} 
+                    className="h-16 w-auto object-contain"
+                  />
+                )}
+                <div className="flex-1">
+                  <h1 className="text-2xl font-bold text-slate-900">
+                    {businessSettings.companyName}
+                  </h1>
+                  {businessSettings.brandDescription && (
+                    <p className="text-sm text-slate-600 mt-1 max-w-2xl">
+                      {businessSettings.brandDescription}
+                    </p>
+                  )}
+                  <div className="mt-2 space-y-0.5 text-sm text-slate-500">
+                    {businessSettings.organizationNumber && (
+                      <p>Org.nr: {businessSettings.organizationNumber}</p>
+                    )}
+                    {businessSettings.industry && (
+                      <p>{businessSettings.industry}</p>
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-center text-slate-600">
-                  <Calendar className="w-4 h-4 mr-2" />
-                  <span>Dato: {new Date(quote.dato).toLocaleDateString('nb-NO')}</span>
-                </div>
-                <div className="flex items-center text-slate-600">
-                  <Calendar className="w-4 h-4 mr-2" />
-                  <span>Svarfrist: {new Date(quote.svarfrist).toLocaleDateString('nb-NO')}</span>
-                </div>
+              </div>
+              <div className="text-right ml-4">
+                <Badge className={statusColor}>
+                  {statusText}
+                </Badge>
               </div>
             </div>
             
-            {businessSettings && (
-              <div className="text-sm space-y-2">
-                <h3 className="font-semibold text-slate-900 mb-2">Kontaktinformasjon</h3>
-                {businessSettings.phone && (
-                  <div className="flex items-center text-slate-600">
-                    <Phone className="w-4 h-4 mr-2" />
-                    <span>{businessSettings.phone}</span>
-                  </div>
-                )}
-                {businessSettings.email && (
-                  <div className="flex items-center text-slate-600">
-                    <Mail className="w-4 h-4 mr-2" />
-                    <span>{businessSettings.email}</span>
-                  </div>
-                )}
-                {businessSettings.address && (
-                  <div className="text-slate-600">
-                    {businessSettings.address}, {businessSettings.postalCode} {businessSettings.city}
-                  </div>
-                )}
-              </div>
-            )}
+            {/* Business Contact Info - Subtle but accessible */}
+            <div className="mt-4 pt-4 border-t border-slate-100 flex flex-wrap gap-4 text-sm text-slate-600">
+              {businessSettings.phone && (
+                <div className="flex items-center">
+                  <Phone className="w-3.5 h-3.5 mr-1.5" />
+                  <span>{businessSettings.phone}</span>
+                </div>
+              )}
+              {businessSettings.email && (
+                <div className="flex items-center">
+                  <Mail className="w-3.5 h-3.5 mr-1.5" />
+                  <span>{businessSettings.email}</span>
+                </div>
+              )}
+              {businessSettings.website && (
+                <div className="flex items-center">
+                  <span className="mr-1.5">🌐</span>
+                  <a 
+                    href={businessSettings.website.startsWith('http') ? businessSettings.website : `https://${businessSettings.website}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline"
+                  >
+                    {businessSettings.website.replace(/^https?:\/\//, '')}
+                  </a>
+                </div>
+              )}
+              {businessSettings.serviceAreas && businessSettings.serviceAreas.length > 0 && (
+                <div className="flex items-center text-slate-500">
+                  <span className="mr-1.5">📍</span>
+                  <span>{businessSettings.serviceAreas.slice(0, 3).join(', ')}</span>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-
-        {/* Quote Description */}
-        {quote.beskrivelse && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <FileText className="w-5 h-5 mr-2" />
-                Beskrivelse
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-slate-700 whitespace-pre-wrap">
-                {quote.beskrivelse}
-              </p>
-            </CardContent>
-          </Card>
         )}
 
-        {/* Price Breakdown */}
+        {/* Combined Quote and Price Card */}
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle>Prisforslag</CardTitle>
-            <CardDescription>Detaljert oversikt over kostnadene</CardDescription>
+            <div className="flex items-start justify-between mb-2">
+              <div>
+                <CardTitle className="text-2xl font-bold text-slate-900">
+                  Tilbud
+                </CardTitle>
+                <CardDescription className="text-lg text-slate-600 mt-1">
+                  {quote.prosjekt}
+                </CardDescription>
+              </div>
+            </div>
           </CardHeader>
-          <CardContent>
-            {quote.prisgrunnlag && quote.prisgrunnlag.length > 0 ? (
-              <div className="space-y-4">
-                {/* Desktop Table View */}
-                <div className="hidden md:block">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-slate-200">
-                        <th className="text-left py-3 px-2 font-semibold text-slate-700">
-                          Produkt
-                        </th>
-                        <th className="text-right py-3 px-2 font-semibold text-slate-700">
-                          Mengde
-                        </th>
-                        <th className="text-right py-3 px-2 font-semibold text-slate-700">
-                          Pris
-                        </th>
-                        <th className="text-right py-3 px-2 font-semibold text-slate-700">
-                          Beløp
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {quote.prisgrunnlag.map((item: any, index: number) => (
-                        <tr 
-                          key={index}
-                          className="border-b border-slate-100 hover:bg-slate-50 transition-colors"
-                        >
-                          <td className="py-3 px-2">
-                            <div>
-                              <div className="font-medium text-slate-900">
-                                {item.name}
-                              </div>
-                              {item.description && (
-                                <div className="text-sm text-slate-600">
-                                  {item.description}
+
+          <CardContent className="space-y-6">
+            {/* Quote Info Grid */}
+            <div className="grid md:grid-cols-2 gap-6 pb-6 border-b border-slate-200">
+              <div>
+                <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">
+                  Kunde
+                </h3>
+                <div className="space-y-2">
+                  <div className="flex items-center text-slate-900">
+                    <Building2 className="w-4 h-4 mr-2 text-slate-400" />
+                    <span className="font-medium">{quote.kundenavn}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div>
+                <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">
+                  Tilbudsinformasjon
+                </h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center text-slate-600">
+                    <Calendar className="w-4 h-4 mr-2 text-slate-400" />
+                    <span>Dato: {new Date(quote.dato).toLocaleDateString('nb-NO')}</span>
+                  </div>
+                  <div className="flex items-center text-slate-600">
+                    <Calendar className="w-4 h-4 mr-2 text-slate-400" />
+                    <span>Svarfrist: {new Date(quote.svarfrist).toLocaleDateString('nb-NO')}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Quote Description */}
+            {quote.beskrivelse && (
+              <div className="pb-6 border-b border-slate-200">
+                <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 flex items-center">
+                  <FileText className="w-4 h-4 mr-2" />
+                  Beskrivelse
+                </h3>
+                <p className="text-slate-700 whitespace-pre-wrap">
+                  {quote.beskrivelse}
+                </p>
+              </div>
+            )}
+
+            {/* Price Breakdown */}
+            <div>
+              <h3 className="text-lg font-semibold text-slate-900 mb-4">Prisforslag</h3>
+              {quote.prisgrunnlag && quote.prisgrunnlag.length > 0 ? (
+                <div className="space-y-4">
+                  {/* Desktop Table View */}
+                  <div className="hidden md:block">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-slate-200">
+                          <th className="text-left py-3 px-2 font-semibold text-slate-700">
+                            Produkt
+                          </th>
+                          <th className="text-right py-3 px-2 font-semibold text-slate-700">
+                            Mengde
+                          </th>
+                          <th className="text-right py-3 px-2 font-semibold text-slate-700">
+                            Pris
+                          </th>
+                          <th className="text-right py-3 px-2 font-semibold text-slate-700">
+                            Beløp
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {quote.prisgrunnlag.map((item: any, index: number) => (
+                          <tr 
+                            key={index}
+                            className="border-b border-slate-100 hover:bg-slate-50 transition-colors"
+                          >
+                            <td className="py-3 px-2">
+                              <div>
+                                <div className="font-medium text-slate-900">
+                                  {item.name}
                                 </div>
-                              )}
+                                {item.description && (
+                                  <div className="text-sm text-slate-600">
+                                    {item.description}
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                            <td className="text-right py-3 px-2 text-slate-700">
+                              {item.quantity || 1} {item.unit || 'stk'}
+                            </td>
+                            <td className="text-right py-3 px-2 text-slate-700">
+                              {Math.round((item.unitPrice || 0) * (1 + (item.priceMarkup || 0) / 100)).toLocaleString('nb-NO')} kr
+                            </td>
+                            <td className="text-right py-3 px-2 font-semibold text-slate-900">
+                              {item.amount.toLocaleString('nb-NO')} kr
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot>
+                        <tr>
+                          <td colSpan={4} className="border-t-2 pt-2 px-2">
+                            <div className="flex justify-between items-center">
+                              <span className="font-bold text-slate-900">Total:</span>
+                              <span className="font-bold text-primary">
+                                {Number(quote.belop).toLocaleString('nb-NO')} kr
+                              </span>
                             </div>
                           </td>
-                          <td className="text-right py-3 px-2 text-slate-700">
-                            {item.quantity || 1} {item.unit || 'stk'}
-                          </td>
-                          <td className="text-right py-3 px-2 text-slate-700">
-                            {Math.round((item.unitPrice || 0) * (1 + (item.priceMarkup || 0) / 100)).toLocaleString('nb-NO')} kr
-                          </td>
-                          <td className="text-right py-3 px-2 font-semibold text-slate-900">
-                            {item.amount.toLocaleString('nb-NO')} kr
+                        </tr>
+                        <tr>
+                          <td colSpan={4} className="pb-2 px-2">
+                            <div className="flex justify-between items-center">
+                              <span className="text-xs text-slate-500">MVA (25%):</span>
+                              <span className="text-xs text-slate-500">
+                                {Number(quote.belop * 0.25).toLocaleString('nb-NO')} kr
+                              </span>
+                            </div>
                           </td>
                         </tr>
-                      ))}
-                    </tbody>
-                    <tfoot>
-                      <tr>
-                        <td colSpan={4} className="border-t-2 pt-2 px-2">
-                          <div className="flex justify-between items-center">
-                            <span className="font-bold text-slate-900">Total:</span>
-                            <span className="font-bold text-primary">
-                              {Number(quote.belop).toLocaleString('nb-NO')} kr
-                            </span>
-                          </div>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td colSpan={4} className="pb-2 px-2">
-                          <div className="flex justify-between items-center">
-                            <span className="text-xs text-slate-500">MVA (25%):</span>
-                            <span className="text-xs text-slate-500">
-                              {Number(quote.belop * 0.25).toLocaleString('nb-NO')} kr
-                            </span>
-                          </div>
-                        </td>
-                      </tr>
-                      <tr className="border-t-1 border-slate-100">
-                        <td colSpan={4} className="py-4 px-2">
-                          <div className="flex justify-between items-center">
-                            <span className="font-bold text-slate-900">Total inkl. MVA:</span>
-                            <span className="font-bold underline text-xl text-primary">
-                              {Number(quote.belop * 1.25).toLocaleString('nb-NO')} kr
-                            </span>
-                          </div>
-                        </td>
-                      </tr>
-                    </tfoot>
-                  </table>
-                </div>
+                        <tr className="border-t-1 border-slate-100">
+                          <td colSpan={4} className="py-4 px-2">
+                            <div className="flex justify-between items-center">
+                              <span className="font-bold text-slate-900">Total inkl. MVA:</span>
+                              <span className="font-bold underline text-xl text-primary">
+                                {Number(quote.belop * 1.25).toLocaleString('nb-NO')} kr
+                              </span>
+                            </div>
+                          </td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
 
-                {/* Mobile Card View */}
-                <div className="md:hidden space-y-3">
-                  {quote.prisgrunnlag.map((item: any, index: number) => (
-                    <Card 
-                      key={index} 
-                      className="px-4 py-2 cursor-pointer hover:bg-slate-50 transition-colors"
-                      onClick={() => setSelectedItem(item)}
-                    >
-                      <div className="space-y-2">
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-medium text-sm text-slate-900 truncate pr-2">
-                              {item.name}
-                            </h4>
-                            {item.description && (
-                              <p className="text-xs text-slate-600 mt-1 line-clamp-2">
-                                {item.description}
-                              </p>
-                            )}
+                  {/* Mobile Card View */}
+                  <div className="md:hidden space-y-3">
+                    {quote.prisgrunnlag.map((item: any, index: number) => (
+                      <Card 
+                        key={index} 
+                        className="px-4 py-2 cursor-pointer hover:bg-slate-50 transition-colors"
+                        onClick={() => setSelectedItem(item)}
+                      >
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-medium text-sm text-slate-900 truncate pr-2">
+                                {item.name}
+                              </h4>
+                              {item.description && (
+                                <p className="text-xs text-slate-600 mt-1 line-clamp-2">
+                                  {item.description}
+                                </p>
+                              )}
+                            </div>
+                            <div className="text-right font-semibold text-slate-900 whitespace-nowrap">
+                              {item.amount.toLocaleString('nb-NO')} kr
+                            </div>
                           </div>
-                          <div className="text-right font-semibold text-slate-900 whitespace-nowrap">
-                            {item.amount.toLocaleString('nb-NO')} kr
+                          <div className="flex justify-between text-sm text-slate-600">
+                            <span>Mengde: {item.quantity || 1} {item.unit || 'stk'}</span>
+                            <span>Pris: {Math.round((item.unitPrice || 0) * (1 + (item.priceMarkup || 0) / 100)).toLocaleString('nb-NO')} kr</span>
                           </div>
                         </div>
-                        <div className="flex justify-between text-sm text-slate-600">
-                          <span>Mengde: {item.quantity || 1} {item.unit || 'stk'}</span>
-                          <span>Pris: {Math.round((item.unitPrice || 0) * (1 + (item.priceMarkup || 0) / 100)).toLocaleString('nb-NO')} kr</span>
+                      </Card>
+                    ))}
+                    
+                    {/* Mobile Totals */}
+                    <Card className="p-4 bg-slate-50">
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="font-medium text-slate-900">Total:</span>
+                          <span className="font-bold text-primary">
+                            {Number(quote.belop).toLocaleString('nb-NO')} kr
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-xs text-slate-500">
+                          <span>MVA (25%):</span>
+                          <span>
+                            {Number(quote.belop * 0.25).toLocaleString('nb-NO')} kr
+                          </span>
+                        </div>
+                        <Separator className="my-2" />
+                        <div className="flex justify-between">
+                          <span className="font-bold text-slate-900">Total inkl. MVA:</span>
+                          <span className="font-bold underline text-xl text-primary">
+                            {Number(quote.belop * 1.25).toLocaleString('nb-NO')} kr
+                          </span>
                         </div>
                       </div>
                     </Card>
-                  ))}
-                  
-                  {/* Mobile Totals */}
-                  <Card className="p-4 bg-slate-50">
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="font-medium text-slate-900">Total:</span>
-                        <span className="font-bold text-primary">
-                          {Number(quote.belop).toLocaleString('nb-NO')} kr
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-xs text-slate-500">
-                        <span>MVA (25%):</span>
-                        <span>
-                          {Number(quote.belop * 0.25).toLocaleString('nb-NO')} kr
-                        </span>
-                      </div>
-                      <Separator className="my-2" />
-                      <div className="flex justify-between">
-                        <span className="font-bold text-slate-900">Total inkl. MVA:</span>
-                        <span className="font-bold underline text-xl text-primary">
-                          {Number(quote.belop * 1.25).toLocaleString('nb-NO')} kr
-                        </span>
-                      </div>
-                    </div>
-                  </Card>
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <p className="text-slate-600 text-center py-8">
-                Ingen prisgrunnlag tilgjengelig
-              </p>
-            )}
+              ) : (
+                <p className="text-slate-600 text-center py-8">
+                  Ingen prisgrunnlag tilgjengelig
+                </p>
+              )}
+            </div>
           </CardContent>
         </Card>
 
@@ -617,8 +663,94 @@ function TilbudsvisningContent() {
           </Card>
         )}
 
-        {/* Footer */}
-        <div className="text-center text-sm text-slate-600 mt-8">
+        {/* Professional Footer with Business Info */}
+        {businessSettings && (
+          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 mt-8">
+            <div className="max-w-4xl mx-auto">
+              <div className="grid md:grid-cols-3 gap-6">
+                {/* Company Info */}
+                <div>
+                  <h4 className="font-semibold text-slate-900 mb-3">
+                    {businessSettings.companyName}
+                  </h4>
+                  <div className="space-y-1 text-sm text-slate-600">
+                    {businessSettings.address && (
+                      <p>
+                        {businessSettings.address}<br />
+                        {businessSettings.postalCode} {businessSettings.city}
+                      </p>
+                    )}
+                    {businessSettings.organizationNumber && (
+                      <p className="text-slate-500">Org.nr: {businessSettings.organizationNumber}</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Contact */}
+                <div>
+                  <h4 className="font-semibold text-slate-900 mb-3">Kontakt</h4>
+                  <div className="space-y-2 text-sm text-slate-600">
+                    {businessSettings.phone && (
+                      <div className="flex items-center">
+                        <Phone className="w-3.5 h-3.5 mr-2 text-slate-400" />
+                        <span>{businessSettings.phone}</span>
+                      </div>
+                    )}
+                    {businessSettings.email && (
+                      <div className="flex items-center">
+                        <Mail className="w-3.5 h-3.5 mr-2 text-slate-400" />
+                        <span>{businessSettings.email}</span>
+                      </div>
+                    )}
+                    {businessSettings.website && (
+                      <div className="flex items-center">
+                        <span className="mr-2">🌐</span>
+                        <a 
+                          href={businessSettings.website.startsWith('http') ? businessSettings.website : `https://${businessSettings.website}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline"
+                        >
+                          {businessSettings.website.replace(/^https?:\/\//, '')}
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Additional Info */}
+                <div>
+                  <h4 className="font-semibold text-slate-900 mb-3">Informasjon</h4>
+                  <div className="space-y-1 text-sm text-slate-600">
+                    {businessSettings.bankAccount && (
+                      <p>
+                        <span className="text-slate-500">Kontonr:</span><br />
+                        {businessSettings.bankAccount}
+                      </p>
+                    )}
+                    {businessSettings.specializations && businessSettings.specializations.length > 0 && (
+                      <p className="text-slate-500 text-xs mt-2">
+                        {businessSettings.specializations.slice(0, 3).join(' • ')}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+              
+              <Separator className="my-4" />
+              
+              <div className="text-center text-xs text-slate-500">
+                <p>Dette tilbudet er utarbeidet av {businessSettings.companyName} og er gyldig til {new Date(quote.svarfrist).toLocaleDateString('nb-NO')}</p>
+                {businessSettings.defaultQuoteNotes && (
+                  <p className="mt-2 text-slate-400">{businessSettings.defaultQuoteNotes}</p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Powered by */}
+        <div className="text-center text-xs text-slate-400 mt-4 mb-2">
           <p>Powered by Proanbud</p>
         </div>
 

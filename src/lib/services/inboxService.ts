@@ -270,7 +270,49 @@ export const updateInboxMessage = async (messageId: string, updates: Partial<Omi
   }
 };
 
-// Delete an inbox message
+// Archive an inbox message (move to archive folder)
+export const archiveInboxMessage = async (messageId: string): Promise<void> => {
+  try {
+    // Test connection first
+    await ensureConnection();
+
+    // Get current user ID
+    const userId = getCurrentUserId();
+
+    // Update the message to set folder to 'arkiv'
+    const messageRef = ref(db, `${getUserPath(userId, 'inbox')}/${messageId}`);
+    await update(messageRef, {
+      folder: 'arkiv',
+      archivedAt: Date.now(),
+      oppdatert: Date.now(),
+    });
+  } catch (error) {
+    throw handleDatabaseError(error, 'arkivere innboks melding');
+  }
+};
+
+// Unarchive an inbox message (move back to inbox folder)
+export const unarchiveInboxMessage = async (messageId: string): Promise<void> => {
+  try {
+    // Test connection first
+    await ensureConnection();
+
+    // Get current user ID
+    const userId = getCurrentUserId();
+
+    // Update the message to set folder to 'innboks' and remove archivedAt
+    const messageRef = ref(db, `${getUserPath(userId, 'inbox')}/${messageId}`);
+    await update(messageRef, {
+      folder: 'innboks',
+      archivedAt: null,
+      oppdatert: Date.now(),
+    });
+  } catch (error) {
+    throw handleDatabaseError(error, 'avarkivere innboks melding');
+  }
+};
+
+// Delete an inbox message (kept for backwards compatibility, but should use archive instead)
 export const deleteInboxMessage = async (messageId: string): Promise<void> => {
   try {
     // Test connection first

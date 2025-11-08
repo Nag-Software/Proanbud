@@ -133,20 +133,20 @@ export function MessageList({
               }
             }}
           >
-            <CardContent className="p-3">
-              <div className="flex items-start gap-3">
-                <Avatar className="h-10 w-10 flex-shrink-0">
+            <CardContent className="p-2">
+              <div className="flex items-start gap-2">
+                <Avatar className="h-8 w-8 flex-shrink-0">
                   <AvatarFallback className="text-xs">
                     {message.type === 'outgoing_reply' ? (
-                      <Building2 className="h-4 w-4" />
+                      <Building2 className="h-3.5 w-3.5" />
                     ) : (
-                      <User className="h-4 w-4" />
+                      <User className="h-3.5 w-3.5" />
                     )}
                   </AvatarFallback>
                 </Avatar>
 
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center justify-between mb-0.5">
                     <div className="flex items-center gap-2 min-w-0 flex-1">
                       <span className={`text-sm font-medium truncate ${
                         !message.isRead ? 'font-semibold text-foreground' : 'text-muted-foreground'
@@ -177,10 +177,12 @@ export function MessageList({
                             variant="ghost"
                             size="sm"
                             onClick={(e) => {
+                              e.preventDefault();
                               e.stopPropagation();
                               onToggleFlag(message.id, message.isFlagged || false);
                             }}
                             className="h-6 w-6 p-0 opacity-60 hover:opacity-100"
+                            type="button"
                           >
                             {!message.isFlagged ? (
                               <Flag className="h-3 w-3" />
@@ -192,10 +194,13 @@ export function MessageList({
                             variant="ghost"
                             size="sm"
                             onClick={(e) => {
+                              e.preventDefault();
                               e.stopPropagation();
+                              console.log('Delete clicked in MessageList for:', message.id);
                               onDeleteMessage(message.id);
                             }}
                             className="h-6 w-6 p-0 opacity-60 hover:opacity-100 text-muted-foreground hover:text-destructive"
+                            type="button"
                           >
                             <Trash2 className="h-3 w-3" />
                           </Button>
@@ -204,13 +209,13 @@ export function MessageList({
                     </div>
                   </div>
 
-                  <p className={`text-sm truncate mb-1 ${
+                  <p className={`text-sm truncate mb-0.5 ${
                     !message.isRead ? 'font-medium text-foreground' : 'text-muted-foreground'
                   }`}>
                     {message.subject}
                   </p>
 
-                  <p className="text-xs text-muted-foreground truncate mb-2">
+                  <p className="text-xs text-muted-foreground truncate mb-1">
                     {message.message}
                   </p>
 

@@ -12,6 +12,7 @@ const config: Config = {
     extend: {
       fontFamily: {
         sans: ['var(--font-geist)', 'sans-serif'],
+        serif: ['var(--font-lora)', 'serif'],
       },
       colors: {
         primary: {

@@ -30,13 +30,8 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4" data-dashboard>
       <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Tilbakestill passord</h1>
-          <p className="text-muted-text max-w-xl">Skriv inn e-posten din for å motta en lenke for tilbakestilling av passord</p>
-        </div>
-
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 justify-center">
@@ -44,7 +39,7 @@ export default function ForgotPasswordPage() {
               Tilbakestill passord
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent data-dashboard>
             <form onSubmit={handleSubmit} className="space-y-4">
               {error && (
                 <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md text-sm">

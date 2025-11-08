@@ -69,6 +69,18 @@ h1, h2, h3, h4, h5, h6 {
   letter-spacing: -0.01em;
 }
 
+/* Geist font for headings in font-sans contexts (dialogs, drawers, popovers) */
+.font-sans h1,
+.font-sans h2,
+.font-sans h3,
+.font-sans h4,
+.font-sans h5,
+.font-sans h6 {
+  font-family: var(--font-geist), sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
 html {
   overflow-x: hidden;
 }
