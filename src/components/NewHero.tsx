@@ -26,10 +26,10 @@ export function NewHero() {
     fetchBanner();
   }, []);
   return (
-    <section className="w-full py-20 md:py-28 bg-white">
+    <section className="w-full py-16 md:py-20 bg-white">
       <div className="max-w-6xl mx-auto px-6 sm:px-8 lg:px-12">
         {/* Launch Special Banner */}
-        <div className="mb-10 mx-auto max-w-2xl">
+        <div className="mb-6 mx-auto max-w-2xl">
           {banner && banner.isActive && (
             <div className="bg-gradient-to-r from-[#82ffb2] via-[#82ffb2] to-[#66ff9f] rounded-2xl p-[1px] shadow-lg">
               <div className="bg-white rounded-xl px-6 py-3">
@@ -52,19 +52,19 @@ export function NewHero() {
           )}
         </div>
 
-        <div className="text-center max-w-4xl mx-auto mb-16 space-y-8">
+        <div className="text-center max-w-4xl mx-auto mb-10 space-y-6">
           <h1 
-            className="text-4xl md:text-6xl lg:text-7xl font-normal text-gray-900 tracking-tight leading-[1.1]"
+            className="text-3xl md:text-5xl lg:text-6xl font-normal text-gray-900 tracking-tight leading-[1.1]"
             style={{ fontFamily: 'var(--font-lora), serif' }}
           >
             Norges første AI-drevne tilbudsplattform
           </h1>
           
-          <p className="text-gray-600 text-lg md:text-xl leading-relaxed max-w-2xl mx-auto font-light">
+          <p className="text-gray-600 text-base md:text-lg leading-relaxed max-w-2xl mx-auto font-light">
             Din komplette tilbudsplattform for håndverkere. Bruk AI til å prissete riktig, send profesjonelle tilbud fra nettbrett eller PC, og vinn flere oppdrag.
           </p>
           
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
             <Link
               href="/signup"
               className="group bg-primary text-primary-foreground px-8 py-2.5 rounded-xl hover:bg-primary/90 transition-all font-semibold text-md hover:shadow-md flex items-center justify-center gap-2"
@@ -80,7 +80,7 @@ export function NewHero() {
             </Link>
           </div>
           
-          <div className="flex items-center justify-center gap-8 pt-2">
+          <div className="flex items-center justify-center gap-8 pt-1">
             <div className="flex items-center gap-2">
               <Check className="w-5 h-5 text-[#82ffb2]" />
               <span className="text-sm text-gray-600 font-light">Gratis i 14 dager</span>
@@ -92,7 +92,7 @@ export function NewHero() {
           </div>
         </div>
         
-        <div className="max-w-6xl mx-auto relative px-4">
+        <div className="max-w-4xl mx-auto relative px-4">
           {/* Main dashboard container - Ultra clean and premium */}
           <div className="relative">
             {/* Outer frame - adds depth without blur */}

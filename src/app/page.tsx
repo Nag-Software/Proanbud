@@ -180,17 +180,37 @@ function HomeContent() {
 
       <NewHero />
 
-      {/* Before/After Section */}
-      <section className="py-20 xs:py-28 bg-gray-50/50">
-        <div className="max-w-6xl mx-auto px-6 sm:px-8 lg:px-12">
-          <div className="text-center mb-16">
+      <ShowcaseFeature />
+
+      {/* Savings Calculator Section */}
+      <section className="py-16 xs:py-20 bg-white">
+        <div className="max-w-3xl mx-auto px-6 sm:px-8 lg:px-12">
+          <div className="text-center mb-10">
             <h2 
-              className="text-4xl md:text-5xl font-normal text-gray-900 tracking-tight mb-4"
+              className="text-3xl md:text-4xl font-normal text-gray-900 tracking-tight mb-4"
+              style={{ fontFamily: 'var(--font-lora), serif' }}
+            >
+              Sjekk hvor mye du kan spare
+            </h2>
+            <p className="text-gray-600 text-base md:text-lg font-light max-w-2xl mx-auto">
+              Se hvor mye tid og penger du kan spare ved å bytte til Proanbud
+            </p>
+          </div>
+          <SavingsCalculator variant="full" />
+        </div>
+      </section>
+
+      {/* Before/After Section */}
+      <section className="py-16 xs:py-20 bg-gray-50/50">
+        <div className="max-w-6xl mx-auto px-6 sm:px-8 lg:px-12">
+          <div className="text-center mb-12">
+            <h2 
+              className="text-3xl md:text-4xl font-normal text-gray-900 tracking-tight mb-4"
               style={{ fontFamily: 'var(--font-lora), serif' }}
             >
               Fra kaos til kontroll
             </h2>
-            <p className="text-gray-600 text-lg md:text-xl font-light max-w-2xl mx-auto">
+            <p className="text-gray-600 text-base md:text-lg font-light max-w-2xl mx-auto">
               Se forskjellen Proanbud gjør i din arbeidshverdag
             </p>
           </div>
@@ -298,27 +318,27 @@ function HomeContent() {
           </div>
 
           {/* Stats Below */}
-          <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-8">
+          <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-6">
             <div className="text-center">
-              <div className="text-4xl font-bold text-gray-900 mb-2" style={{ fontFamily: 'var(--font-lora), serif' }}>
+              <div className="text-3xl md:text-4xl font-bold text-gray-900 mb-2" style={{ fontFamily: 'var(--font-lora), serif' }}>
                 96%
               </div>
               <div className="text-sm text-gray-600">Mindre tid brukt</div>
             </div>
             <div className="text-center">
-              <div className="text-4xl font-bold text-gray-900 mb-2" style={{ fontFamily: 'var(--font-lora), serif' }}>
+              <div className="text-3xl md:text-4xl font-bold text-gray-900 mb-2" style={{ fontFamily: 'var(--font-lora), serif' }}>
                 5 min
               </div>
               <div className="text-sm text-gray-600">Per tilbud</div>
             </div>
             <div className="text-center">
-              <div className="text-4xl font-bold text-gray-900 mb-2" style={{ fontFamily: 'var(--font-lora), serif' }}>
+              <div className="text-3xl md:text-4xl font-bold text-gray-900 mb-2" style={{ fontFamily: 'var(--font-lora), serif' }}>
                 21x
               </div>
               <div className="text-sm text-gray-600">Flere tilbud sendt</div>
             </div>
             <div className="text-center">
-              <div className="text-4xl font-bold text-gray-900 mb-2" style={{ fontFamily: 'var(--font-lora), serif' }}>
+              <div className="text-3xl md:text-4xl font-bold text-gray-900 mb-2" style={{ fontFamily: 'var(--font-lora), serif' }}>
                 100%
               </div>
               <div className="text-sm text-gray-600">Mer profesjonelt</div>
@@ -326,26 +346,6 @@ function HomeContent() {
           </div>
         </div>
       </section>
-
-      {/* Savings Calculator Section */}
-      <section className="py-20 xs:py-32 bg-white">
-        <div className="max-w-4xl mx-auto px-6 sm:px-8 lg:px-12">
-          <div className="text-center mb-12">
-            <h2 
-              className="text-4xl md:text-5xl font-normal text-gray-900 tracking-tight mb-4"
-              style={{ fontFamily: 'var(--font-lora), serif' }}
-            >
-              Sjekk hvor mye du kan spare
-            </h2>
-            <p className="text-gray-600 text-lg md:text-xl font-light max-w-2xl mx-auto">
-              Se hvor mye tid og penger du kan spare ved å bytte til Proanbud
-            </p>
-          </div>
-          <SavingsCalculator variant="full" />
-        </div>
-      </section>
-
-      <ShowcaseFeature />
 
       {/* Features Section
       <FeatureSection />
@@ -359,15 +359,15 @@ function HomeContent() {
       <BlogSection1 />
 
       {/* CTA Section */}
-      <section className="py-20 xs:py-28 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 relative overflow-hidden">
-        <div className="max-w-4xl mx-auto px-6 sm:px-8 lg:px-12 text-center space-y-10 relative z-10">
+      <section className="py-16 xs:py-20 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 relative overflow-hidden">
+        <div className="max-w-6xl mx-auto px-6 sm:px-8 lg:px-12 text-center space-y-8 relative z-10">
           <h2 
-            className="text-4xl md:text-6xl font-normal text-white tracking-tight"
+            className="text-3xl md:text-5xl font-normal text-white tracking-tight"
             style={{ fontFamily: 'var(--font-lora), serif' }}
           >
             Klar til å effektivisere tilbudsprosessen?
           </h2>
-          <p className="text-xl text-gray-300 font-light max-w-2xl mx-auto">
+          <p className="text-lg md:text-xl text-gray-300 font-light max-w-2xl mx-auto">
             Bli med tusenvis av håndverkere som allerede bruker Proanbud
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">

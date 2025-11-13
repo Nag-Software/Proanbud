@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { Zap } from "lucide-react";
+import Image from "next/image";
 
 export default function Logo({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
   const router = useRouter();

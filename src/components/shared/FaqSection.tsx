@@ -61,7 +61,7 @@ export const FaqSection: React.FC<FaqSectionProps> = ({
         {/* FAQ Accordion */}
         <Accordion type="single" defaultValue="item-1" aria-label="FAQ items">
           {faqs.map((faq, index) => (
-            <AccordionItem key={index} value={`item-${index + 1}`}>
+            <AccordionItem key={index} value={`item-${index + 1}`} data-dashboard>
               <AccordionTrigger className="text-left text-base font-medium">
                 {faq.question}
               </AccordionTrigger>

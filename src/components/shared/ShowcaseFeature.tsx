@@ -63,16 +63,16 @@ const Feature197 = ({
   const [activeImage, setActiveImage] = useState<string>(features[0].image);
 
   return (
-    <section className="py-20 xs:py-32 bg-gray-50/50" id="showcase">
-      <div className="container mx-auto max-w-7xl px-6">
+    <section className="py-16 xs:py-20 bg-gray-50/50" id="showcase">
+      <div className="container mx-auto max-w-6xl px-6">
         <h1 
           id="showcase-heading" 
-          className="text-4xl md:text-5xl lg:text-6xl font-normal mx-auto text-center mb-6 text-gray-900 tracking-tight"
+          className="text-3xl md:text-4xl lg:text-5xl font-normal mx-auto text-center mb-4 text-gray-900 tracking-tight"
           style={{ fontFamily: 'var(--font-lora), serif' }}
         >
           Alt du trenger i én plattform
         </h1>
-        <p className="text-gray-600 text-center text-lg md:text-xl mb-16 font-light max-w-2xl mx-auto">
+        <p className="text-gray-600 text-center text-base md:text-lg mb-12 font-light max-w-2xl mx-auto">
           Effektiviser anbudsprosessen: intuitivt, kraftig og designet for å gjøre håndverkerens hverdag enklere med smarte verktøy.
         </p>
         <div className="mb-12 flex w-full items-start justify-between gap-12">
