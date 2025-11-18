@@ -1,3 +1,5 @@
+import Logo from "@/components/shared/Logo";
+
 export default function TilgjengelighetPage() {
   return (
     <div className="min-h-screen bg-white">
@@ -8,7 +10,7 @@ export default function TilgjengelighetPage() {
           <section>
             <h2 className="text-2xl font-bold text-gray-900 mb-4">1. Vår forpliktelse</h2>
             <p className="text-gray-600 leading-relaxed">
-              Proanbud AS er forpliktet til å gjøre vår nettside og tjenester tilgjengelige for alle brukere, uavhengig av eventuelle 
+              Proanbud er forpliktet til å gjøre vår nettside og tjenester tilgjengelige for alle brukere, uavhengig av eventuelle 
               funksjonsnedsettelser. Vi jobber kontinuerlig for å forbedre tilgjengeligheten og brukeropplevelsen for alle våre brukere, 
               i tråd med Web Content Accessibility Guidelines (WCAG) 2.1 nivå AA.
             </p>
@@ -156,7 +158,8 @@ export default function TilgjengelighetPage() {
               eller funksjoner på vår nettside, vennligst kontakt oss:
             </p>
             <div className="bg-gray-50 p-6 rounded-xl">
-              <p className="text-gray-600"><strong>E-post:</strong> post@proanbud.no</p>
+              <Logo size="md" />
+              <p className="text-gray-600 mt-3"><strong>E-post:</strong> post@proanbud.no</p>
               <p className="text-gray-600"><strong>Telefon:</strong> +47 (utilgjengelig)</p>
               <p className="text-gray-600"><strong>Adresse:</strong> Bergen, Norge</p>
             </div>
@@ -187,7 +190,7 @@ export default function TilgjengelighetPage() {
             </p>
             <div className="bg-gray-50 p-6 rounded-xl">
               <p className="text-gray-600 mb-2"><strong>Diskrimineringsnemnda</strong></p>
-              <p className="text-gray-600">Nettside: <a href="https://www.diskrimineringsnemnda.no" target="_blank" rel="noopener noreferrer" className="text-[#82ffb2] hover:text-[#6ee69f] font-semibold">diskrimineringsnemnda.no</a></p>
+              <p className="text-gray-600">Nettside: <a href="https://www.diskrimineringsnemnda.no" target="_blank" rel="noopener noreferrer" className="font-semibold">diskrimineringsnemnda.no</a></p>
             </div>
           </section>
 
@@ -213,17 +216,17 @@ export default function TilgjengelighetPage() {
             </p>
             <ul className="list-disc list-inside space-y-2 text-gray-600">
               <li>
-                <a href="https://www.uutilsynet.no" target="_blank" rel="noopener noreferrer" className="text-[#82ffb2] hover:text-[#6ee69f] font-semibold">
+                <a href="https://www.uutilsynet.no" target="_blank" rel="noopener noreferrer" className="font-semibold">
                   Uutilsynet
                 </a> - Tilsyn med universell utforming av IKT
               </li>
               <li>
-                <a href="https://www.w3.org/WAI/" target="_blank" rel="noopener noreferrer" className="text-[#82ffb2] hover:text-[#6ee69f] font-semibold">
+                <a href="https://www.w3.org/WAI/" target="_blank" rel="noopener noreferrer" className="font-semibold">
                   W3C Web Accessibility Initiative
                 </a>
               </li>
               <li>
-                <a href="https://www.difi.no/fagomrader-og-tjenester/universell-utforming" target="_blank" rel="noopener noreferrer" className="text-[#82ffb2] hover:text-[#6ee69f] font-semibold">
+                <a href="https://www.difi.no/fagomrader-og-tjenester/universell-utforming" target="_blank" rel="noopener noreferrer" className="font-semibold">
                   Digdir - Universell utforming
                 </a>
               </li>
@@ -232,7 +235,7 @@ export default function TilgjengelighetPage() {
 
           <section className="border-t border-gray-200 pt-8 mt-12">
             <p className="text-sm text-gray-500">
-              Sist oppdatert: 2. oktober 2025
+              Sist oppdatert: 18. november 2025
             </p>
             <p className="text-sm text-gray-500 mt-2">
               Denne erklæringen gjennomgås og oppdateres minst én gang per år.

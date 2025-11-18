@@ -1,3 +1,5 @@
+import Logo from "@/components/shared/Logo";
+
 export default function VilkarPage() {
   return (
     <div className="min-h-screen bg-white">
@@ -39,7 +41,7 @@ export default function VilkarPage() {
               <li>All aktivitet som skjer under din brukerkonto</li>
               <li>Å varsle oss umiddelbart ved mistanke om uautorisert bruk</li>
             </ul>
-            <p className="text-gray-600 leading-relaxed mt-4">
+            <p className="text-gray-600 leading-relaxed mtntkat-4">
               Du må være minst 18 år for å opprette en konto. Dersom du representerer en bedrift, må du ha fullmakt til å inngå avtaler på vegne av bedriften.
             </p>
           </section>
@@ -161,7 +163,7 @@ export default function VilkarPage() {
           <section>
             <h2 className="text-2xl font-bold text-gray-900 mb-4">13. Skadesløsholdelse</h2>
             <p className="text-gray-600 leading-relaxed">
-              Du godtar å holde Proanbud AS skadesløs for alle krav, tap, skader og utgifter som oppstår som følge av din bruk av 
+              Du godtar å holde Proanbud skadesløs for alle krav, tap, skader og utgifter som oppstår som følge av din bruk av 
               tjenesten, brudd på disse vilkårene, eller krenkelse av tredjeparters rettigheter.
             </p>
           </section>
@@ -188,8 +190,8 @@ export default function VilkarPage() {
               Hvis du har spørsmål om disse vilkårene, kan du kontakte oss:
             </p>
             <div className="bg-gray-50 p-6 rounded-xl">
-              <p className="text-gray-600"><strong>Proanbud AS</strong></p>
-              <p className="text-gray-600"><strong>E-post:</strong> post@proanbud.no</p>
+              <Logo size="md"/>
+              <p className="text-gray-600 mt-3"><strong>E-post:</strong> post@proanbud.no</p>
               <p className="text-gray-600"><strong>Telefon:</strong> +47 (utilgjengelig)</p>
               <p className="text-gray-600"><strong>Adresse:</strong> Bergen, Norge</p>
             </div>
@@ -197,7 +199,7 @@ export default function VilkarPage() {
 
           <section className="border-t border-gray-200 pt-8 mt-12">
             <p className="text-sm text-gray-500">
-              Sist oppdatert: 2. oktober 2025
+              Sist oppdatert: 18. november 2025
             </p>
           </section>
         </div>

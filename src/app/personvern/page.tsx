@@ -1,3 +1,5 @@
+import Logo from "@/components/shared/Logo";
+
 export default function PersonvernPage() {
   return (
     <div className="min-h-screen bg-white">
@@ -8,7 +10,7 @@ export default function PersonvernPage() {
           <section>
             <h2 className="text-2xl font-bold text-gray-900 mb-4">1. Innledning</h2>
             <p className="text-gray-600 leading-relaxed">
-              Proanbud AS ("vi", "oss" eller "vår") respekterer ditt personvern og er forpliktet til å beskytte dine personopplysninger. 
+              Proanbud ("vi", "oss" eller "vår") respekterer ditt personvern og er forpliktet til å beskytte dine personopplysninger. 
               Denne personvernerklæringen beskriver hvordan vi samler inn, bruker, deler og beskytter dine personopplysninger når du bruker vår tjeneste.
             </p>
           </section>
@@ -16,7 +18,7 @@ export default function PersonvernPage() {
           <section>
             <h2 className="text-2xl font-bold text-gray-900 mb-4">2. Dataansvarlig</h2>
             <p className="text-gray-600 leading-relaxed mb-4">
-              Proanbud AS er dataansvarlig for behandlingen av dine personopplysninger.
+              Proanbud er dataansvarlig for behandlingen av dine personopplysninger.
             </p>
             <div className="bg-gray-50 p-6 rounded-xl">
               <p className="text-gray-600"><strong>Organisasjonsnummer:</strong> XXX XXX XXX</p>
@@ -138,7 +140,8 @@ export default function PersonvernPage() {
               Hvis du har spørsmål om denne personvernerklæringen eller ønsker å utøve dine rettigheter, kan du kontakte oss:
             </p>
             <div className="bg-gray-50 p-6 rounded-xl">
-              <p className="text-gray-600"><strong>E-post:</strong> post@proanbud.no</p>
+              <Logo size="md" />
+              <p className="text-gray-600 mt-3"><strong>E-post:</strong> post@proanbud.no</p>
               <p className="text-gray-600"><strong>Telefon:</strong> +47 (utilgjengelig)</p>
               <p className="text-gray-600"><strong>Adresse:</strong> Bergen, Norge</p>
             </div>
@@ -149,7 +152,7 @@ export default function PersonvernPage() {
 
           <section className="border-t border-gray-200 pt-8 mt-12">
             <p className="text-sm text-gray-500">
-              Sist oppdatert: 2. oktober 2025
+              Sist oppdatert: 18. november 2025
             </p>
           </section>
         </div>
