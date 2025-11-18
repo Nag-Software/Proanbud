@@ -5,6 +5,8 @@ import { Calculator, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/shared/Card';
 import { fetchStripePrices } from '@/lib/stripe-client';
+import { Input } from './ui/input';
+import { Slider } from './ui/slider';
 
 interface CalculatorProps {
   variant?: 'full' | 'compact';
@@ -179,15 +181,15 @@ export function SavingsCalculator({ variant = 'full', showEmailCapture = false }
               Din timepris (kr) <span className="text-xs text-gray-500 font-normal">• Snitt: 850-1200 kr/t</span>
             </label>
             <div className="relative">
-              <input
+              <Input
                 type="number"
                 min="0"
-                step="50"
-                value={hourlyRate}
+                step="25"
+                defaultValue={hourlyRate}
                 onChange={(e) => setHourlyRate(Number(e.target.value))}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-gray-900 focus:ring-1 focus:ring-gray-900 focus:outline-none transition-colors text-base"
               />
-              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm">
+              <span className="absolute right-8 top-1/2 -translate-y-1/2 text-gray-500 text-sm">
                 kr/t
               </span>
             </div>

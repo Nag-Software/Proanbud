@@ -1,5 +1,6 @@
 import { Zap, Linkedin, Twitter, Facebook, Mail, Phone, MapPin } from 'lucide-react';
 import Link from 'next/link';
+import Logo from './Logo';
 
 export default function Footer() {
     return (
@@ -8,12 +9,16 @@ export default function Footer() {
           <div className="py-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-12">
             {/* Company Info */}
             <div className="lg:col-span-2 space-y-6">
+              <Logo mode="dark"/>
+              {/*}}
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-[#82ffb2] flex items-center justify-center">
                   <Zap className="w-6 h-6 text-gray-900" />
                 </div>
                 <span className="text-2xl font-bold text-white">Proanbud</span>
               </div>
+
+                */}
               <p className="text-gray-400 leading-relaxed max-w-sm">
                 Den komplette tilbudsplattformen for moderne håndverkere. Spar tid, øk lønnsomhet og vinn flere oppdrag.
               </p>

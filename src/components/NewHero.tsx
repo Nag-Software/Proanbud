@@ -4,12 +4,15 @@ import Link from "next/link";
 import dashboardImage from "../../public/assets/4.jpg";
 import Image from "next/image";
 import { ArrowRight, Check } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { getLaunchSpecialBanner, getDiscountTypeLabel, LaunchSpecialBanner } from "@/lib/sanity/launchBanner";
+import white from "../../public/logo/light/white.png";
 
 export function NewHero() {
   const [banner, setBanner] = useState<LaunchSpecialBanner | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isVisible, setIsVisible] = useState(false);
+  const logoRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchBanner = async () => {
@@ -25,8 +28,43 @@ export function NewHero() {
 
     fetchBanner();
   }, []);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (logoRef.current) {
+      observer.observe(logoRef.current);
+    }
+
+    return () => {
+      if (logoRef.current) {
+        observer.unobserve(logoRef.current);
+      }
+    };
+  }, []);
   return (
     <section className="w-full py-16 md:py-20 bg-white">
+      <div 
+        ref={logoRef}
+        className="absolute top-130 h-full left-1/10 overflow-hidden z-[0] pointer-events-none scale-130"
+      >
+        <Link href="/">
+          <Image 
+            src={white} 
+            alt="Proanbud Logo"
+            className={`w-0 md:w-100 lg:w-130 rotate-[-35deg] transition-all duration-1000 ease-in ${
+              isVisible ? 'opacity-7' : 'opacity-0'
+            }`}
+          />
+        </Link>
+      </div>
       <div className="max-w-6xl mx-auto px-6 sm:px-8 lg:px-12">
         {/* Launch Special Banner */}
         <div className="mb-6 mx-auto max-w-2xl">
