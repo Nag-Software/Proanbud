@@ -110,6 +110,7 @@ export interface PriceComponent {
   category: 'materialer' | 'arbeid' | 'transport' | 'utstyr' | 'margin' | 'annet';
   name: string;
   description: string;
+  produsent?: string;
   amount: number;
   quantity?: number;
   unit?: string;

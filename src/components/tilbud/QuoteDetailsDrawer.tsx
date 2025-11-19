@@ -331,6 +331,7 @@ export function QuoteDetailsDrawer({
       category: 'materialer',
       name: '',
       description: '',
+      produsent: '',
       amount: 0,
       quantity: 1,
       unit: 'stk',

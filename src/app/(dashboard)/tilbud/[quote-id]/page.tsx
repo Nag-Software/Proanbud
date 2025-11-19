@@ -1,14 +1,13 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { X, User, FileText, Calendar, DollarSign, Briefcase, Clock, Edit3, Save, XCircle, ExternalLink, Eye, Download, Trash2, Plus, Play, RotateCcw, Send, ArrowLeft, MoreHorizontal } from 'lucide-react';
-import { Tilbud, Kunde, BusinessSettings, PriceComponent, Product, Category, Subcategory } from '@/lib/types';
+import { X, User, FileText, Calendar, DollarSign, Briefcase, Clock, Save, ExternalLink, Eye, Download, Trash2, Plus, Send, ArrowLeft, MoreHorizontal } from 'lucide-react';
+import { Tilbud, Kunde, BusinessSettings, PriceComponent } from '@/lib/types';
 import { Card, CardHeader, CardContent, CardTitle } from '@/components/shared/Card';
 import { updateTilbud, deleteTilbud, getTilbudById, TilbudFormData } from '@/lib/services/tilbudService';
 import { getBusinessSettings } from '@/lib/services/businessService';
 import { getCustomers } from '@/lib/services/customerService';
-import { getProducts, getCategories, getSubcategories } from '@/lib/services/catalogService';
 import { useBreakpoint } from '@/hooks/useResponsive';
 import {
   Dialog,
@@ -18,14 +17,6 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerDescription,
-  DrawerFooter,
-} from '@/components/ui/drawer';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -41,7 +32,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ProductDetailsDrawer } from '@/components/katalog';
+import { ProductCatalog, ProductCatalogHandle, ProductCatalogSelectionItem } from '@/components/katalog';
+import GroupedDataTable from '@/components/shared/GroupedDataTable';
+
+
+const EDITABLE_QUOTE_STATUSES = new Set(['draft', 'venter', 'avvist']);
 
 
 
@@ -69,7 +64,7 @@ export default function QuoteDetailsPage() {
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [emailCooldown, setEmailCooldown] = useState(0);
 
-  // Catalog and price component editing state
+  // Price component editing state
   const [customCategories, setCustomCategories] = useState<string[]>([]);
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
@@ -77,18 +72,8 @@ export default function QuoteDetailsPage() {
   const [editingComponent, setEditingComponent] = useState<PriceComponent | null>(null);
   const [editingField, setEditingField] = useState<'name' | 'description' | null>(null);
   const [editValue, setEditValue] = useState('');
-  const [isCatalogDialogOpen, setIsCatalogDialogOpen] = useState(false);
-  const [catalogProducts, setCatalogProducts] = useState<Product[]>([]);
-  const [catalogCategories, setCatalogCategories] = useState<Category[]>([]);
-  const [catalogSubcategories, setCatalogSubcategories] = useState<Subcategory[]>([]);
-  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('all');
-  const [selectedSubcategoryFilter, setSelectedSubcategoryFilter] = useState<string>('all');
-  const [catalogSearchTerm, setCatalogSearchTerm] = useState('');
-  const [isLoadingCatalog, setIsLoadingCatalog] = useState(false);
   const [unitPriceInputs, setUnitPriceInputs] = useState<Map<string, string>>(new Map());
-  const [selectedProducts, setSelectedProducts] = useState<Map<string, { product: Product; quantity: number }>>(new Map());
-  const [catalogSortBy, setCatalogSortBy] = useState<'name' | 'price'>('name');
-  const [catalogViewMode, setCatalogViewMode] = useState<'grid' | 'list'>('grid');
+  const productCatalogRef = useRef<ProductCatalogHandle>(null);
 
   // Load quote and customers on mount
   useEffect(() => {
@@ -136,24 +121,9 @@ export default function QuoteDetailsPage() {
     fetchBusinessSettings();
   }, []);
 
-  // Load catalog data on component mount
+  // Ensure catalog data is fresh on mount
   useEffect(() => {
-    const loadCatalogData = async () => {
-      try {
-        const [products, categories, subcategories] = await Promise.all([
-          getProducts(),
-          getCategories(),
-          getSubcategories()
-        ]);
-        setCatalogProducts(products);
-        setCatalogCategories(categories);
-        setCatalogSubcategories(subcategories);
-      } catch (error) {
-        console.error('Error loading catalog data:', error);
-      }
-    };
-
-    loadCatalogData();
+    productCatalogRef.current?.refresh();
   }, []);
 
   // Email cooldown timer
@@ -165,6 +135,37 @@ export default function QuoteDetailsPage() {
       return () => clearTimeout(timer);
     }
   }, [emailCooldown]);
+
+  const initializeEditingState = useCallback(() => {
+    if (!quote) return;
+
+    setEditedQuote({
+      kundenavn: quote.kundenavn,
+      prosjekt: quote.prosjekt,
+      jobbtype: quote.jobbtype,
+      belop: quote.belop,
+      status: quote.status,
+      dato: quote.dato,
+      svarfrist: quote.svarfrist,
+      template: quote.template || 'modern',
+    });
+    setEditedPriceComponents(quote.prisgrunnlag ? JSON.parse(JSON.stringify(quote.prisgrunnlag)) : []);
+    setEditedNotes(quote.notater || '');
+    setIsEditing(true);
+  }, [quote]);
+
+  useEffect(() => {
+    if (!quote) return;
+
+    if (EDITABLE_QUOTE_STATUSES.has(quote.status as string)) {
+      initializeEditingState();
+    } else {
+      setIsEditing(false);
+      setEditedQuote({});
+      setEditedPriceComponents([]);
+      setEditedNotes('');
+    }
+  }, [quote, initializeEditingState]);
 
   if (isLoading) {
     return (
@@ -199,34 +200,10 @@ export default function QuoteDetailsPage() {
 
   // At this point, quote is guaranteed to be non-null
   const currentQuote = quote;
+  const canEditQuote = EDITABLE_QUOTE_STATUSES.has(currentQuote.status as string);
 
   // Find the customer for this quote
   const relatedCustomer = customers.find(customer => customer.navn === currentQuote.kundenavn);
-
-  // Initialize edited quote data when editing starts
-  const startEditing = () => {
-    setEditedQuote({
-      kundenavn: currentQuote.kundenavn,
-      prosjekt: currentQuote.prosjekt,
-      jobbtype: currentQuote.jobbtype,
-      belop: currentQuote.belop,
-      status: currentQuote.status,
-      dato: currentQuote.dato,
-      svarfrist: currentQuote.svarfrist,
-      template: currentQuote.template || 'modern',
-    });
-    // Deep copy of price components for editing
-    setEditedPriceComponents(currentQuote.prisgrunnlag ? JSON.parse(JSON.stringify(currentQuote.prisgrunnlag)) : []);
-    setEditedNotes(currentQuote.notater || '');
-    setIsEditing(true);
-  };
-
-  const cancelEditing = () => {
-    setIsEditing(false);
-    setEditedQuote({});
-    setEditedPriceComponents([]);
-    setEditedNotes('');
-  };
 
   const handleResendEmail = async () => {
     if (!relatedCustomer || emailCooldown > 0 || isSendingEmail) return;
@@ -466,10 +443,6 @@ export default function QuoteDetailsPage() {
         belop: calculatedTotal,
       } : null);
 
-      setIsEditing(false);
-      setEditedQuote({});
-      setEditedPriceComponents([]);
-      setEditedNotes('');
     } catch (error) {
       console.error('Error updating quote:', error);
       alert('Kunne ikke oppdatere tilbud');
@@ -485,6 +458,7 @@ export default function QuoteDetailsPage() {
       category: 'materialer',
       name: '',
       description: '',
+      produsent: '',
       amount: 0,
       quantity: 1,
       unit: 'stk',
@@ -550,6 +524,7 @@ export default function QuoteDetailsPage() {
       category: 'annet',
       name: 'Ny komponent',
       description: 'Beskrivelse av komponenten',
+      produsent: '',
       amount: 0, // Will be calculated below
       quantity: 1,
       unit: 'stk',
@@ -625,36 +600,21 @@ export default function QuoteDetailsPage() {
     return labels[category] || category.charAt(0).toUpperCase() + category.slice(1);
   };
 
-  // Catalog functions
-  const openCatalogDialog = async () => {
-    setIsLoadingCatalog(true);
-    try {
-      const [products, categories, subcategories] = await Promise.all([
-        getProducts(),
-        getCategories(),
-        getSubcategories()
-      ]);
-      setCatalogProducts(products);
-      setCatalogCategories(categories);
-      setCatalogSubcategories(subcategories);
-      setIsCatalogDialogOpen(true);
-    } catch (error) {
-      console.error('Error loading catalog:', error);
-      alert('Kunne ikke laste produktkatalog');
-    } finally {
-      setIsLoadingCatalog(false);
+  // Catalog helpers
+  const applyCatalogSelections = (selections: ProductCatalogSelectionItem[]) => {
+    if (selections.length === 0) {
+      return;
     }
-  };
 
-  const addProductsFromCatalog = (selectedProducts: Product[]) => {
-    const newComponents: PriceComponent[] = selectedProducts.map(product => {
+    const newComponents: PriceComponent[] = selections.map(({ product, quantity }) => {
       const component: PriceComponent = {
         id: `catalog-${product.id}-${Date.now()}`,
-        category: 'materialer', // Default category since Product doesn't have category field
+        category: 'materialer',
         name: product.produktnavn,
-        description: product.beskrivelse || '',
-        amount: 0, // Will be calculated below
-        quantity: 1,
+        description: product.beskrivelse || `${product.produsent ? `${product.produsent} - ` : ''}${product.produktnavn}`,
+        produsent: product.produsent || '',
+        amount: 0,
+        quantity,
         unit: product.enhet || 'stk',
         unitPrice: product.enhetspris || 0,
         priceMarkup: product.påslag || 0,
@@ -662,66 +622,24 @@ export default function QuoteDetailsPage() {
         isEditable: true,
         confidence: 0,
       };
-      // Calculate amount with markup
       component.amount = calculateAmountWithMarkup(component);
       return component;
     });
 
     setEditedPriceComponents(prev => [...prev, ...newComponents]);
-    setIsCatalogDialogOpen(false);
   };
 
-  // Catalog functions from NewQuoteDrawer
-  const toggleProductSelection = (product: Product) => {
-    setSelectedProducts(prev => {
-      const newMap = new Map(prev);
-      if (newMap.has(product.id)) {
-        newMap.delete(product.id);
-      } else {
-        newMap.set(product.id, { product, quantity: 1 });
+  const openProductCatalog = async (viewMode: 'grid' | 'list' = 'grid') => {
+    if (!productCatalogRef.current) return;
+    try {
+      const result = await productCatalogRef.current.open({ viewMode });
+      if (result.confirmed && result.selections.length > 0) {
+        applyCatalogSelections(result.selections);
       }
-      return newMap;
-    });
-  };
-
-  const updateProductQuantity = (productId: string, quantity: number) => {
-    setSelectedProducts(prev => {
-      const newMap = new Map(prev);
-      const existing = newMap.get(productId);
-      if (existing) {
-        newMap.set(productId, { ...existing, quantity: Math.max(1, quantity) });
-      }
-      return newMap;
-    });
-  };
-
-  const addSelectedProductsToQuote = () => {
-    const newComponents: PriceComponent[] = Array.from(selectedProducts.values()).map(({ product, quantity }) => {
-      const component: PriceComponent = {
-        id: `catalog-${product.id}-${Date.now()}-${Math.random()}`,
-        category: 'materialer', // Default category
-        name: product.produktnavn,
-        description: product.beskrivelse || '',
-        amount: 0, // Will be calculated below
-        quantity: quantity,
-        unit: product.enhet || 'stk',
-        unitPrice: product.enhetspris,
-        priceMarkup: product.påslag || 0,
-        materialMarkup: 0,
-        isEditable: true,
-        confidence: 0,
-      };
-      // Calculate amount with markup
-      component.amount = calculateAmountWithMarkup(component);
-      return component;
-    });
-
-    setEditedPriceComponents(prev => [...prev, ...newComponents]);
-    setIsCatalogDialogOpen(false);
-    setSelectedProducts(new Map());
-    setCatalogSearchTerm('');
-    setSelectedCategoryFilter('all');
-    setSelectedSubcategoryFilter('all');
+    } catch (error) {
+      console.error('Error opening product catalog:', error);
+      alert('Kunne ikke åpne produktkatalogen');
+    }
   };
 
   // Edit dialog functions
@@ -890,117 +808,91 @@ export default function QuoteDetailsPage() {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              {isEditing ? (
-                <>
+              <div className="flex items-center gap-2">
+                <div className="hidden min-[1500px]:flex items-center gap-2">
+                  {relatedCustomer && quote?.status === 'draft' && (
+                    <Button
+                      onClick={handleSendQuote}
+                      disabled={isSendingEmail}
+                      className="bg-primary text-primary-foreground hover:bg-primary/90"
+                    >
+                      <Send className="h-4 w-4 mr-2" />
+                      {isSendingEmail ? 'Sender...' : 'Send tilbud'}
+                    </Button>
+                  )}
+                  {relatedCustomer && quote?.status !== 'draft' && (
+                    <Button
+                      onClick={handleResendEmail}
+                      disabled={emailCooldown > 0 || isSendingEmail}
+                      variant="outline"
+                      className="border-slate-300 text-slate-700 hover:bg-slate-50"
+                    >
+                      <Send className="h-4 w-4 mr-2" />
+                      {isSendingEmail ? 'Sender...' : 'Send tilbud'}
+                      {emailCooldown > 0 && ` (${emailCooldown}s)`}
+                    </Button>
+                  )}
                   <Button
                     variant="outline"
-                    onClick={cancelEditing}
-                    disabled={isUpdating}
+                    onClick={handlePreview}
                     className="border-slate-300 text-slate-700 hover:bg-slate-50"
                   >
-                    <XCircle className="h-4 w-4 mr-2" />
-                    Avbryt
+                    <Eye className="h-4 w-4 mr-2" />
+                    Forhåndsvis
                   </Button>
-                  <Button
-                    onClick={saveChanges}
-                    disabled={isUpdating}
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
-                  >
-                    <Save className="h-4 w-4 mr-2" />
-                    {isUpdating ? 'Lagrer...' : 'Lagre'}
-                  </Button>
-                </>
-              ) : (
-                <div className="flex items-center gap-2">
-                  {/* Buttons for large screens (>= 1500px) */}
-                  <div className="hidden min-[1500px]:flex items-center gap-2">
-                    {/* Send tilbud button for draft quotes */}
-                    {relatedCustomer && quote?.status === 'draft' && (
+                </div>
+
+                <div className="min-[1500px]:hidden">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
                       <Button
-                        onClick={handleSendQuote}
-                        disabled={isSendingEmail}
-                        className="bg-primary text-primary-foreground hover:bg-primary/90"
-                      >
-                        <Send className="h-4 w-4 mr-2" />
-                        {isSendingEmail ? 'Sender...' : 'Send tilbud'}
-                      </Button>
-                    )}
-                    {/* Send tilbud på nytt button with cooldown */}
-                    {relatedCustomer && quote?.status !== 'draft' && (
-                      <Button
-                        onClick={handleResendEmail}
-                        disabled={emailCooldown > 0 || isSendingEmail}
                         variant="outline"
+                        size="sm"
                         className="border-slate-300 text-slate-700 hover:bg-slate-50"
                       >
-                        <Send className="h-4 w-4 mr-2" />
-                        {isSendingEmail ? 'Sender...' : 'Send tilbud'}
-                        {emailCooldown > 0 && ` (${emailCooldown}s)`}
+                        <MoreHorizontal className="h-4 w-4" />
                       </Button>
-                    )}
-                    <Button
-                      variant="outline"
-                      onClick={handlePreview}
-                      className="border-slate-300 text-slate-700 hover:bg-slate-50"
-                    >
-                      <Eye className="h-4 w-4 mr-2" />
-                      Forhåndsvis
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={startEditing}
-                      className="border-slate-300 text-slate-700 hover:bg-slate-50"
-                    >
-                      {quote?.status === 'draft' ? <Play className="h-4 w-4 mr-2" /> : <Edit3 className="h-4 w-4 mr-2" />}
-                      {quote?.status === 'draft' ? 'Fortsett redigering' : 'Rediger'}
-                    </Button>
-                  </div>
-
-                  {/* Dropdown menu for smaller screens (< 1500px) */}
-                  <div className="min-[1500px]:hidden">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="border-slate-300 text-slate-700 hover:bg-slate-50"
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      {relatedCustomer && quote?.status === 'draft' && (
+                        <DropdownMenuItem
+                          onClick={handleSendQuote}
+                          disabled={isSendingEmail}
                         >
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-48">
-                        {relatedCustomer && quote?.status === 'draft' && (
-                          <DropdownMenuItem
-                            onClick={handleSendQuote}
-                            disabled={isSendingEmail}
-                          >
-                            <Send className="h-4 w-4 mr-2" />
-                            {isSendingEmail ? 'Sender...' : 'Send tilbud'}
-                          </DropdownMenuItem>
-                        )}
-                        {relatedCustomer && quote?.status !== 'draft' && (
-                          <DropdownMenuItem
-                            onClick={handleResendEmail}
-                            disabled={emailCooldown > 0 || isSendingEmail}
-                          >
-                            <Send className="h-4 w-4 mr-2" />
-                            {isSendingEmail ? 'Sender...' : 'Send tilbud'}
-                            {emailCooldown > 0 && ` (${emailCooldown}s)`}
-                          </DropdownMenuItem>
-                        )}
-                        <DropdownMenuItem onClick={handlePreview}>
-                          <Eye className="h-4 w-4 mr-2" />
-                          Forhåndsvis
+                          <Send className="h-4 w-4 mr-2" />
+                          {isSendingEmail ? 'Sender...' : 'Send tilbud'}
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={startEditing}>
-                          {quote?.status === 'draft' ? <Play className="h-4 w-4 mr-2" /> : <Edit3 className="h-4 w-4 mr-2" />}
-                          {quote?.status === 'draft' ? 'Fortsett redigering' : 'Rediger'}
+                      )}
+                      {relatedCustomer && quote?.status !== 'draft' && (
+                        <DropdownMenuItem
+                          onClick={handleResendEmail}
+                          disabled={emailCooldown > 0 || isSendingEmail}
+                        >
+                          <Send className="h-4 w-4 mr-2" />
+                          {isSendingEmail ? 'Sender...' : 'Send tilbud'}
+                          {emailCooldown > 0 && ` (${emailCooldown}s)`}
                         </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
+                      )}
+                      <DropdownMenuItem onClick={handlePreview}>
+                        <Eye className="h-4 w-4 mr-2" />
+                        Forhåndsvis
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
+              </div>
+
+              {canEditQuote && (
+                <Button
+                  onClick={saveChanges}
+                  disabled={isUpdating}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  {isUpdating ? 'Lagrer...' : 'Lagre'}
+                </Button>
               )}
+
               {/* Delete button */}
               <Button
                 variant="destructive"
@@ -1142,7 +1034,25 @@ export default function QuoteDetailsPage() {
             </CardContent>
           </Card>
           </div>
+          
+          { /* New prisgrunnlag */}
+          <GroupedDataTable 
+            items={isEditing ? editedPriceComponents : (quote.prisgrunnlag ?? [])}
+            editable={isEditing}
+            onItemsChange={(updatedComponents) => {
+              setEditedPriceComponents(updatedComponents);
+              // Also update the quote
+              setEditedQuote(prev => ({
+                ...prev,
+                prisgrunnlag: updatedComponents
+              }));
+            }}
+            onOpenCatalog={() => openProductCatalog('grid')}
+            customCategories={customCategories}
+            onCustomCategoriesChange={setCustomCategories}
+          />
 
+          {/* Old prisgrunnlag - to be removed after update is complete */}
           {/* Price Breakdown */}
           {((isEditing && editedPriceComponents.length > 0) || (!isEditing && quote.prisgrunnlag && quote.prisgrunnlag.length > 0)) && (
             <Card className="shadow-sm border-slate-200">
@@ -1156,7 +1066,7 @@ export default function QuoteDetailsPage() {
                   </div>
                   {isEditing && (
                     <div className="flex gap-2">
-                      <Button onClick={openCatalogDialog} size="sm" variant="outline">
+                      <Button onClick={() => openProductCatalog('grid')} size="sm" variant="outline">
                         <Plus className="w-4 h-4 mr-2" />
                         Legg til produkt
                       </Button>
@@ -1558,607 +1468,7 @@ export default function QuoteDetailsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Product Catalog Dialog - Full Implementation */}
-      {isMobile ? (
-        <Drawer open={isCatalogDialogOpen} onOpenChange={setIsCatalogDialogOpen}>
-          <DrawerContent className="max-h-[95vh] flex flex-col z-[250]">
-            <DrawerHeader className="border-b">
-              <div className="flex items-center justify-between">
-                <div>
-                  <DrawerTitle>Produktkatalog</DrawerTitle>
-                  <DrawerDescription>
-                    Velg produkter fra katalogen
-                  </DrawerDescription>
-                </div>
-                {selectedProducts.size > 0 && (
-                  <div className="bg-primary/10 px-3 py-1.5 rounded-lg">
-                    <span className="text-xs font-medium text-primary">
-                      {selectedProducts.size} valgt
-                    </span>
-                  </div>
-                )}
-              </div>
-            </DrawerHeader>
-            
-            <div className="flex-1 overflow-hidden flex flex-col p-4">
-              {/* Mobile Search and Filters */}
-              <div className="space-y-3 mb-4">
-                <input
-                  type="text"
-                  placeholder="Søk etter produkt..."
-                  value={catalogSearchTerm}
-                  onChange={(e) => setCatalogSearchTerm(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                />
-                
-                <div className="flex gap-2">
-                  <Select value={selectedCategoryFilter} onValueChange={(value) => {
-                    setSelectedCategoryFilter(value);
-                    setSelectedSubcategoryFilter('all');
-                  }}>
-                    <SelectTrigger className="flex-1 text-sm">
-                      <SelectValue placeholder="Kategori" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Alle kategorier</SelectItem>
-                      {catalogCategories.map(cat => (
-                        <SelectItem key={cat.id} value={cat.id}>
-                          {cat.navn}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  
-                  {selectedCategoryFilter !== 'all' && catalogSubcategories.filter(s => s.kategoriId === selectedCategoryFilter).length > 0 && (
-                    <Select value={selectedSubcategoryFilter} onValueChange={setSelectedSubcategoryFilter}>
-                      <SelectTrigger className="flex-1 text-sm">
-                        <SelectValue placeholder="Underkategori" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Alle</SelectItem>
-                        {catalogSubcategories
-                          .filter(s => s.kategoriId === selectedCategoryFilter)
-                          .map(subcat => (
-                            <SelectItem key={subcat.id} value={subcat.id}>
-                              {subcat.navn}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                </div>
-                
-                <Select value={catalogSortBy} onValueChange={(value) => setCatalogSortBy(value as 'name' | 'price')}>
-                  <SelectTrigger className="w-full text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="name">Sorter: Navn</SelectItem>
-                    <SelectItem value="price">Sorter: Pris</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Products List - Mobile */}
-              <div className="flex-1 overflow-y-auto -mx-4 px-4">
-                {isLoadingCatalog ? (
-                  <div className="flex items-center justify-center h-40">
-                    <div className="text-center">
-                      <div className="animate-spin w-8 h-8 mx-auto mb-3 border-4 border-primary border-t-transparent rounded-full"></div>
-                      <p className="text-sm text-gray-500">Laster...</p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-3 pb-4">
-                    {catalogProducts
-                      .filter(product => {
-                        const matchesSearch = catalogSearchTerm === '' || 
-                          product.produktnavn.toLowerCase().includes(catalogSearchTerm.toLowerCase()) ||
-                          product.beskrivelse?.toLowerCase().includes(catalogSearchTerm.toLowerCase()) ||
-                          product.produsent?.toLowerCase().includes(catalogSearchTerm.toLowerCase());
-                        
-                        const matchesCategory = selectedCategoryFilter === 'all' || 
-                          product.kategoriId === selectedCategoryFilter;
-                        
-                        const matchesSubcategory = selectedSubcategoryFilter === 'all' || 
-                          product.underkategoriId === selectedSubcategoryFilter;
-                        
-                        return matchesSearch && matchesCategory && matchesSubcategory;
-                      })
-                      .sort((a, b) => {
-                        if (catalogSortBy === 'name') {
-                          return a.produktnavn.localeCompare(b.produktnavn);
-                        } else {
-                          return a.enhetspris - b.enhetspris;
-                        }
-                      })
-                      .map(product => {
-                        const category = catalogCategories.find(c => c.id === product.kategoriId);
-                        const subcategory = catalogSubcategories.find(s => s.id === product.underkategoriId);
-                        const isSelected = selectedProducts.has(product.id);
-                        const selectedItem = selectedProducts.get(product.id);
-                        
-                        return (
-                          <div 
-                            key={product.id} 
-                            className={`border rounded-lg p-3 transition-all ${
-                              isSelected 
-                                ? 'border-primary bg-primary/5' 
-                                : 'border-gray-200'
-                            }`}
-                          >
-                            <div className="flex items-start gap-3" onClick={() => toggleProductSelection(product)}>
-                              <input
-                                type="checkbox"
-                                checked={isSelected}
-                                className="mt-1 w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
-                              />
-                              
-                              <div className="flex-1 min-w-0">
-                                <h4 className="font-semibold text-sm text-gray-900 mb-0.5">
-                                  {product.produktnavn}
-                                </h4>
-                                {product.produsent && (
-                                  <p className="text-xs text-gray-600 mb-1">
-                                    {product.produsent}
-                                  </p>
-                                )}
-                                {product.beskrivelse && (
-                                  <p className="text-xs text-gray-500 mb-2 line-clamp-2">
-                                    {product.beskrivelse}
-                                  </p>
-                                )}
-                                
-                                <div className="flex items-center justify-between">
-                                  <div className="flex flex-wrap gap-1.5">
-                                    {category && (
-                                      <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs">
-                                        {category.navn}
-                                      </span>
-                                    )}
-                                    {subcategory && (
-                                      <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs">
-                                        {subcategory.navn}
-                                      </span>
-                                    )}
-                                  </div>
-                                  
-                                  <div className="text-right">
-                                    <div className="font-semibold text-sm text-gray-900">
-                                      kr {product.enhetspris.toLocaleString('nb-NO')}
-                                    </div>
-                                    <div className="text-xs text-gray-500">
-                                      per {product.enhet || 'stk'}
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                            
-                            {isSelected && selectedItem && (
-                              <div className="mt-3 pt-3 border-t border-gray-200">
-                                <div className="flex items-center gap-2">
-                                  <label className="text-xs text-gray-600">Antall:</label>
-                                  <input
-                                    type="number"
-                                    min="1"
-                                    value={selectedItem.quantity}
-                                    onChange={(e) => updateProductQuantity(product.id, parseInt(e.target.value) || 1)}
-                                    className="w-16 px-2 py-1 text-xs border rounded focus:ring-1 focus:ring-primary"
-                                  />
-                                  <span className="text-xs text-gray-500">× kr {product.enhetspris.toLocaleString('nb-NO')}</span>
-                                  <span className="text-xs font-medium text-gray-900 ml-auto">
-                                    = kr {(product.enhetspris * selectedItem.quantity).toLocaleString('nb-NO')}
-                                  </span>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    
-                    {catalogProducts.filter(product => {
-                      const matchesSearch = catalogSearchTerm === '' || 
-                        product.produktnavn.toLowerCase().includes(catalogSearchTerm.toLowerCase()) ||
-                        product.beskrivelse?.toLowerCase().includes(catalogSearchTerm.toLowerCase()) ||
-                        product.produsent?.toLowerCase().includes(catalogSearchTerm.toLowerCase());
-                      
-                      const matchesCategory = selectedCategoryFilter === 'all' || 
-                        product.kategoriId === selectedCategoryFilter;
-                      
-                      const matchesSubcategory = selectedSubcategoryFilter === 'all' || 
-                        product.underkategoriId === selectedSubcategoryFilter;
-                      
-                      return matchesSearch && matchesCategory && matchesSubcategory;
-                    }).length === 0 && (
-                      <div className="p-8 text-center">
-                        <p className="text-gray-600 text-sm">Ingen produkter funnet</p>
-                        <p className="text-gray-500 text-xs mt-1">Prøv å endre søkeord eller filter</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Mobile Footer */}
-            <DrawerFooter className="border-t bg-gray-50">
-              {selectedProducts.size > 0 && (
-                <div className="text-sm text-gray-600 mb-2 text-center">
-                  <span className="font-medium">{selectedProducts.size}</span> produkt{selectedProducts.size !== 1 ? 'er' : ''} valgt
-                  <span className="block mt-1">
-                    Total: <span className="font-semibold">
-                      {Array.from(selectedProducts.values())
-                        .reduce((sum, { product, quantity }) => sum + (product.enhetspris * quantity), 0)
-                        .toLocaleString('nb-NO')} kr
-                    </span>
-                  </span>
-                </div>
-              )}
-              <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  onClick={() => {
-                    setIsCatalogDialogOpen(false);
-                    setSelectedProducts(new Map());
-                    setCatalogSearchTerm('');
-                    setSelectedCategoryFilter('all');
-                    setSelectedSubcategoryFilter('all');
-                  }}
-                  className="flex-1"
-                >
-                  Avbryt
-                </Button>
-                <Button 
-                  onClick={addSelectedProductsToQuote}
-                  disabled={selectedProducts.size === 0}
-                  className="flex-1"
-                >
-                  Legg til {selectedProducts.size > 0 && `(${selectedProducts.size})`}
-                </Button>
-              </div>
-            </DrawerFooter>
-          </DrawerContent>
-        </Drawer>
-      ) : (
-        <Dialog open={isCatalogDialogOpen} onOpenChange={setIsCatalogDialogOpen}>
-          <DialogContent className="max-w-7xl max-h-[95vh] overflow-hidden flex flex-col p-0">
-          <DialogHeader className="px-6 pt-6 pb-4 border-b">
-            <div className="flex items-center justify-between">
-              <div>
-                <DialogTitle className="text-2xl">Produktkatalog</DialogTitle>
-                <DialogDescription>
-                  Velg produkter fra katalogen og legg til i tilbudet
-                </DialogDescription>
-              </div>
-              {selectedProducts.size > 0 && (
-                <div className="bg-primary/10 px-4 py-2 rounded-lg">
-                  <span className="text-sm font-medium text-primary">
-                    {selectedProducts.size} produkt{selectedProducts.size !== 1 ? 'er' : ''} valgt
-                  </span>
-                </div>
-              )}
-            </div>
-          </DialogHeader>
-          
-          <div className="flex flex-1 overflow-hidden">
-            {/* Left Sidebar - Categories */}
-            <div className="w-64 border-r bg-gray-50 overflow-y-auto p-4">
-              <h3 className="font-semibold text-sm text-gray-700 mb-3 px-2">KATEGORIER</h3>
-              <div className="space-y-1">
-                <button
-                  onClick={() => {
-                    setSelectedCategoryFilter('all');
-                    setSelectedSubcategoryFilter('all');
-                  }}
-                  className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                    selectedCategoryFilter === 'all' 
-                      ? 'bg-primary text-white' 
-                      : 'hover:bg-gray-200'
-                  }`}
-                >
-                  Alle kategorier
-                  <span className="ml-2 text-xs opacity-75">
-                    ({catalogProducts.length})
-                  </span>
-                </button>
-                
-                {catalogCategories.map(category => {
-                  const categoryProducts = catalogProducts.filter(p => p.kategoriId === category.id);
-                  const categorySubcategories = catalogSubcategories.filter(s => s.kategoriId === category.id);
-                  
-                  return (
-                    <div key={category.id}>
-                      <button
-                        onClick={() => {
-                          setSelectedCategoryFilter(category.id);
-                          setSelectedSubcategoryFilter('all');
-                        }}
-                        className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                          selectedCategoryFilter === category.id 
-                            ? 'bg-primary text-white' 
-                            : 'hover:bg-gray-200'
-                        }`}
-                      >
-                        {category.navn}
-                        <span className="ml-2 text-xs opacity-75">
-                          ({categoryProducts.length})
-                        </span>
-                      </button>
-                      
-                      {/* Subcategories */}
-                      {selectedCategoryFilter === category.id && categorySubcategories.length > 0 && (
-                        <div className="ml-4 mt-1 space-y-1">
-                          <button
-                            onClick={() => setSelectedSubcategoryFilter('all')}
-                            className={`w-full text-left px-3 py-1.5 rounded text-xs transition-colors ${
-                              selectedSubcategoryFilter === 'all'
-                                ? 'bg-primary/20 text-primary font-medium'
-                                : 'hover:bg-gray-200'
-                            }`}
-                          >
-                            Alle
-                          </button>
-                          {categorySubcategories.map(subcat => {
-                            const subcatProducts = categoryProducts.filter(p => p.underkategoriId === subcat.id);
-                            return (
-                              <button
-                                key={subcat.id}
-                                onClick={() => setSelectedSubcategoryFilter(subcat.id)}
-                                className={`w-full text-left px-3 py-1.5 rounded text-xs transition-colors ${
-                                  selectedSubcategoryFilter === subcat.id
-                                    ? 'bg-primary/20 text-primary font-medium'
-                                    : 'hover:bg-gray-200'
-                                }`}
-                              >
-                                {subcat.navn}
-                                <span className="ml-2 text-xs opacity-75">
-                                  ({subcatProducts.length})
-                                </span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Main Content Area */}
-            <div className="flex-1 flex flex-col overflow-hidden">
-              {/* Toolbar */}
-              <div className="p-4 border-b bg-white space-y-3">
-                <div className="flex gap-3">
-                  <input
-                    type="text"
-                    placeholder="Søk etter produktnavn, produsent eller beskrivelse..."
-                    value={catalogSearchTerm}
-                    onChange={(e) => setCatalogSearchTerm(e.target.value)}
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                  />
-                  <Select value={catalogSortBy} onValueChange={(value) => setCatalogSortBy(value as 'name' | 'price')}>
-                    <SelectTrigger className="w-40">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="name">Sorter: Navn</SelectItem>
-                      <SelectItem value="price">Sorter: Pris</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                {/* Stats bar */}
-                <div className="flex items-center justify-between text-sm text-gray-600">
-                  <span>
-                    Viser {catalogProducts.filter(product => {
-                      const matchesSearch = catalogSearchTerm === '' || 
-                        product.produktnavn.toLowerCase().includes(catalogSearchTerm.toLowerCase()) ||
-                        product.beskrivelse?.toLowerCase().includes(catalogSearchTerm.toLowerCase()) ||
-                        product.produsent?.toLowerCase().includes(catalogSearchTerm.toLowerCase());
-                      
-                      const matchesCategory = selectedCategoryFilter === 'all' || 
-                        product.kategoriId === selectedCategoryFilter;
-                      
-                      const matchesSubcategory = selectedSubcategoryFilter === 'all' || 
-                        product.underkategoriId === selectedSubcategoryFilter;
-                      
-                      return matchesSearch && matchesCategory && matchesSubcategory;
-                    }).length} produkter
-                  </span>
-                </div>
-              </div>
-
-              {/* Products Grid/List */}
-              <div className="flex-1 overflow-y-auto p-4">
-                {isLoadingCatalog ? (
-                  <div className="flex items-center justify-center h-64">
-                    <div className="text-center">
-                      <div className="animate-spin w-10 h-10 mx-auto mb-4 border-4 border-primary border-t-transparent rounded-full"></div>
-                      <p className="text-gray-500">Laster produkter...</p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className={catalogViewMode === 'grid' ? 'grid grid-cols-3 gap-4' : 'space-y-3'}>
-                    {catalogProducts
-                      .filter(product => {
-                        const matchesSearch = catalogSearchTerm === '' || 
-                          product.produktnavn.toLowerCase().includes(catalogSearchTerm.toLowerCase()) ||
-                          product.beskrivelse?.toLowerCase().includes(catalogSearchTerm.toLowerCase()) ||
-                          product.produsent?.toLowerCase().includes(catalogSearchTerm.toLowerCase());
-                        
-                        const matchesCategory = selectedCategoryFilter === 'all' || 
-                          product.kategoriId === selectedCategoryFilter;
-                        
-                        const matchesSubcategory = selectedSubcategoryFilter === 'all' || 
-                          product.underkategoriId === selectedSubcategoryFilter;
-                        
-                        return matchesSearch && matchesCategory && matchesSubcategory;
-                      })
-                      .sort((a, b) => {
-                        if (catalogSortBy === 'name') {
-                          return a.produktnavn.localeCompare(b.produktnavn);
-                        } else {
-                          return a.enhetspris - b.enhetspris;
-                        }
-                      })
-                      .map(product => {
-                        const category = catalogCategories.find(c => c.id === product.kategoriId);
-                        const subcategory = catalogSubcategories.find(s => s.id === product.underkategoriId);
-                        const isSelected = selectedProducts.has(product.id);
-                        const selectedItem = selectedProducts.get(product.id);
-                        
-                        return (
-                          <div 
-                            key={product.id} 
-                            className={`border rounded-lg p-4 transition-all ${
-                              isSelected 
-                                ? 'border-primary bg-primary/5 shadow-md' 
-                                : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
-                            }`}
-                          >
-                            <div className="flex items-start gap-3">
-                              <input
-                                type="checkbox"
-                                checked={isSelected}
-                                onChange={() => toggleProductSelection(product)}
-                                className="mt-1 w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
-                              />
-                              
-                              <div className="flex-1 min-w-0">
-                                <h4 className="font-semibold text-sm text-gray-900 mb-1">
-                                  {product.produktnavn}
-                                </h4>
-                                {product.produsent && (
-                                  <p className="text-xs text-gray-600 mb-1">
-                                    {product.produsent}
-                                  </p>
-                                )}
-                                {product.beskrivelse && (
-                                  <p className="text-xs text-gray-500 mb-2 line-clamp-2">
-                                    {product.beskrivelse}
-                                  </p>
-                                )}
-                                
-                                <div className="flex items-center justify-between">
-                                  <div className="flex flex-wrap gap-1.5">
-                                    {category && (
-                                      <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs">
-                                        {category.navn}
-                                      </span>
-                                    )}
-                                    {subcategory && (
-                                      <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs">
-                                        {subcategory.navn}
-                                      </span>
-                                    )}
-                                  </div>
-                                  
-                                  <div className="text-right">
-                                    <div className="font-semibold text-sm text-gray-900">
-                                      kr {product.enhetspris.toLocaleString('nb-NO')}
-                                    </div>
-                                    <div className="text-xs text-gray-500">
-                                      per {product.enhet || 'stk'}
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                            
-                            {isSelected && selectedItem && (
-                              <div className="mt-3 pt-3 border-t border-gray-200">
-                                <div className="flex items-center gap-2">
-                                  <label className="text-xs text-gray-600">Antall:</label>
-                                  <input
-                                    type="number"
-                                    min="1"
-                                    value={selectedItem.quantity}
-                                    onChange={(e) => updateProductQuantity(product.id, parseInt(e.target.value) || 1)}
-                                    className="w-16 px-2 py-1 text-xs border rounded focus:ring-1 focus:ring-primary"
-                                  />
-                                  <span className="text-xs text-gray-500">× kr {product.enhetspris.toLocaleString('nb-NO')}</span>
-                                  <span className="text-xs font-medium text-gray-900 ml-auto">
-                                    = kr {(product.enhetspris * selectedItem.quantity).toLocaleString('nb-NO')}
-                                  </span>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    
-                    {catalogProducts.filter(product => {
-                      const matchesSearch = catalogSearchTerm === '' || 
-                        product.produktnavn.toLowerCase().includes(catalogSearchTerm.toLowerCase()) ||
-                        product.beskrivelse?.toLowerCase().includes(catalogSearchTerm.toLowerCase()) ||
-                        product.produsent?.toLowerCase().includes(catalogSearchTerm.toLowerCase());
-                      
-                      const matchesCategory = selectedCategoryFilter === 'all' || 
-                        product.kategoriId === selectedCategoryFilter;
-                      
-                      const matchesSubcategory = selectedSubcategoryFilter === 'all' || 
-                        product.underkategoriId === selectedSubcategoryFilter;
-                      
-                      return matchesSearch && matchesCategory && matchesSubcategory;
-                    }).length === 0 && (
-                      <div className="p-8 text-center">
-                        <p className="text-gray-600 text-sm">Ingen produkter funnet</p>
-                        <p className="text-gray-500 text-xs mt-1">Prøv å endre søkeord eller filter</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Footer */}
-          <div className="border-t bg-gray-50 px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-gray-600">
-                {selectedProducts.size > 0 && (
-                  <>
-                    <span className="font-medium">{selectedProducts.size}</span> produkt{selectedProducts.size !== 1 ? 'er' : ''} valgt
-                    {selectedProducts.size > 0 && (
-                      <span className="block mt-1">
-                        Total: <span className="font-semibold">
-                          {Array.from(selectedProducts.values())
-                            .reduce((sum, { product, quantity }) => sum + (product.enhetspris * quantity), 0)
-                            .toLocaleString('nb-NO')} kr
-                        </span>
-                      </span>
-                    )}
-                  </>
-                )}
-              </div>
-              <div className="flex gap-3">
-                <Button 
-                  variant="outline" 
-                  onClick={() => {
-                    setIsCatalogDialogOpen(false);
-                    setSelectedProducts(new Map());
-                    setCatalogSearchTerm('');
-                    setSelectedCategoryFilter('all');
-                    setSelectedSubcategoryFilter('all');
-                  }}
-                >
-                  Avbryt
-                </Button>
-                <Button 
-                  onClick={addSelectedProductsToQuote}
-                  disabled={selectedProducts.size === 0}
-                  className="min-w-32"
-                >
-                  Legg til {selectedProducts.size > 0 && `(${selectedProducts.size})`}
-                </Button>
-              </div>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-      )}
+      <ProductCatalog ref={productCatalogRef} />
 
       {/* Edit Dialog for component name/description */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
