@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, Suspense } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { CheckCircle2, XCircle, MessageSquare, Building2, Mail, Phone, Calendar, FileText, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import GroupedDataTable from '@/components/shared/GroupedDataTable';
 
 function TilbudsvisningContent() {
   const params = useParams();
@@ -27,7 +28,6 @@ function TilbudsvisningContent() {
   const [feedbackMessage, setFeedbackMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<any>(null);
   const [contactMessage, setContactMessage] = useState('');
   const [contactSubmitting, setContactSubmitting] = useState(false);
   const [showContactDialog, setShowContactDialog] = useState(false);
@@ -397,149 +397,7 @@ function TilbudsvisningContent() {
             <div>
               <h3 className="text-lg font-semibold text-slate-900 mb-4">Prisforslag</h3>
               {quote.prisgrunnlag && quote.prisgrunnlag.length > 0 ? (
-                <div className="space-y-4">
-                  {/* Desktop Table View */}
-                  <div className="hidden md:block">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b border-slate-200">
-                          <th className="text-left py-3 px-2 font-semibold text-slate-700">
-                            Produkt
-                          </th>
-                          <th className="text-right py-3 px-2 font-semibold text-slate-700">
-                            Mengde
-                          </th>
-                          <th className="text-right py-3 px-2 font-semibold text-slate-700">
-                            Pris
-                          </th>
-                          <th className="text-right py-3 px-2 font-semibold text-slate-700">
-                            Beløp
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {quote.prisgrunnlag.map((item: any, index: number) => (
-                          <tr 
-                            key={index}
-                            className="border-b border-slate-100 hover:bg-slate-50 transition-colors"
-                          >
-                            <td className="py-3 px-2">
-                              <div>
-                                <div className="font-medium text-slate-900">
-                                  {item.name}
-                                </div>
-                                {item.description && (
-                                  <div className="text-sm text-slate-600">
-                                    {item.description}
-                                  </div>
-                                )}
-                              </div>
-                            </td>
-                            <td className="text-right py-3 px-2 text-slate-700">
-                              {item.quantity || 1} {item.unit || 'stk'}
-                            </td>
-                            <td className="text-right py-3 px-2 text-slate-700">
-                              {Math.round((item.unitPrice || 0) * (1 + (item.priceMarkup || 0) / 100)).toLocaleString('nb-NO')} kr
-                            </td>
-                            <td className="text-right py-3 px-2 font-semibold text-slate-900">
-                              {item.amount.toLocaleString('nb-NO')} kr
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                      <tfoot>
-                        <tr>
-                          <td colSpan={4} className="border-t-2 pt-2 px-2">
-                            <div className="flex justify-between items-center">
-                              <span className="font-bold text-slate-900">Total:</span>
-                              <span className="font-bold text-primary">
-                                {Number(quote.belop).toLocaleString('nb-NO')} kr
-                              </span>
-                            </div>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td colSpan={4} className="pb-2 px-2">
-                            <div className="flex justify-between items-center">
-                              <span className="text-xs text-slate-500">MVA (25%):</span>
-                              <span className="text-xs text-slate-500">
-                                {Number(quote.belop * 0.25).toLocaleString('nb-NO')} kr
-                              </span>
-                            </div>
-                          </td>
-                        </tr>
-                        <tr className="border-t-1 border-slate-100">
-                          <td colSpan={4} className="py-4 px-2">
-                            <div className="flex justify-between items-center">
-                              <span className="font-bold text-slate-900">Total inkl. MVA:</span>
-                              <span className="font-bold underline text-xl text-primary">
-                                {Number(quote.belop * 1.25).toLocaleString('nb-NO')} kr
-                              </span>
-                            </div>
-                          </td>
-                        </tr>
-                      </tfoot>
-                    </table>
-                  </div>
-
-                  {/* Mobile Card View */}
-                  <div className="md:hidden space-y-3">
-                    {quote.prisgrunnlag.map((item: any, index: number) => (
-                      <Card 
-                        key={index} 
-                        className="px-4 py-2 cursor-pointer hover:bg-slate-50 transition-colors"
-                        onClick={() => setSelectedItem(item)}
-                      >
-                        <div className="space-y-2">
-                          <div className="flex justify-between items-start">
-                            <div className="flex-1 min-w-0">
-                              <h4 className="font-medium text-sm text-slate-900 truncate pr-2">
-                                {item.name}
-                              </h4>
-                              {item.description && (
-                                <p className="text-xs text-slate-600 mt-1 line-clamp-2">
-                                  {item.description}
-                                </p>
-                              )}
-                            </div>
-                            <div className="text-right font-semibold text-slate-900 whitespace-nowrap">
-                              {item.amount.toLocaleString('nb-NO')} kr
-                            </div>
-                          </div>
-                          <div className="flex justify-between text-sm text-slate-600">
-                            <span>Mengde: {item.quantity || 1} {item.unit || 'stk'}</span>
-                            <span>Pris: {Math.round((item.unitPrice || 0) * (1 + (item.priceMarkup || 0) / 100)).toLocaleString('nb-NO')} kr</span>
-                          </div>
-                        </div>
-                      </Card>
-                    ))}
-                    
-                    {/* Mobile Totals */}
-                    <Card className="p-4 bg-slate-50">
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span className="font-medium text-slate-900">Total:</span>
-                          <span className="font-bold text-primary">
-                            {Number(quote.belop).toLocaleString('nb-NO')} kr
-                          </span>
-                        </div>
-                        <div className="flex justify-between text-xs text-slate-500">
-                          <span>MVA (25%):</span>
-                          <span>
-                            {Number(quote.belop * 0.25).toLocaleString('nb-NO')} kr
-                          </span>
-                        </div>
-                        <Separator className="my-2" />
-                        <div className="flex justify-between">
-                          <span className="font-bold text-slate-900">Total inkl. MVA:</span>
-                          <span className="font-bold underline text-xl text-primary">
-                            {Number(quote.belop * 1.25).toLocaleString('nb-NO')} kr
-                          </span>
-                        </div>
-                      </div>
-                    </Card>
-                  </div>
-                </div>
+                <GroupedDataTable items={quote.prisgrunnlag ?? []} editable={false} variant="public" />
               ) : (
                 <p className="text-slate-600 text-center py-8">
                   Ingen prisgrunnlag tilgjengelig
@@ -799,41 +657,6 @@ function TilbudsvisningContent() {
           </DialogContent>
         </Dialog>
 
-        {/* Item Details Dialog */}
-        <Dialog open={!!selectedItem} onOpenChange={() => setSelectedItem(null)}>
-          <DialogContent className="sm:max-w-md rounded-xl max-w-xs">
-            <DialogHeader>
-              <DialogTitle>{selectedItem?.name}</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              {selectedItem?.description && (
-                <div>
-                  <h4 className="font-medium text-slate-900 mb-2">Beskrivelse</h4>
-                  <p className="text-slate-600">{selectedItem.description}</p>
-                </div>
-              )}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <h4 className="font-medium text-slate-900">Mengde</h4>
-                  <p className="text-slate-600">{selectedItem?.quantity || 1} {selectedItem?.unit || 'stk'}</p>
-                </div>
-                <div>
-                  <h4 className="font-medium text-slate-900">Enhetspris</h4>
-                  <p className="text-slate-600">{parseFloat((selectedItem?.amount / selectedItem?.quantity || 0).toFixed(2)).toLocaleString('nb-NO')} kr</p>
-                </div>
-              </div>
-              <div className="border-t pt-4">
-                <div className="flex justify-between items-center">
-                  <h4 className="font-bold text-slate-900">Total beløp</h4>
-                  <p className="font-bold text-lg text-primary">{selectedItem?.amount.toLocaleString('nb-NO')} kr</p>
-                </div>
-              </div>
-              <Button onClick={() => setSelectedItem(null)} className="w-full">
-                Lukk
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
       </div>
     </div>
   );

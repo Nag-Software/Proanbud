@@ -24,6 +24,36 @@ import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { ErrorDialog } from '@/components/shared/ErrorDialog';
 
+type ProductFormState = Omit<ProductFormData, 'enhetspris' | 'påslag'> & {
+  enhetspris: string;
+  påslag: string;
+};
+
+const createInitialFormState = (product: Product): ProductFormState => ({
+  produktnavn: product.produktnavn,
+  produsent: product.produsent,
+  enhet: product.enhet,
+  enhetspris: product.enhetspris?.toString() ?? '',
+  påslag: product.påslag?.toString() ?? '',
+  kategoriId: product.kategoriId,
+  underkategoriId: product.underkategoriId,
+  beskrivelse: product.beskrivelse || '',
+});
+
+const parseNumberInput = (value: string): number => {
+  if (!value.trim()) {
+    return NaN;
+  }
+  const normalized = value.replace(',', '.');
+  const parsed = parseFloat(normalized);
+  return Number.isFinite(parsed) ? parsed : NaN;
+};
+
+const parseNumberOrDefault = (value: string, fallback = 0): number => {
+  const parsed = parseNumberInput(value);
+  return Number.isNaN(parsed) ? fallback : parsed;
+};
+
 interface ProductDetailsDrawerProps {
   open: boolean;
   onClose: () => void;
@@ -38,21 +68,12 @@ export const ProductDetailsDrawer: React.FC<ProductDetailsDrawerProps> = ({
   onUpdate 
 }) => {
   const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState<ProductFormData>({
-    produktnavn: product.produktnavn,
-    produsent: product.produsent,
-    enhet: product.enhet,
-    enhetspris: product.enhetspris,
-    påslag: product.påslag,
-    kategoriId: product.kategoriId,
-    underkategoriId: product.underkategoriId,
-    beskrivelse: product.beskrivelse || '',
-  });
+  const [formData, setFormData] = useState<ProductFormState>(createInitialFormState(product));
   const [categories, setCategories] = useState<Category[]>([]);
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [categoryName, setCategoryName] = useState('');
   const [subcategoryName, setSubcategoryName] = useState('');
-  const [errors, setErrors] = useState<Partial<Record<keyof ProductFormData, string>>>({});
+  const [errors, setErrors] = useState<Partial<Record<keyof ProductFormState, string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorDialog, setErrorDialog] = useState<{ isOpen: boolean; message: string }>({
     isOpen: false,
@@ -64,16 +85,7 @@ export const ProductDetailsDrawer: React.FC<ProductDetailsDrawerProps> = ({
   useEffect(() => {
     if (open) {
       loadData();
-      setFormData({
-        produktnavn: product.produktnavn,
-        produsent: product.produsent,
-        enhet: product.enhet,
-        enhetspris: product.enhetspris,
-        påslag: product.påslag,
-        kategoriId: product.kategoriId,
-        underkategoriId: product.underkategoriId,
-        beskrivelse: product.beskrivelse || '',
-      });
+      setFormData(createInitialFormState(product));
       setIsEditing(false);
     }
   }, [open, product]);
@@ -118,7 +130,9 @@ export const ProductDetailsDrawer: React.FC<ProductDetailsDrawerProps> = ({
   };
 
   const validateForm = (): boolean => {
-    const newErrors: Partial<Record<keyof ProductFormData, string>> = {};
+    const newErrors: Partial<Record<keyof ProductFormState, string>> = {};
+    const enhetsprisValue = parseNumberInput(formData.enhetspris);
+    const påslagValue = parseNumberInput(formData.påslag);
 
     if (!formData.produktnavn.trim()) {
       newErrors.produktnavn = 'Produktnavn er påkrevd';
@@ -132,11 +146,11 @@ export const ProductDetailsDrawer: React.FC<ProductDetailsDrawerProps> = ({
       newErrors.enhet = 'Enhet er påkrevd';
     }
 
-    if (formData.enhetspris <= 0) {
+    if (Number.isNaN(enhetsprisValue) || enhetsprisValue <= 0) {
       newErrors.enhetspris = 'Enhetspris må være større enn 0';
     }
 
-    if (formData.påslag < 0) {
+    if (!Number.isNaN(påslagValue) && påslagValue < 0) {
       newErrors.påslag = 'Påslag kan ikke være negativt';
     }
 
@@ -162,7 +176,18 @@ export const ProductDetailsDrawer: React.FC<ProductDetailsDrawerProps> = ({
     setIsSubmitting(true);
 
     try {
-      await updateProduct(product.kategoriId, product.id, formData);
+      const payload: ProductFormData = {
+        produktnavn: formData.produktnavn,
+        produsent: formData.produsent,
+        enhet: formData.enhet,
+        enhetspris: parseNumberOrDefault(formData.enhetspris, 0),
+        påslag: parseNumberOrDefault(formData.påslag, 0),
+        kategoriId: formData.kategoriId,
+        underkategoriId: formData.underkategoriId,
+        beskrivelse: formData.beskrivelse || '',
+      };
+
+      await updateProduct(product.kategoriId, product.id, payload);
       setIsEditing(false);
       onUpdate?.();
     } catch (error: any) {
@@ -199,16 +224,19 @@ export const ProductDetailsDrawer: React.FC<ProductDetailsDrawerProps> = ({
     }
   };
 
-  const handleChange = (field: keyof ProductFormData, value: any) => {
-    setFormData((prev: ProductFormData) => ({ ...prev, [field]: value }));
+  const handleChange = (field: keyof ProductFormState, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) {
-      setErrors((prev: Partial<Record<keyof ProductFormData, string>>) => ({ ...prev, [field]: undefined }));
+      setErrors((prev) => ({ ...prev, [field]: undefined }));
     }
   };
 
   const calculateFinalPrice = (enhetspris: number, påslag: number) => {
     return enhetspris * (1 + påslag / 100);
   };
+  const parsedEnhetspris = parseNumberInput(formData.enhetspris);
+  const parsedPåslag = parseNumberOrDefault(formData.påslag, 0);
+  const canShowCalculatedPrice = !Number.isNaN(parsedEnhetspris) && parsedEnhetspris > 0;
 
   return (
     <Drawer open={open} onOpenChange={handleClose}>
@@ -263,7 +291,7 @@ export const ProductDetailsDrawer: React.FC<ProductDetailsDrawerProps> = ({
                 <input
                   type="text"
                   value={formData.produktnavn}
-                  onChange={(e) => handleChange('produktnavn', e.target.value)}
+                    onChange={(e) => handleChange('produktnavn', e.target.value)}
                   className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                     errors.produktnavn ? 'border-red-500' : ''
                   }`}
@@ -281,7 +309,7 @@ export const ProductDetailsDrawer: React.FC<ProductDetailsDrawerProps> = ({
                 <input
                   type="text"
                   value={formData.produsent}
-                  onChange={(e) => handleChange('produsent', e.target.value)}
+                    onChange={(e) => handleChange('produsent', e.target.value)}
                   className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                     errors.produsent ? 'border-red-500' : ''
                   }`}
@@ -370,7 +398,7 @@ export const ProductDetailsDrawer: React.FC<ProductDetailsDrawerProps> = ({
                     type="number"
                     step="any"
                     value={formData.enhetspris}
-                    onChange={(e) => handleChange('enhetspris', parseFloat(e.target.value))}
+                    onChange={(e) => handleChange('enhetspris', e.target.value)}
                     className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                       errors.enhetspris ? 'border-red-500' : ''
                     }`}
@@ -391,7 +419,7 @@ export const ProductDetailsDrawer: React.FC<ProductDetailsDrawerProps> = ({
                   type="number"
                   step="any"
                   value={formData.påslag}
-                  onChange={(e) => handleChange('påslag', parseFloat(e.target.value))}
+                  onChange={(e) => handleChange('påslag', e.target.value)}
                   className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                     errors.påslag ? 'border-red-500' : ''
                   }`}
@@ -400,9 +428,9 @@ export const ProductDetailsDrawer: React.FC<ProductDetailsDrawerProps> = ({
                 {errors.påslag && (
                   <p className="mt-1 text-sm text-red-600">{errors.påslag}</p>
                 )}
-                {formData.enhetspris > 0 && (
+                {canShowCalculatedPrice && (
                   <p className="mt-1 text-sm text-gray-500">
-                    Pris med påslag: {calculateFinalPrice(formData.enhetspris, formData.påslag).toLocaleString('no-NO')} kr
+                    Pris med påslag: {calculateFinalPrice(parsedEnhetspris, parsedPåslag).toLocaleString('no-NO')} kr
                   </p>
                 )}
               </div>

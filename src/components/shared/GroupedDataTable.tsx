@@ -13,8 +13,8 @@ import { cn } from "@/lib/utils";
 import { ChevronDown, Edit2, Trash2 } from "lucide-react";
 import { useEffect, useState, Fragment } from "react";
 import { Card, CardContent, CardHeader } from "./Card";
-import { PriceComponent, Product } from "@/lib/types";
-import { ProductDetailsDrawer } from "@/components/katalog/ProductDetailsDrawer";
+import { PriceComponent } from "@/lib/types";
+import { PriceComponentDrawer } from "@/components/tilbud/PriceComponentDrawer";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,6 +52,7 @@ interface GroupedDataTableProps {
   catalogOpen?: boolean;
   customCategories?: string[];
   onCustomCategoriesChange?: (categories: string[]) => void;
+  variant?: "default" | "public";
 }
 
 export default function GroupedDataTable({
@@ -62,6 +63,7 @@ export default function GroupedDataTable({
   catalogOpen = false,
   customCategories,
   onCustomCategoriesChange,
+  variant = "default",
 }: GroupedDataTableProps) {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [showAddCategory, setShowAddCategory] = useState(false);
@@ -72,8 +74,17 @@ export default function GroupedDataTable({
   const [renamingCategory, setRenamingCategory] = useState<string | null>(null);
   const [renameCategoryValue, setRenameCategoryValue] = useState("");
   const [renameError, setRenameError] = useState<string | null>(null);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [isProductDrawerOpen, setIsProductDrawerOpen] = useState(false);
+  const [selectedComponent, setSelectedComponent] = useState<PriceComponent | null>(null);
+  const [isComponentDrawerOpen, setIsComponentDrawerOpen] = useState(false);
+  const VAT_RATE = 0.25;
+  const isPublicView = variant === "public";
+  const showActionsColumn = editable && !isPublicView;
+  const formatCurrency = (value: number) =>
+    value.toLocaleString("no-NO", { style: "currency", currency: "NOK" });
+  const applyMarkup = (value: number, markupPercent?: number | null) =>
+    value * (1 + ((markupPercent ?? 0) / 100));
+  const applyVat = (value: number) => value * (1 + VAT_RATE);
+  const unitPriceWithMarkup = (item: PriceComponent) => applyMarkup(item.unitPrice ?? 0, item.priceMarkup);
 
   const activeCustomCategories = customCategories ?? localCustomCategories;
   const applyCustomCategoryUpdate = (updater: (prev: string[]) => string[]) => {
@@ -139,6 +150,8 @@ export default function GroupedDataTable({
     items: groupedItems[category] ?? [],
     isCustom: !DEFAULT_CATEGORY_SET.has(category),
   }));
+
+  const columnCount = isPublicView ? 4 : 6 + (showActionsColumn ? 1 : 0);
 
   const handleAddCategory = () => {
     const trimmed = newCategoryName.trim();
@@ -278,46 +291,49 @@ export default function GroupedDataTable({
     onItemsChange?.(updatedItems);
   };
 
-  const convertComponentToProduct = (component: PriceComponent): Product => {
-    const timestamp = Date.now();
-    return {
-      id: component.id,
-      produktnavn: component.name,
-      produsent: component.produsent || "-",
-      enhet: component.unit || "stk",
-      enhetspris: component.unitPrice || 0,
-      påslag: component.priceMarkup || 0,
-      kategoriId: component.category || "annet",
-      underkategoriId: "custom",
-      beskrivelse: component.description,
-      opprettet: timestamp,
-      oppdatert: timestamp,
-    };
-  };
-
   const handleComponentClick = (component: PriceComponent) => {
-    if (draggedItemId) return;
-    const product = convertComponentToProduct(component);
-    setSelectedProduct(product);
-    setIsProductDrawerOpen(true);
+    if (draggedItemId || isPublicView) return;
+    setSelectedComponent(component);
+    setIsComponentDrawerOpen(true);
   };
 
-  const closeProductDrawer = () => {
-    setIsProductDrawerOpen(false);
-    setSelectedProduct(null);
+  const closeComponentDrawer = () => {
+    setIsComponentDrawerOpen(false);
+    setSelectedComponent(null);
+  };
+
+  const handleComponentSave = (updatedComponent: PriceComponent) => {
+    if (!onItemsChange) {
+      closeComponentDrawer();
+      return;
+    }
+
+    const updatedItems = items.map((item) =>
+      item.id === updatedComponent.id ? updatedComponent : item
+    );
+    onItemsChange(updatedItems);
+    closeComponentDrawer();
   };
 
   // Calculate totals
   const subtotal = items.reduce((sum, item) => {
-    return sum + (item.unitPrice! * item.quantity! * (1 + item.priceMarkup! / 100));
+    const unitPrice = item.unitPrice ?? 0;
+    const quantity = item.quantity ?? 1;
+    const markup = item.priceMarkup ?? 0;
+    return sum + unitPrice * quantity * (1 + markup / 100);
   }, 0);
   
   const profit = items.reduce((sum, item) => {
-    return sum + (item.unitPrice! * item.quantity! * (item.priceMarkup! / 100));
+    const unitPrice = item.unitPrice ?? 0;
+    const quantity = item.quantity ?? 1;
+    const markup = item.priceMarkup ?? 0;
+    return sum + unitPrice * quantity * (markup / 100);
   }, 0);
   
   const mva = subtotal * 0.25; // 25% MVA
   const total = subtotal + mva;
+  const costBase = subtotal - profit;
+  const profitPercentage = costBase > 0 ? (profit / costBase) * 100 : 0;
 
   return (
     <>
@@ -377,12 +393,24 @@ export default function GroupedDataTable({
               <TableHeader>
               <TableRow>
                 <TableHead className="font-semibold text-foreground">Produktnavn</TableHead>
-                <TableHead className="font-semibold text-foreground">AI-score</TableHead>
-                <TableHead className="font-semibold text-foreground">Enhetspris</TableHead>
-                <TableHead className="font-semibold text-foreground">Antall</TableHead>
-                <TableHead className="font-semibold text-foreground">Påslag</TableHead>
-                <TableHead className="font-semibold text-foreground">Pris</TableHead>
-                {editable && <TableHead className="font-semibold text-right text-foreground">Handlinger</TableHead>}
+                {isPublicView ? (
+                  <>
+                    <TableHead className="font-semibold text-foreground">Antall</TableHead>
+                    <TableHead className="font-semibold text-foreground">Enhetspris</TableHead>
+                    <TableHead className="font-semibold text-foreground">Pris</TableHead>
+                  </>
+                ) : (
+                  <>
+                    <TableHead className="font-semibold text-foreground">AI-score</TableHead>
+                    <TableHead className="font-semibold text-foreground">Enhetspris</TableHead>
+                    <TableHead className="font-semibold text-foreground">Antall</TableHead>
+                    <TableHead className="font-semibold text-foreground">Påslag</TableHead>
+                    <TableHead className="font-semibold text-foreground">Pris</TableHead>
+                    {showActionsColumn && (
+                      <TableHead className="font-semibold text-right text-foreground">Handlinger</TableHead>
+                    )}
+                  </>
+                )}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -399,7 +427,7 @@ export default function GroupedDataTable({
                       onDragOver={(event) => handleDragOver(event, category)}
                       onDrop={(event) => handleDropOnCategory(event, category)}
                     >
-                      <TableCell colSpan={editable ? 7 : 6}>
+                      <TableCell colSpan={columnCount}>
                         <div className="flex items-center gap-3">
                           <ChevronDown
                             className={cn(
@@ -445,7 +473,7 @@ export default function GroupedDataTable({
                     </TableRow>
                     {editable && renamingCategory === category && (
                       <TableRow onClick={(event) => event.stopPropagation()}>
-                        <TableCell colSpan={editable ? 7 : 6}>
+                        <TableCell colSpan={columnCount}>
                           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                             <Input
                               value={renameCategoryValue}
@@ -473,7 +501,7 @@ export default function GroupedDataTable({
                     )}
                     {isExpanded && groupItems.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={editable ? 7 : 6} className="text-sm text-muted-foreground italic">
+                        <TableCell colSpan={columnCount} className="text-sm text-muted-foreground italic">
                           Ingen komponenter i denne kategorien
                         </TableCell>
                       </TableRow>
@@ -482,40 +510,59 @@ export default function GroupedDataTable({
                       groupItems.map((item) => (
                         <TableRow
                           key={item.id}
-                          draggable={editable}
+                          draggable={editable && !isPublicView}
                           onDragStart={(event) => handleDragStart(event, item.id)}
                           onDragEnd={handleDragEnd}
-                          onClick={() => handleComponentClick(item)}
-                          className={cn("hover:bg-muted/40", editable && "cursor-grab")}
+                          onClick={isPublicView ? undefined : () => handleComponentClick(item)}
+                          className={cn(
+                            "hover:bg-muted/40",
+                            editable && !isPublicView && "cursor-grab",
+                            isPublicView && "cursor-default"
+                          )}
                         >
                           <TableCell className="font-medium">{item.name}</TableCell>
-                          <TableCell>{item.confidence}</TableCell>
-                          <TableCell>
-                            {item.unitPrice?.toLocaleString("no-NO", { style: "currency", currency: "NOK" })}
-                          </TableCell>
-                          <TableCell>
-                            {item.quantity!} {item.unit}
-                          </TableCell>
-                          <TableCell>{item.priceMarkup}%</TableCell>
-                          <TableCell>
-                            {(item.unitPrice! * item.quantity! * (1 + item.priceMarkup! / 100)).toLocaleString("no-NO", {
-                              style: "currency",
-                              currency: "NOK",
-                            })}
-                          </TableCell>
-                          {editable && (
-                            <TableCell className="text-right">
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  handleRemoveItem(item.id);
-                                }}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </TableCell>
+                          {isPublicView ? (
+                            <>
+                              <TableCell>
+                                {item.quantity ?? 1} {item.unit ?? "stk"}
+                              </TableCell>
+                              <TableCell>
+                                {formatCurrency(applyVat(unitPriceWithMarkup(item)))}
+                              </TableCell>
+                              <TableCell>
+                                {formatCurrency(
+                                  applyVat(unitPriceWithMarkup(item) * (item.quantity ?? 1))
+                                )}
+                              </TableCell>
+                            </>
+                          ) : (
+                            <>
+                              <TableCell>{item.confidence}</TableCell>
+                              <TableCell>{formatCurrency(item.unitPrice ?? 0)}</TableCell>
+                              <TableCell>
+                                {item.quantity ?? 1} {item.unit ?? ""}
+                              </TableCell>
+                              <TableCell>{item.priceMarkup ?? 0}%</TableCell>
+                              <TableCell>
+                                {formatCurrency(
+                                  applyMarkup((item.unitPrice ?? 0) * (item.quantity ?? 1), item.priceMarkup)
+                                )}
+                              </TableCell>
+                              {showActionsColumn && (
+                                <TableCell className="text-right">
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      handleRemoveItem(item.id);
+                                    }}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </TableCell>
+                              )}
+                            </>
                           )}
                         </TableRow>
                       ))}
@@ -524,7 +571,7 @@ export default function GroupedDataTable({
               })}
               {categoryEntries.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={editable ? 7 : 6} className="py-6 text-center text-sm text-muted-foreground">
+                  <TableCell colSpan={columnCount} className="py-6 text-center text-sm text-muted-foreground">
                     Ingen prisgrunnlag er lagt til enda.
                   </TableCell>
                 </TableRow>
@@ -536,38 +583,53 @@ export default function GroupedDataTable({
         {/* Summary Section */}
         <div className="mt-6">
           <div className="w-full rounded-lg border border-border bg-muted/30 px-6 py-4">
-            <div className="flex justify-between items-center gap-8">
-              <div className="flex items-center gap-2">
-                <span className="text-md font-semibold text-foreground">Total: </span>
-                <span className="font-medium">
-                  {subtotal.toLocaleString("no-NO", { style: "currency", currency: "NOK" })}
-                </span>
+            {isPublicView ? (
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-md font-semibold text-foreground">Sum inkl. MVA</span>
+                  <span className="font-medium">{formatCurrency(total)}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">MVA (25%)</span>
+                  <span className="font-medium">{formatCurrency(mva)}</span>
+                </div>
               </div>
-              
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Profitt ({((profit / (subtotal - profit)) * 100).toFixed(1)}%)</span>
-                <span className="font-medium text-green-600">
-                  +{profit.toLocaleString("no-NO", { style: "currency", currency: "NOK" })}
-                </span>
+            ) : (
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-md font-semibold text-foreground">Total:</span>
+                  <span className="font-medium">{formatCurrency(subtotal)}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">
+                    Profitt ({profitPercentage.toFixed(1)}%)
+                  </span>
+                  <span className="font-medium text-green-600">+{formatCurrency(profit)}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">MVA (25%)</span>
+                  <span className="font-medium">{formatCurrency(mva)}</span>
+                </div>
               </div>
-              
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">MVA (25%)</span>
-                <span className="font-medium">
-                  {mva.toLocaleString("no-NO", { style: "currency", currency: "NOK" })}
-                </span>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </CardContent>
     </Card>
 
-    {selectedProduct && (
-      <ProductDetailsDrawer
-        open={isProductDrawerOpen}
-        onClose={closeProductDrawer}
-        product={selectedProduct}
+    {!isPublicView && selectedComponent && (
+      <PriceComponentDrawer
+        open={isComponentDrawerOpen}
+        onClose={closeComponentDrawer}
+        component={selectedComponent}
+        onSave={handleComponentSave}
+        readOnly={!editable || !onItemsChange}
+        categoryOptions={Array.from(
+          new Set<string>([
+            ...DEFAULT_CATEGORIES,
+            ...mergedCustomCategories,
+          ])
+        )}
       />
     )}
     </>

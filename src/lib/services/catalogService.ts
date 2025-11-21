@@ -59,12 +59,26 @@ export const getCategories = async (): Promise<Category[]> => {
     const categories: Category[] = [];
     snapshot.forEach((categorySnapshot) => {
       const data = categorySnapshot.val();
+
+      if (!data || typeof data !== 'object') {
+        return;
+      }
       
       // Filter out subcategories (they have kategoriId property)
       if (!data.kategoriId) {
+        const navn = typeof data.navn === 'string' ? data.navn.trim() : '';
+
+        if (!navn) {
+          console.warn('Ignorerer katalogoppføring uten navn', {
+            id: categorySnapshot.key,
+            keys: Object.keys(data),
+          });
+          return;
+        }
+
         categories.push({
           id: categorySnapshot.key!,
-          navn: data.navn,
+          navn,
           beskrivelse: data.beskrivelse || '',
           opprettet: data.opprettet || Date.now(),
           oppdatert: data.oppdatert || Date.now(),

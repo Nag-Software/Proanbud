@@ -80,6 +80,9 @@ export function NewHero() {
                     <p className="text-gray-600 text-xs">
                       De første {banner.totalPlaces} kundene får <span className="font-bold text-gray-900">{banner.discountPercentage}% rabatt {getDiscountTypeLabel(banner.discountType)}!</span>
                     </p>
+                    <p className="text-gray-600 text-xs">
+                      Rabattkode: <span className="font-bold text-gray-900">LANS25</span>
+                    </p>
                   </div>
                   <div className="bg-[#82ffb2] text-primary px-4 py-2 rounded-lg font-semibold text-xs whitespace-nowrap">
                     Kun {banner.availablePlaces} plasser igjen
