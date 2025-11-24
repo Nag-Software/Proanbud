@@ -1,11 +1,11 @@
 export { NewProductDrawer } from './NewProductDrawer';
 export { NewCategoryDrawer } from './NewCategoryDrawer';
 export { ProductDetailsDrawer } from './ProductDetailsDrawer';
-export { ProductCatalog } from './productcatalog';
+export { ProductCatalog } from './ProductCatalog';
 export type {
 	ProductCatalogHandle,
 	ProductCatalogSelectionItem,
 	ProductCatalogSelectionResult,
 	ProductCatalogSnapshot,
 	ProductCatalogOpenOptions,
-} from './productcatalog';
+} from './ProductCatalog';
