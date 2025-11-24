@@ -1,11 +1,52 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { X, Mail, Phone, MapPin, Calendar, TrendingUp, FileText, Award, Clock, Edit3, Save, XCircle } from 'lucide-react';
-import { Kunde, Tilbud, ColumnDef, TilbudStatus } from '@/lib/types';
-import { Card } from '@/components/shared/Card';
-import { DataTable } from '@/components/shared/DataTable';
-import { updateCustomer, CustomerFormData } from '@/lib/services/customerService';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { ColumnDef } from '@tanstack/react-table';
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip as RechartsTooltip,
+  XAxis,
+  YAxis,
+  PieChart,
+  Pie,
+  Cell,
+} from 'recharts';
+import {
+  AlertCircle,
+  CheckCircle2,
+  Loader2,
+  Mail,
+  MapPin,
+  Phone,
+  Sparkles,
+  User,
+} from 'lucide-react';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { DataTable } from '@/components/ui/data-table';
+import { Kunde, Tilbud } from '@/lib/types';
+import { updateCustomer, type CustomerFormData } from '@/lib/services/customerService';
+import { cn } from '@/lib/utils';
 
 interface CustomerDetailsDrawerProps {
   customer: Kunde | null;
@@ -15,372 +56,584 @@ interface CustomerDetailsDrawerProps {
   onOpenQuoteDrawer?: (quote: Tilbud) => void;
 }
 
-// Status pill component for quotes table
-const StatusPill: React.FC<{ status: TilbudStatus }> = ({ status }) => {
-  const statusStyles = {
-    vunnet: 'bg-green-100 text-green-800',
-    venter: 'bg-yellow-100 text-yellow-800',
-    tapt: 'bg-red-100 text-red-800',
+type EditableField = 'navn' | 'epost' | 'telefon' | 'addresser' | 'notater';
+type SavingState = 'idle' | 'saving' | 'saved' | 'error';
+
+interface EditableFormState {
+  navn: string;
+  epost: string;
+  telefon: string;
+  addresser: string;
+  notater: string;
+}
+
+const AUTOSAVE_DELAY = 700;
+const editableFields: EditableField[] = ['navn', 'epost', 'telefon', 'addresser', 'notater'];
+const statusColors: Record<string, string> = {
+  vunnet: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+  venter: 'bg-[#fff9c2] text-amber-700 border-amber-100',
+  tapt: 'bg-rose-50 text-rose-700 border-rose-100',
+  draft: 'bg-slate-50 text-slate-600 border-slate-100',
+};
+const pieColors = ['#22c55e', '#fbee77ff', '#f97316', '#a855f7', '#e11d48'];
+
+export function CustomerDetailsDrawer({
+  customer,
+  open,
+  onOpenChange,
+  onCustomerUpdated,
+  onOpenQuoteDrawer,
+}: CustomerDetailsDrawerProps) {
+  const formInitialState = useMemo(() => createFormState(customer), [customer]);
+  const [formState, setFormState] = useState<EditableFormState>(formInitialState);
+  const [fieldStatus, setFieldStatus] = useState<Record<EditableField, SavingState>>(createStatusState());
+  const [fieldErrors, setFieldErrors] = useState<Record<EditableField, string | null>>(createErrorState());
+  const debounceRefs = useRef<Partial<Record<EditableField, ReturnType<typeof setTimeout>>>>({});
+  const savedSnapshotRef = useRef<EditableFormState>(formInitialState);
+
+  // Sync when customer changes
+  useEffect(() => {
+    setFormState(formInitialState);
+    savedSnapshotRef.current = formInitialState;
+    setFieldStatus(createStatusState());
+    setFieldErrors(createErrorState());
+    clearAllTimers(debounceRefs.current);
+  }, [formInitialState]);
+
+  // Clear timers on unmount
+  useEffect(() => {
+    return () => {
+      clearAllTimers(debounceRefs.current);
+    };
+  }, []);
+
+  const quotes = useMemo(() => customer?.tilbud ?? [], [customer]);
+  const winRate = useMemo(() => calcWinRate(customer), [customer]);
+  const totalQuoteValue = useMemo(() => calcTotalValue(quotes), [quotes]);
+  const averageQuoteValue = useMemo(() => calcAverageValue(quotes), [quotes]);
+  const quoteTrendData = useMemo(() => buildTrendData(quotes), [quotes]);
+  const statusDistribution = useMemo(() => buildStatusDistribution(quotes), [quotes]);
+  const quoteColumns = useMemo<ColumnDef<Tilbud>[]>(() => buildQuoteColumns(), []);
+
+  const handleFieldChange = (field: EditableField, value: string) => {
+    setFormState((prev) => ({ ...prev, [field]: value }));
+    setFieldErrors((prev) => ({ ...prev, [field]: null }));
+
+    if (value === savedSnapshotRef.current[field]) {
+      setFieldStatus((prev) => ({ ...prev, [field]: 'idle' }));
+      return;
+    }
+
+    setFieldStatus((prev) => ({ ...prev, [field]: 'saving' }));
+    if (debounceRefs.current[field]) {
+      clearTimeout(debounceRefs.current[field]!);
+    }
+    debounceRefs.current[field] = setTimeout(() => {
+      void persistField(field, value);
+    }, AUTOSAVE_DELAY);
   };
 
+  const persistField = async (field: EditableField, value: string) => {
+    if (!customer) return;
+    try {
+      const payload = buildPayload(field, value);
+      await updateCustomer(customer.id, payload);
+      savedSnapshotRef.current = { ...savedSnapshotRef.current, [field]: value };
+      setFieldStatus((prev) => ({ ...prev, [field]: 'saved' }));
+      onCustomerUpdated?.();
+      setTimeout(() => {
+        setFieldStatus((prev) => ({ ...prev, [field]: 'idle' }));
+      }, 1200);
+    } catch (error) {
+      console.error('Customer autosave failed', error);
+      setFieldStatus((prev) => ({ ...prev, [field]: 'error' }));
+      setFieldErrors((prev) => ({ ...prev, [field]: 'Kunne ikke lagre endringen' }));
+    }
+  };
+
+  const handleQuoteClick = (quote: Tilbud) => {
+    onOpenQuoteDrawer?.(quote);
+  };
+
+  if (!customer) {
+    return (
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetContent side="right" className="z-[120] w-full max-w-3xl" data-dashboard>
+          <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+            Velg en kunde for å vise detaljer
+          </div>
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
   return (
-    <span
-      className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${statusStyles[status]}`}
-    >
-      {status.charAt(0).toUpperCase() + status.slice(1)}
-    </span>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="z-[120] w-full max-w-4xl p-0" data-dashboard>
+        <SheetHeader className="border-b bg-muted/30 px-6 py-5">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <SheetTitle className="text-2xl font-semibold">{customer.navn}</SheetTitle>
+              <SheetDescription>
+                Sist aktivitet {formatLongDate(customer.sistAktivitet)} · {customer.antallTilbud} tilbud totalt
+              </SheetDescription>
+            </div>
+            <Badge variant="outline" className="text-xs uppercase tracking-wide">
+              {customer.id}
+            </Badge>
+          </div>
+        </SheetHeader>
+
+        <ScrollArea className="h-[calc(100vh-6rem)] px-6 py-6">
+          <div className="space-y-6 pb-10">
+            <Card>
+              <CardHeader>
+                <CardTitle>Kontaktinformasjon</CardTitle>
+                <CardDescription>Alle felt autolagres etter hvert tastetrykk.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid gap-6 md:grid-cols-2">
+                  <EditableInput
+                    id="customer-name"
+                    icon={<User className="h-4 w-4" />}
+                    label="Navn"
+                    value={formState.navn}
+                    state={fieldStatus.navn}
+                    error={fieldErrors.navn}
+                    onChange={(value) => handleFieldChange('navn', value)}
+                  />
+                  <EditableInput
+                    id="customer-email"
+                    icon={<Mail className="h-4 w-4" />}
+                    label="E-post"
+                    type="email"
+                    value={formState.epost}
+                    state={fieldStatus.epost}
+                    error={fieldErrors.epost}
+                    onChange={(value) => handleFieldChange('epost', value)}
+                  />
+                  <EditableInput
+                    id="customer-phone"
+                    icon={<Phone className="h-4 w-4" />}
+                    label="Telefon"
+                    type="tel"
+                    value={formState.telefon}
+                    state={fieldStatus.telefon}
+                    error={fieldErrors.telefon}
+                    onChange={(value) => handleFieldChange('telefon', value)}
+                  />
+                  <EditableTextarea
+                    id="customer-addresses"
+                    icon={<MapPin className="h-4 w-4" />}
+                    label="Adresser"
+                    helper="En adresse per linje."
+                    value={formState.addresser}
+                    state={fieldStatus.addresser}
+                    error={fieldErrors.addresser}
+                    onChange={(value) => handleFieldChange('addresser', value)}
+                  />
+                </div>
+                <EditableTextarea
+                  id="customer-notes"
+                  icon={<Sparkles className="h-4 w-4" />}
+                  label="Notater"
+                  helper="Del intern innsikt, preferanser eller annet som er nyttig."
+                  value={formState.notater}
+                  state={fieldStatus.notater}
+                  error={fieldErrors.notater}
+                  rows={4}
+                  onChange={(value) => handleFieldChange('notater', value)}
+                />
+              </CardContent>
+            </Card>
+
+            <StatsGrid
+              winRate={winRate}
+              totalQuotes={customer.antallTilbud}
+              wonQuotes={customer.antallVunnet}
+              totalValue={totalQuoteValue}
+              avgValue={averageQuoteValue}
+              lastActivity={customer.sistAktivitet}
+            />
+
+            <div className="grid gap-6 lg:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Verdi over tid</CardTitle>
+                  <CardDescription>Summen av utsendte og vunnet beløp.</CardDescription>
+                </CardHeader>
+                <CardContent className="h-64">
+                  {quoteTrendData.length ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={quoteTrendData} margin={{ left: 0, right: 0, top: 10, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="quoteValue" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#2563eb" stopOpacity={0.35} />
+                            <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
+                          </linearGradient>
+                          <linearGradient id="wonValue" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#16a34a" stopOpacity={0.35} />
+                            <stop offset="95%" stopColor="#16a34a" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} />
+                        <XAxis dataKey="date" tickLine={false} axisLine={false} fontSize={12} />
+                        <YAxis tickLine={false} axisLine={false} fontSize={12} tickFormatter={(value) => formatYAxis(value)} />
+                        <RechartsTooltip formatter={(value) => formatCurrency(Number(value))} />
+                        <Area type="monotone" dataKey="verdi" stroke="#2563eb" fill="url(#quoteValue)" strokeWidth={2} />
+                        <Area type="monotone" dataKey="vunnet" stroke="#16a34a" fill="url(#wonValue)" strokeWidth={2} />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <EmptyState message="Ingen historikk enda" />
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Statusfordeling</CardTitle>
+                  <CardDescription>Fordeling av kundens tilknyttede tilbud.</CardDescription>
+                </CardHeader>
+                <CardContent className="h-64">
+                  {statusDistribution.length ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie data={statusDistribution} dataKey="value" nameKey="label" innerRadius={60} outerRadius={90} paddingAngle={4}>
+                          {statusDistribution.map((_, index) => (
+                            <Cell key={`cell-${index}`} fill={pieColors[index % pieColors.length]} />
+                          ))}
+                        </Pie>
+                        <RechartsTooltip formatter={(value, name) => [`${value} stk`, name as string]} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <EmptyState message="Ingen tilbud registrert" />
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <CardTitle>Kundens tilbud</CardTitle>
+                    <CardDescription>Alle tilknyttede tilbud og status.</CardDescription>
+                  </div>
+                  <Badge variant="secondary">{quotes.length} registrert</Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="-mx-2">
+                {quotes.length ? (
+                  <DataTable
+                    columns={quoteColumns}
+                    data={quotes}
+                    searchKey="prosjekt"
+                    searchPlaceholder="Søk i prosjekter eller jobbtype..."
+                    onRowClick={handleQuoteClick}
+                  />
+                ) : (
+                  <EmptyState message="Denne kunden har ingen tilbud ennå" />
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </ScrollArea>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+const EditableInput = ({
+  id,
+  label,
+  icon,
+  type = 'text',
+  value,
+  state,
+  error,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  icon: ReactNode;
+  type?: string;
+  value: string;
+  state: SavingState;
+  error: string | null;
+  onChange: (value: string) => void;
+}) => (
+  <div className="space-y-2">
+    <div className="flex items-center justify-between gap-2">
+      <Label htmlFor={id} className="flex items-center gap-2 text-sm font-medium">
+        <span className="text-muted-foreground">{icon}</span>
+        {label}
+      </Label>
+      <AutosaveIndicator state={state} error={error} />
+    </div>
+    <Input id={id} type={type} value={value} onChange={(event) => onChange(event.target.value)} placeholder={`Oppdater ${label.toLowerCase()}`} />
+    {error && <p className="text-xs text-destructive">{error}</p>}
+  </div>
+);
+
+const EditableTextarea = ({
+  id,
+  label,
+  icon,
+  helper,
+  value,
+  state,
+  error,
+  rows = 3,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  icon: ReactNode;
+  helper?: string;
+  value: string;
+  state: SavingState;
+  error: string | null;
+  rows?: number;
+  onChange: (value: string) => void;
+}) => (
+  <div className="space-y-2">
+    <div className="flex items-center justify-between gap-2">
+      <div>
+        <Label htmlFor={id} className="flex items-center gap-2 text-sm font-medium">
+          <span className="text-muted-foreground">{icon}</span>
+          {label}
+        </Label>
+        {helper && <p className="text-xs text-muted-foreground">{helper}</p>}
+      </div>
+      <AutosaveIndicator state={state} error={error} />
+    </div>
+    <Textarea id={id} rows={rows} value={value} onChange={(event) => onChange(event.target.value)} placeholder={`Skriv ${label.toLowerCase()}`} />
+    {error && <p className="text-xs text-destructive">{error}</p>}
+  </div>
+);
+
+const AutosaveIndicator = ({ state, error }: { state: SavingState; error?: string | null }) => {
+  if (state === 'saving') {
+    return (
+      <span className="flex items-center gap-1 text-xs text-muted-foreground">
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        Lagres...
+      </span>
+    );
+  }
+  if (state === 'saved') {
+    return (
+      <span className="flex items-center gap-1 text-xs text-emerald-600">
+        <CheckCircle2 className="h-3.5 w-3.5" />
+        Lagret
+      </span>
+    );
+  }
+  if (state === 'error') {
+    return (
+      <span className="flex items-center gap-1 text-xs text-destructive">
+        <AlertCircle className="h-3.5 w-3.5" />
+        {error || 'Feil'}
+      </span>
+    );
+  }
+  return <span className="text-xs text-muted-foreground">Autolagring</span>;
+};
+
+const StatsGrid = ({
+  winRate,
+  totalQuotes,
+  wonQuotes,
+  totalValue,
+  avgValue,
+  lastActivity,
+}: {
+  winRate: number;
+  totalQuotes: number;
+  wonQuotes: number;
+  totalValue: number;
+  avgValue: number;
+  lastActivity: string;
+}) => {
+  const stats = [
+    { label: 'Totale tilbud', value: totalQuotes.toString(), helper: 'Historiske og aktive' },
+    { label: 'Vunnet', value: wonQuotes.toString(), helper: 'Signerte tilbud' },
+    { label: 'Treffprosent', value: `${winRate}%`, helper: 'Vunnet / sendt' },
+    { label: 'Total verdi', value: formatCurrency(totalValue), helper: 'Utsendte tilbud' },
+    { label: 'Snittverdi', value: formatCurrency(avgValue), helper: 'Per tilbud' },
+    { label: 'Sist aktivitet', value: formatLongDate(lastActivity), helper: '' },
+  ];
+
+  return (
+    <div className="grid gap-4 md:grid-cols-3">
+      {stats.map((stat) => (
+        <Card key={stat.label} className="border-dashed">
+          <CardHeader className="space-y-1">
+            <CardDescription>{stat.label}</CardDescription>
+            <CardTitle className="text-2xl">{stat.value}</CardTitle>
+            {stat.helper && <p className="text-xs text-muted-foreground">{stat.helper}</p>}
+          </CardHeader>
+        </Card>
+      ))}
+    </div>
   );
 };
 
-export function CustomerDetailsDrawer({ customer, open, onOpenChange, onCustomerUpdated, onOpenQuoteDrawer }: CustomerDetailsDrawerProps) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [editedCustomer, setEditedCustomer] = useState<Partial<CustomerFormData>>({});
+const EmptyState = ({ message }: { message: string }) => (
+  <div className="flex h-full flex-col items-center justify-center rounded-lg border border-dashed text-sm text-muted-foreground">
+    {message}
+  </div>
+);
 
-  // Reset editing state when drawer closes
-  useEffect(() => {
-    if (!open) {
-      setIsEditing(false);
-      setEditedCustomer({});
-    }
-  }, [open]);
+const QuoteStatusBadge = ({ status }: { status: Tilbud['status'] }) => (
+  <Badge variant="outline" className={cn('text-xs capitalize', statusColors[status] || 'bg-muted text-muted-foreground')}>
+    {formatStatusLabel(status)}
+  </Badge>
+);
 
-  if (!customer) return null;
-
-  // Define columns for the quotes table
-  const quoteColumns: ColumnDef<Tilbud>[] = [
-    {
-      accessorKey: 'prosjekt',
-      header: 'Prosjekt',
-    },
-    {
-      accessorKey: 'jobbtype',
-      header: 'Jobbtype',
-    },
-    {
-      accessorKey: 'belop',
-      header: 'Beløp',
-      cell: ({ row }) => formatCurrency((row.original.belop as number)),
-    },
-    {
-      accessorKey: 'status',
-      header: 'Status',
-      cell: ({ row }) => <StatusPill status={row.original.status as TilbudStatus} />,
-    },
-    {
-      accessorKey: 'dato',
-      header: 'Dato',
-      cell: ({ row }) => formatDate(row.original.dato),
-    },
-    {
-      accessorKey: 'svarfrist',
-      header: 'Svarfrist',
-      cell: ({ row }) => formatDate(row.original.svarfrist),
-    },
-  ];
-
-  const handleQuoteClick = (quote: Tilbud) => {
-    if (onOpenQuoteDrawer) {
-      onOpenQuoteDrawer(quote);
-    }
-  };
-
-  // Initialize edited customer data when editing starts
-  const startEditing = () => {
-    if (!customer) return;
-    setEditedCustomer({
-      navn: customer.navn,
-      epost: customer.epost,
-      telefon: customer.telefon,
-      adresse: customer.addresser?.[0] || '',
-    });
-    setIsEditing(true);
-  };
-
-  const cancelEditing = () => {
-    setIsEditing(false);
-    setEditedCustomer({});
-  };
-
-  const saveChanges = async () => {
-    if (!customer) return;
-    try {
-      setIsUpdating(true);
-      await updateCustomer(customer.id, editedCustomer);
-      setIsEditing(false);
-      setEditedCustomer({});
-      onCustomerUpdated?.();
-    } catch (error) {
-      console.error('Error updating customer:', error);
-      // You could add a toast notification here
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('nb-NO', {
-      style: 'currency',
-      currency: 'NOK',
-      minimumFractionDigits: 0,
-    }).format(amount);
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('nb-NO', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    }).format(date);
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'vunnet':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'tapt':
-        return 'bg-red-100 text-red-800 border-red-200';
-      case 'venter':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'vunnet':
-        return 'Vunnet';
-      case 'tapt':
-        return 'Tapt';
-      case 'venter':
-        return 'Venter';
-      default:
-        return status;
-    }
-  };
-
-  const winRate = customer.antallTilbud > 0 ? 
-    Math.round((customer.antallVunnet / customer.antallTilbud) * 100) : 0;
-
-  const totalQuoteValue = customer.tilbud?.reduce((sum, tilbud) => sum + tilbud.belop, 0) || 0;
-  const wonQuoteValue = customer.tilbud?.filter(t => t.status === 'vunnet')
-    .reduce((sum, tilbud) => sum + tilbud.belop, 0) || 0;
-
-  return (
-    <>
-      {/* Backdrop */}
-      <div 
-        className={`fixed inset-0 bg-black/50 z-[200] transition-opacity duration-300 ${
-          open ? 'opacity-100' : 'opacity-0 pointer-events-none'
-        }`}
-        onClick={() => onOpenChange(false)}
-      />
-      
-      {/* Drawer */}
-      <div className={`fixed right-0 top-0 h-full w-full max-w-2xl bg-white shadow-2xl z-[400] transform transition-all duration-300 ease-in-out ${
-        open ? 'translate-x-0' : 'translate-x-full'
-      }`}>
-        <div className="flex flex-col h-full">
-          {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gray-50">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">{customer.navn}</h2>
-              <p className="text-sm text-gray-600 mt-1">Kundedetaljer</p>
-            </div>
-            <div className="flex items-center gap-2">
-              {isEditing ? (
-                <>
-                  <button
-                    onClick={cancelEditing}
-                    disabled={isUpdating}
-                    className="p-2 hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-50"
-                  >
-                    <XCircle className="h-5 w-5 text-gray-500" />
-                  </button>
-                  <button
-                    onClick={saveChanges}
-                    disabled={isUpdating}
-                    className="p-2 hover:bg-green-100 rounded-lg transition-colors disabled:opacity-50"
-                  >
-                    <Save className="h-5 w-5 text-green-600" />
-                  </button>
-                </>
-              ) : (
-                <button
-                  onClick={startEditing}
-                  className="p-2 hover:bg-blue-100 rounded-lg transition-colors"
-                >
-                  <Edit3 className="h-5 w-5 text-blue-600" />
-                </button>
-              )}
-              <button
-                onClick={() => onOpenChange(false)}
-                className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
-              >
-                <X className="h-6 w-6 text-gray-500" />
-              </button>
-            </div>
-          </div>
-
-          {/* Content */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
-            {/* Contact Information */}
-            <Card>
-              <div className="p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <Mail className="h-5 w-5 text-blue-600" />
-                  Kontaktinformasjon
-                </h3>
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <Mail className="h-4 w-4 text-gray-400" />
-                    {isEditing ? (
-                      <input
-                        type="email"
-                        value={editedCustomer.epost || ''}
-                        onChange={(e) => setEditedCustomer({ ...editedCustomer, epost: e.target.value })}
-                        className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="E-postadresse"
-                      />
-                    ) : (
-                      <span className="text-gray-700">{customer.epost}</span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Phone className="h-4 w-4 text-gray-400" />
-                    {isEditing ? (
-                      <input
-                        type="tel"
-                        value={editedCustomer.telefon || ''}
-                        onChange={(e) => setEditedCustomer({ ...editedCustomer, telefon: e.target.value })}
-                        className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="Telefonnummer"
-                      />
-                    ) : (
-                      <span className="text-gray-700">{customer.telefon}</span>
-                    )}
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <MapPin className="h-4 w-4 text-gray-400 mt-2.5" />
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        value={editedCustomer.adresse || ''}
-                        onChange={(e) => setEditedCustomer({ ...editedCustomer, adresse: e.target.value })}
-                        className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="Adresse"
-                      />
-                    ) : (
-                      <div className="space-y-1">
-                        {customer.addresser && customer.addresser.length > 0 ? (
-                          customer.addresser.map((address, index) => (
-                            <div key={index} className="text-gray-700">{address}</div>
-                          ))
-                        ) : (
-                          <span className="text-gray-500 italic">Ingen adresse registrert</span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </Card>
-
-            {/* Statistics Overview - Responsive Grid */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
-              <Card>
-                <div className="p-4 lg:p-5 text-center">
-                  <div className="flex items-center justify-center w-10 h-10 lg:w-12 lg:h-12 bg-blue-100 rounded-lg mx-auto mb-2 lg:mb-3">
-                    <FileText className="h-5 w-5 lg:h-6 lg:w-6 text-blue-600" />
-                  </div>
-                  <div className="text-xl lg:text-2xl font-bold text-gray-900">{customer.antallTilbud}</div>
-                  <div className="text-xs lg:text-sm text-gray-600">Totale tilbud</div>
-                </div>
-              </Card>
-              
-              <Card>
-                <div className="p-4 lg:p-5 text-center">
-                  <div className="flex items-center justify-center w-10 h-10 lg:w-12 lg:h-12 bg-green-100 rounded-lg mx-auto mb-2 lg:mb-3">
-                    <Award className="h-5 w-5 lg:h-6 lg:w-6 text-green-600" />
-                  </div>
-                  <div className="text-xl lg:text-2xl font-bold text-gray-900">{customer.antallVunnet}</div>
-                  <div className="text-xs lg:text-sm text-gray-600">Vunnede tilbud</div>
-                </div>
-              </Card>
-              
-              <Card>
-                <div className="p-4 lg:p-5 text-center">
-                  <div className="flex items-center justify-center w-10 h-10 lg:w-12 lg:h-12 bg-purple-100 rounded-lg mx-auto mb-2 lg:mb-3">
-                    <TrendingUp className="h-5 w-5 lg:h-6 lg:w-6 text-purple-600" />
-                  </div>
-                  <div className="text-xl lg:text-2xl font-bold text-gray-900">{winRate}%</div>
-                  <div className="text-xs lg:text-sm text-gray-600">Treffprosent</div>
-                </div>
-              </Card>
-              
-              <Card>
-                <div className="p-4 lg:p-5 text-center">
-                  <div className="flex items-center justify-center w-10 h-10 lg:w-12 lg:h-12 bg-orange-100 rounded-lg mx-auto mb-2 lg:mb-3">
-                    <Clock className="h-5 w-5 lg:h-6 lg:w-6 text-orange-600" />
-                  </div>
-                  <div className="text-sm lg:text-sm font-medium text-gray-900">{formatDate(customer.sistAktivitet)}</div>
-                  <div className="text-xs lg:text-sm text-gray-600">Sist aktivitet</div>
-                </div>
-              </Card>
-            </div>
-
-            {/* Financial Overview */}
-            {totalQuoteValue > 0 && (
-              <Card>
-                <div className="p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Finansiell oversikt</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <div className="text-sm text-gray-600">Total tilbudsverdi</div>
-                      <div className="text-xl font-bold text-gray-900">{formatCurrency(totalQuoteValue)}</div>
-                    </div>
-                    <div className="bg-green-50 p-4 rounded-lg">
-                      <div className="text-sm text-green-600">Vunnet verdi</div>
-                      <div className="text-xl font-bold text-green-700">{formatCurrency(wonQuoteValue)}</div>
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            )}
-
-            {/* Customer Quotes Table */}
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <FileText className="h-5 w-5 text-blue-600" />
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Kundens tilbud ({customer.tilbud?.length || 0})
-                </h3>
-              </div>
-              {customer.tilbud && customer.tilbud.length > 0 ? (
-                <DataTable 
-                  columns={quoteColumns} 
-                  data={customer.tilbud} 
-                  enableFiltering 
-                  searchPlaceholder="Søk i tilbud..."
-                  onRowClick={handleQuoteClick}
-                />
-              ) : (
-                <Card>
-                  <div className="p-8 text-center">
-                    <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <h4 className="text-lg font-medium text-gray-900 mb-2">Ingen tilbud funnet</h4>
-                    <p className="text-gray-600">
-                      Denne kunden har ikke noen registrerte tilbud ennå.
-                    </p>
-                  </div>
-                </Card>
-              )}
-            </div>
-          </div>
-        </div>
+const buildQuoteColumns = (): ColumnDef<Tilbud>[] => [
+  {
+    accessorKey: 'prosjekt',
+    header: 'Prosjekt',
+    cell: ({ row }) => (
+      <div className="space-y-1">
+        <p className="font-medium text-sm">{row.original.prosjekt}</p>
+        <p className="text-xs text-muted-foreground">{row.original.jobbtype}</p>
       </div>
-    </>
-  );
-}
+    ),
+  },
+  {
+    accessorKey: 'status',
+    header: 'Status',
+    cell: ({ row }) => <QuoteStatusBadge status={row.original.status} />,
+  },
+  {
+    accessorKey: 'belop',
+    header: 'Beløp',
+    cell: ({ row }) => <span className="font-medium">{formatCurrency(row.original.belop)}</span>,
+  },
+  {
+    accessorKey: 'dato',
+    header: 'Sendt',
+    cell: ({ row }) => <span className="text-sm text-muted-foreground">{formatShortDate(row.original.dato)}</span>,
+  },
+  {
+    accessorKey: 'svarfrist',
+    header: 'Svarfrist',
+    cell: ({ row }) => <span className="text-sm text-muted-foreground">{formatShortDate(row.original.svarfrist)}</span>,
+  },
+];
+
+const buildPayload = (field: EditableField, value: string): Partial<CustomerFormData> => {
+  if (field === 'addresser') {
+    return { addresser: parseAddressList(value) };
+  }
+  if (field === 'notater') {
+    return { notater: value };
+  }
+  return { [field]: value };
+};
+
+const buildTrendData = (quotes: Tilbud[]) => {
+  if (!quotes.length) return [];
+  return [...quotes]
+    .filter((quote) => quote.dato)
+    .sort((a, b) => new Date(a.dato).getTime() - new Date(b.dato).getTime())
+    .map((quote) => ({
+      date: formatShortDate(quote.dato),
+      verdi: quote.belop,
+      vunnet: quote.status === 'vunnet' ? quote.belop : 0,
+    }));
+};
+
+const buildStatusDistribution = (quotes: Tilbud[]) => {
+  if (!quotes.length) return [];
+  const counts: Record<string, number> = {};
+  quotes.forEach((quote) => {
+    counts[quote.status] = (counts[quote.status] || 0) + 1;
+  });
+  return Object.entries(counts).map(([status, value]) => ({
+    label: formatStatusLabel(status),
+    value,
+  }));
+};
+
+const createFormState = (customer?: Kunde | null): EditableFormState => ({
+  navn: customer?.navn ?? '',
+  epost: customer?.epost ?? '',
+  telefon: customer?.telefon ?? '',
+  addresser: (customer?.addresser ?? []).join('\n'),
+  notater: customer?.notater ?? '',
+});
+
+const createStatusState = (): Record<EditableField, SavingState> =>
+  editableFields.reduce((acc, field) => ({ ...acc, [field]: 'idle' }), {} as Record<EditableField, SavingState>);
+
+const createErrorState = (): Record<EditableField, string | null> =>
+  editableFields.reduce((acc, field) => ({ ...acc, [field]: null }), {} as Record<EditableField, string | null>);
+
+const parseAddressList = (value: string): string[] =>
+  value
+    .split(/\n|,/)
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+
+const calcWinRate = (customer?: Kunde | null) => {
+  if (!customer || !customer.antallTilbud) return 0;
+  return Math.round((customer.antallVunnet / customer.antallTilbud) * 100);
+};
+
+const calcTotalValue = (quotes: Tilbud[]) => quotes.reduce((sum, quote) => sum + (quote.belop || 0), 0);
+
+const calcAverageValue = (quotes: Tilbud[]) => {
+  if (!quotes.length) return 0;
+  return Math.round(calcTotalValue(quotes) / quotes.length);
+};
+
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat('nb-NO', { style: 'currency', currency: 'NOK', minimumFractionDigits: 0 }).format(value || 0);
+
+const formatShortDate = (value?: string) => {
+  if (!value) return '—';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '—';
+  return new Intl.DateTimeFormat('nb-NO', { day: '2-digit', month: 'short', year: 'numeric' }).format(date);
+};
+
+const formatLongDate = (value?: string) => {
+  if (!value) return '—';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat('nb-NO', { day: '2-digit', month: 'long', year: 'numeric' }).format(date);
+};
+
+const formatStatusLabel = (status: string) => {
+  switch (status) {
+    case 'vunnet':
+      return 'Vunnet';
+    case 'tapt':
+      return 'Tapt';
+    case 'venter':
+      return 'Venter';
+    case 'draft':
+      return 'Kladd';
+    default:
+      return status;
+  }
+};
+
+const formatYAxis = (value: number) => {
+  if (value >= 1_000_000) return `${Math.round(value / 1_000_000)}M`;
+  if (value >= 1_000) return `${Math.round(value / 1_000)}k`;
+  return value;
+};
+
+const clearAllTimers = (timers: Partial<Record<EditableField, ReturnType<typeof setTimeout>>>) => {
+  Object.values(timers).forEach((timer) => {
+    if (timer) {
+      clearTimeout(timer);
+    }
+  });
+};

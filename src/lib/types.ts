@@ -96,6 +96,7 @@ export interface Kunde {
   sistAktivitet: string;
   addresser: string[];
   tilbud: Tilbud[];
+  notater?: string;
 }
 
 export interface JobbtypeAnalyse {

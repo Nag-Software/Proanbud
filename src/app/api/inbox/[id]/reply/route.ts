@@ -85,7 +85,9 @@ export async function POST(
     const businessSnapshot = await businessRef.once('value');
     const businessSettings = businessSnapshot.exists() ? businessSnapshot.val() : null;
 
-    const fromEmail = businessSettings?.email || 'post@proanbud.no';
+    const senderDisplayName = 'Proanbud';
+    const senderEmail = 'post@proanbud.no';
+    const fromHeader = `${senderDisplayName} <${senderEmail}>`;
     const companyName = businessSettings?.companyName || 'Proanbud';
 
     // Generate email HTML
@@ -149,27 +151,46 @@ export async function POST(
 
     // Send email
     console.log('📧 Sending reply email to:', customerEmail);
-    const emailData = await resend.emails.send({
-      from: `${companyName} - Proanbud <${fromEmail}>`,
+    const { data: resendData, error: resendError } = await resend.emails.send({
+      from: fromHeader,
       to: [customerEmail],
       subject: replySubject,
       html: emailHtml,
     });
 
-    console.log('✅ Reply email sent:', emailData.data?.id);
+    if (resendError) {
+      console.error('❌ Resend rejected reply email:', resendError);
+      return NextResponse.json(
+        { error: resendError.message || 'E-posttjenesten avviste utsendelsen' },
+        { status: 502 }
+      );
+    }
+
+    const emailId = resendData?.id ?? null;
+    console.log('✅ Reply email sent:', emailId);
 
     // Add reply to message thread/conversation log
     const conversationRef = db.ref(`users/${userId}/inbox/${messageId}/conversation`);
     const replyRef = conversationRef.push();
     
-    const replyLog = {
+    const replyLog: {
+      message: string;
+      timestamp: number;
+      sentBy: 'business';
+      sentTo: string;
+      type: 'reply';
+      emailId?: string | null;
+    } = {
       message: replyMessage.split('\n\n--- Original melding ---')[0], // Only the new reply, not the original
       timestamp: Date.now(),
       sentBy: 'business' as const, // To distinguish from customer messages
       sentTo: customerEmail,
-      emailId: emailData.data?.id,
       type: 'reply' as const,
     };
+
+    if (emailId) {
+      replyLog.emailId = emailId;
+    }
 
     await replyRef.set(replyLog);
 
@@ -184,7 +205,20 @@ export async function POST(
     const inboxRef = db.ref(`users/${userId}/inbox`);
     const newReplyRef = inboxRef.push();
     
-    const replyInboxMessage = {
+    const replyInboxMessage: {
+      from: string;
+      subject: string;
+      message: string;
+      timestamp: number;
+      isRead: boolean;
+      type: 'outgoing_reply';
+      folder: string;
+      sentTo: string;
+      relatedMessageId: string;
+      opprettet: number;
+      oppdatert: number;
+      emailId?: string | null;
+    } = {
       from: companyName,
       subject: replySubject,
       message: replyMessage.split('\n\n--- Original melding ---')[0], // Only the new reply
@@ -198,6 +232,10 @@ export async function POST(
       oppdatert: Date.now(),
     };
 
+    if (emailId) {
+      replyInboxMessage.emailId = emailId;
+    }
+
     await newReplyRef.set(replyInboxMessage);
 
     console.log('✅ Reply inbox message created:', newReplyRef.key);
@@ -206,7 +244,7 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      emailId: emailData.data?.id,
+      emailId: resendData?.id,
       replyId: replyRef.key,
       inboxMessageId: newReplyRef.key,
     });

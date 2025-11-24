@@ -20,6 +20,7 @@ export interface CustomerFormData {
   postnummer?: string;
   poststed?: string;
   notater?: string;
+  addresser?: string[];
 }
 
 export interface RealtimeCustomer extends Omit<Kunde, 'id' | 'sistAktivitet'> {
@@ -61,6 +62,7 @@ const convertRealtimeCustomer = (key: string, data: RealtimeCustomer): Kunde => 
     sistAktivitet: new Date(data.sistAktivitet).toISOString().split('T')[0], // Format as YYYY-MM-DD
     addresser: data.addresser || [],
     tilbud: data.tilbud || [],
+    notater: data.notater,
   };
 };
 
@@ -82,6 +84,7 @@ const convertSingleRealtimeCustomer = (snapshot: DataSnapshot): Kunde => {
     sistAktivitet: new Date(data.sistAktivitet).toISOString().split('T')[0], // Format as YYYY-MM-DD
     addresser: data.addresser || [],
     tilbud: data.tilbud || [],
+    notater: data.notater,
   };
 };
 
@@ -151,15 +154,22 @@ export const createCustomer = async (customerData: CustomerFormData): Promise<st
     const userId = getCurrentUserId();
     
     const now = serverTimestamp();
+    const normalizedAddresses = (customerData.addresser || [])
+      .map((address) => address.trim())
+      .filter(Boolean);
     const newCustomer: Omit<RealtimeCustomerInput, 'id'> = {
       navn: customerData.navn.trim(),
       epost: customerData.epost.trim().toLowerCase(),
       telefon: customerData.telefon.trim(),
       antallTilbud: 0,
       antallVunnet: 0,
-      addresser: customerData.adresse ? [
-        `${customerData.adresse}${customerData.postnummer ? `, ${customerData.postnummer}` : ''}${customerData.poststed ? ` ${customerData.poststed}` : ''}`
-      ] : [],
+      addresser: normalizedAddresses.length > 0
+        ? normalizedAddresses
+        : customerData.adresse
+        ? [
+            `${customerData.adresse}${customerData.postnummer ? `, ${customerData.postnummer}` : ''}${customerData.poststed ? ` ${customerData.poststed}` : ''}`
+          ]
+        : [],
       tilbud: [],
       sistAktivitet: now,
       opprettet: now,
@@ -353,6 +363,12 @@ export const updateCustomer = async (customerId: string, updates: Partial<Custom
     if (updates.epost !== undefined) updateData.epost = updates.epost.trim().toLowerCase();
     if (updates.telefon !== undefined) updateData.telefon = updates.telefon.trim();
     if (updates.notater !== undefined) updateData.notater = updates.notater?.trim() || null;
+    if (updates.addresser !== undefined) {
+      const cleanedAddresses = updates.addresser
+        ?.map((address) => address.trim())
+        .filter(Boolean);
+      updateData.addresser = cleanedAddresses || [];
+    }
 
     await update(customerRef, updateData);
   } catch (error) {

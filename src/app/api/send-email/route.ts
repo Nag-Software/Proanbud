@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { to, subject, message, from, customerId, quoteId } = await request.json();
+    const { to, subject, message, customerId, quoteId } = await request.json();
 
     if (!to || !subject || !message) {
       console.error('❌ Missing required fields:', { to: !!to, subject: !!subject, message: !!message });
@@ -24,31 +24,41 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const fromHeader = 'Proanbud <post@proanbud.no>';
+
     console.log('📧 Sending email:', {
       to,
       subject,
-      from: from || 'Proanbud <post@proanbud.no>',
+      from: fromHeader,
       quoteId,
       customerId,
       messageLength: message.length
     });
 
-    const data = await resend.emails.send({
-      from: from || 'Proanbud <post@proanbud.no>',
+    const { data, error: resendError } = await resend.emails.send({
+      from: fromHeader,
       to: [to],
       subject: subject,
       html: message, // Use the message directly as HTML
     });
 
+    if (resendError) {
+      console.error('❌ Resend rejected email send:', resendError);
+      return NextResponse.json(
+        { error: resendError.message || 'Resend kunne ikke sende e-post' },
+        { status: 502 }
+      );
+    }
+
     console.log('✅ Email sent successfully:', {
-      messageId: data.data?.id,
+      messageId: data?.id,
       to,
       quoteId
     });
 
     return NextResponse.json({
       success: true,
-      messageId: data.data?.id,
+      messageId: data?.id,
       customerId,
       quoteId
     });

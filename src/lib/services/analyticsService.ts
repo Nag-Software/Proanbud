@@ -1196,6 +1196,22 @@ const generateEmptyChartData = (timeRange: '7d' | '30d' | '1y' | 'all') => {
   }
 };
 
+type ChartSeriesPoint = { date: string; omsatt: number; tilbudt: number };
+
+const accumulateChartSeries = <T extends ChartSeriesPoint>(data: T[]): T[] => {
+  let cumulativeOmsatt = 0;
+  let cumulativeTilbudt = 0;
+  return data.map((point) => {
+    cumulativeOmsatt += point.omsatt || 0;
+    cumulativeTilbudt += point.tilbudt || 0;
+    return {
+      ...point,
+      omsatt: cumulativeOmsatt,
+      tilbudt: cumulativeTilbudt,
+    };
+  });
+};
+
 const getDailyChartData = (analytics: UserAnalytics, days: number) => {
   // Generate date range for the last N days (including today)
   const now = new Date();
@@ -1215,32 +1231,16 @@ const getDailyChartData = (analytics: UserAnalytics, days: number) => {
   }
 
   // Build result array with carry-forward logic
-  const result: { date: string; omsatt: number; tilbudt: number }[] = [];
-  let lastKnownData: { omsatt: number; tilbudt: number } = { omsatt: 0, tilbudt: 0 };
-
-  for (const { fullDate, displayDate } of dateRange) {
+  const dailyPoints = dateRange.map(({ fullDate, displayDate }) => {
     const existingData = existingDataMap.get(fullDate);
+    return {
+      date: existingData?.date ?? displayDate,
+      omsatt: existingData?.omsatt ?? 0,
+      tilbudt: existingData?.tilbudt ?? 0,
+    };
+  });
 
-    if (existingData) {
-      // Use existing data for this date
-      result.push({
-        date: existingData.date,
-        omsatt: existingData.omsatt,
-        tilbudt: existingData.tilbudt
-      });
-      // Update last known data
-      lastKnownData = { omsatt: existingData.omsatt, tilbudt: existingData.tilbudt };
-    } else {
-      // No data for this date, carry forward from previous day
-      result.push({
-        date: displayDate,
-        omsatt: lastKnownData.omsatt,
-        tilbudt: lastKnownData.tilbudt
-      });
-    }
-  }
-
-  return result;
+  return accumulateChartSeries(dailyPoints);
 };
 
 const getMonthlyChartData = (analytics: UserAnalytics, months: number) => {
@@ -1257,11 +1257,13 @@ const getMonthlyChartData = (analytics: UserAnalytics, months: number) => {
     })
     .slice(-months);
 
-  return sortedData.map(data => ({
+  const monthlyPoints = sortedData.map(data => ({
     date: data.month,
     omsatt: data.omsatt,
     tilbudt: data.tilbudt
-  })); // Return in chronological order
+  }));
+
+  return accumulateChartSeries(monthlyPoints); // Return in chronological order
 };
 
 const getAllTimeChartData = (analytics: UserAnalytics) => {
@@ -1269,8 +1271,7 @@ const getAllTimeChartData = (analytics: UserAnalytics) => {
     return generateEmptyChartData('1y');
   }
 
-  // Return all monthly data
-  return analytics.monthlyData
+  const sortedData = analytics.monthlyData
     .sort((a, b) => {
       if (a.year !== b.year) return a.year - b.year;
       const monthOrder = ['jan', 'feb', 'mar', 'apr', 'mai', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'des'];
@@ -1280,7 +1281,9 @@ const getAllTimeChartData = (analytics: UserAnalytics) => {
       date: `${data.month} ${data.year}`,
       omsatt: data.omsatt,
       tilbudt: data.tilbudt
-    })); // Return in chronological order
+    }));
+
+  return accumulateChartSeries(sortedData); // Return in chronological order
 };
 
 // Get recent activity feed from actual data

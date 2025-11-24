@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import {
   Dialog,
@@ -26,44 +27,40 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
-  Inbox,
-  Plus,
-  Search,
-  AlertCircle,
+  Archive,
+  Building2,
   CheckCircle,
-  Send,
+  Clock,
   Eye,
-  MessageSquare,
-  XCircle,
-  Mail,
+  FileText,
   Flag,
   FlagOff,
+  Inbox,
+  Loader2,
+  Mail,
+  MailOpen,
+  MessageSquare,
+  Plus,
   Reply,
-  Trash2,
-  Clock,
-  FileText,
-  Building2,
+  Search,
+  Send,
   User,
-  Filter,
-  Archive,
+  XCircle,
 } from 'lucide-react';
 import { CustomerDetailsDrawer } from '@/components/kunder/CustomerDetailsDrawer';
-import { MessageList } from '@/components/inbox/MessageList';
-import { MessageDetail } from '@/components/inbox/MessageDetail';
-import { ComposeMessage } from '@/components/inbox/ComposeMessage';
-import { useInbox } from '@/hooks/useInbox';
-import { Kunde, Tilbud, InboxMessage, ConversationEntry } from '@/lib/types';
+import { Kunde, InboxMessage, ConversationEntry } from '@/lib/types';
 import { auth, db } from '@/lib/firebase';
 import { ref, onValue, push, set } from 'firebase/database';
 import { getCustomer } from '@/lib/services/customerService';
-import { getTilbudById } from '@/lib/services/tilbudService';
 import {
   markMessageAsRead,
+  markMessageAsUnread,
   archiveInboxMessage,
   unarchiveInboxMessage,
   unflagMessage,
   flagMessage,
 } from '@/lib/services/inboxService';
+import { cn } from '@/lib/utils';
 
 const formatDate = (dateString: string) => {
   const date = new Date(dateString);
@@ -132,6 +129,15 @@ const isQuoteRelatedMessage = (message: InboxMessage) => {
   );
 };
 
+const getMessageActivityTimestamp = (message: InboxMessage) => {
+  if (message.lastMessageAt) {
+    return message.lastMessageAt;
+  }
+
+  const parsed = Date.parse(message.timestamp);
+  return Number.isNaN(parsed) ? 0 : parsed;
+};
+
 export default function InnboksPage() {
   const router = useRouter();
   const [messages, setMessages] = useState<InboxMessage[]>([]);
@@ -159,16 +165,15 @@ export default function InnboksPage() {
   const [messageToArchive, setMessageToArchive] = useState<string | null>(null);
   const [confirmUnarchiveDialogOpen, setConfirmUnarchiveDialogOpen] = useState(false);
   const [messageToUnarchive, setMessageToUnarchive] = useState<string | null>(null);
-
-  const showDialog = (title: string, message: string, type: 'success' | 'error' = 'success') => {
-    setDialogTitle(title);
-    setDialogMessage(message);
-    setDialogType(type);
-    setDialogOpen(true);
-  };
+  const [searchTerm, setSearchTerm] = useState('');
+  const [activeQuickFilter, setActiveQuickFilter] = useState<'all' | 'unread' | 'flagged' | 'quote'>('all');
+  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
+  const [selectedMessageIds, setSelectedMessageIds] = useState<string[]>([]);
+  const [isBulkActionRunning, setIsBulkActionRunning] = useState(false);
+  const [viewDensity, setViewDensity] = useState<'comfortable' | 'compact'>('compact');
 
   useEffect(() => {
-    let unsubscribe: () => void;
+    let unsubscribe: (() => void) | undefined;
 
     const setupRealtimeListener = async () => {
       try {
@@ -184,67 +189,93 @@ export default function InnboksPage() {
         const userId = auth.currentUser.uid;
         const inboxRef = ref(db, `users/${userId}/inbox`);
 
-        unsubscribe = onValue(inboxRef, (snapshot) => {
-          try {
-            if (!snapshot.exists()) {
-              setMessages([]);
+        unsubscribe = onValue(
+          inboxRef,
+          (snapshot) => {
+            try {
+              if (!snapshot.exists()) {
+                setMessages([]);
+                setIsLoading(false);
+                return;
+              }
+
+              const messageData = snapshot.val() as Record<string, any>;
+              const incomingMessages: InboxMessage[] = [];
+
+              Object.entries(messageData)
+                .sort(([, a], [, b]) => {
+                  const activityA = a.lastMessageAt || a.oppdatert || a.timestamp || 0;
+                  const activityB = b.lastMessageAt || b.oppdatert || b.timestamp || 0;
+                  return activityB - activityA;
+                })
+                .forEach(([key, data]) => {
+                  try {
+                    const latestActivityTimestamp = data.lastMessageAt || data.oppdatert || data.timestamp;
+                    const formattedTimestamp = latestActivityTimestamp
+                      ? new Date(latestActivityTimestamp).toISOString().slice(0, 16).replace('T', ' ')
+                      : new Date().toISOString().slice(0, 16).replace('T', ' ');
+
+                    let previewMessage = data.message || '';
+                    if ((!previewMessage || previewMessage.trim().length === 0) && data.conversation) {
+                      const conversationEntries = Object.values(data.conversation) as ConversationEntry[];
+                      if (conversationEntries.length > 0) {
+                        const latestEntry = conversationEntries.reduce<ConversationEntry | null>((latest, entry) => {
+                          if (!latest) return entry;
+                          return entry.timestamp > latest.timestamp ? entry : latest;
+                        }, null);
+                        previewMessage = latestEntry?.message || previewMessage;
+                      }
+                    }
+
+                    const message: InboxMessage = {
+                      id: key,
+                      from: data.from,
+                      subject: data.subject,
+                      message: previewMessage,
+                      timestamp: formattedTimestamp,
+                      isRead: data.isRead || false,
+                      quoteId: data.quoteId,
+                      customerId: data.customerId,
+                      type: data.type,
+                      customerName: data.customerName,
+                      quoteTitle: data.quoteTitle,
+                      isFlagged: data.isFlagged || false,
+                      folder: data.folder || 'innboks',
+                      conversation: data.conversation,
+                      hasReply: data.hasReply,
+                      lastReplyAt: data.lastReplyAt,
+                      lastMessageAt: data.lastMessageAt,
+                      relatedMessageId: data.relatedMessageId,
+                      sentTo: data.sentTo,
+                      emailId: data.emailId,
+                    };
+                    incomingMessages.push(message);
+                  } catch (messageError) {
+                    console.warn('Skipping invalid inbox message data:', key, messageError);
+                  }
+                });
+
+              setMessages(incomingMessages);
               setIsLoading(false);
-              return;
+            } catch (processingError) {
+              console.error('Error processing inbox messages:', processingError);
+              setError('Kunne ikke behandle meldinger');
+              setIsLoading(false);
             }
-
-            const messageData = snapshot.val() as Record<string, any>;
-            const messages: InboxMessage[] = [];
-            const folderSet = new Set<string>(['innboks']);
-
-            Object.entries(messageData)
-              .sort(([, a], [, b]) => b.timestamp - a.timestamp)
-              .forEach(([key, data]) => {
-                try {
-                  const message: InboxMessage = {
-                    id: key,
-                    from: data.from,
-                    subject: data.subject,
-                    message: data.message,
-                    timestamp: new Date(data.timestamp).toISOString().slice(0, 16).replace('T', ' '),
-                    isRead: data.isRead || false,
-                    quoteId: data.quoteId,
-                    customerId: data.customerId,
-                    type: data.type,
-                    customerName: data.customerName,
-                    quoteTitle: data.quoteTitle,
-                    isFlagged: data.isFlagged || false,
-                    folder: data.folder || 'innboks',
-                    conversation: data.conversation,
-                    hasReply: data.hasReply,
-                    lastReplyAt: data.lastReplyAt,
-                    lastMessageAt: data.lastMessageAt,
-                    relatedMessageId: data.relatedMessageId,
-                    sentTo: data.sentTo,
-                    emailId: data.emailId,
-                  };
-                  messages.push(message);
-                  folderSet.add(message.folder || 'innboks');
-                } catch (error) {
-                  console.warn('Skipping invalid inbox message data:', key, error);
-                }
-              });
-
-            setMessages(messages);
-            // Folders will be loaded separately
-            setIsLoading(false);
-          } catch (error) {
-            console.error('Error processing inbox messages:', error);
-            setError('Kunne ikke behandle meldinger');
+          },
+          (listenerError) => {
+            console.error('Firebase listener error:', listenerError);
+            setError('Kunne ikke lytte til meldinger');
             setIsLoading(false);
           }
-        }, (error) => {
-          console.error('Firebase listener error:', error);
-          setError('Kunne ikke lytte til meldinger');
-          setIsLoading(false);
-        });
-      } catch (error) {
-        console.error('Error setting up real-time listener:', error);
-        setError(error instanceof Error ? error.message : 'Kunne ikke sette opp sanntidsoppdatering');
+        );
+      } catch (listenerSetupError) {
+        console.error('Error setting up real-time listener:', listenerSetupError);
+        setError(
+          listenerSetupError instanceof Error
+            ? listenerSetupError.message
+            : 'Kunne ikke sette opp sanntidsoppdatering'
+        );
         setIsLoading(false);
       }
     };
@@ -258,25 +289,243 @@ export default function InnboksPage() {
     };
   }, []);
 
+  useEffect(() => {
+    setSelectedMessageIds((prev) => prev.filter((id) => messages.some((message) => message.id === id)));
+  }, [messages]);
+
+  useEffect(() => {
+    if (!selectedMessage) return;
+    const latestVersion = messages.find((message) => message.id === selectedMessage.id);
+    if (latestVersion && latestVersion !== selectedMessage) {
+      setSelectedMessage(latestVersion);
+    }
+  }, [messages, selectedMessage]);
+
+  useEffect(() => {
+    setSelectedMessage(null);
+    setSelectedMessageIds([]);
+  }, [currentFolder]);
+
+  const folderMessages = useMemo(() => {
+    return messages.filter((message) => {
+      const messageFolder = message.folder === 'arkiv' ? 'arkiv' : 'innboks';
+      const shouldShow = message.type !== 'outgoing_reply' || !message.relatedMessageId;
+      return messageFolder === currentFolder && shouldShow;
+    });
+  }, [messages, currentFolder]);
+
+  const filteredMessages = useMemo(() => {
+    const normalizedQuery = searchTerm.trim().toLowerCase();
+
+    return folderMessages
+      .filter((message) => {
+        switch (activeQuickFilter) {
+          case 'unread':
+            return !message.isRead;
+          case 'flagged':
+            return Boolean(message.isFlagged);
+          case 'quote':
+            return isQuoteRelatedMessage(message);
+          default:
+            return true;
+        }
+      })
+      .filter((message) => {
+        if (!normalizedQuery) return true;
+        const searchable = `${message.subject || ''} ${message.message || ''} ${message.customerName || ''} ${message.from || ''} ${message.quoteTitle || ''}`.toLowerCase();
+        return searchable.includes(normalizedQuery);
+      })
+      .sort((a, b) => {
+        const timeA = getMessageActivityTimestamp(a);
+        const timeB = getMessageActivityTimestamp(b);
+        return sortOrder === 'desc' ? timeB - timeA : timeA - timeB;
+      });
+  }, [folderMessages, activeQuickFilter, searchTerm, sortOrder]);
+
+  const visibleMessageIds = useMemo(() => filteredMessages.map((message) => message.id), [filteredMessages]);
+  const visibleMessageIdSet = useMemo(() => new Set(visibleMessageIds), [visibleMessageIds]);
+  const allVisibleSelected = visibleMessageIds.length > 0 && visibleMessageIds.every((id) => selectedMessageIds.includes(id));
+  const selectionTouchesView = selectedMessageIds.some((id) => visibleMessageIdSet.has(id));
+  const selectionCheckboxState: boolean | 'indeterminate' = allVisibleSelected
+    ? true
+    : selectionTouchesView
+    ? 'indeterminate'
+    : false;
+  const hasSelection = selectedMessageIds.length > 0;
+
+  const unreadCount = useMemo(() => messages.filter((message) => !message.isRead && message.folder !== 'arkiv').length, [messages]);
+  const archivedCount = useMemo(() => messages.filter((message) => message.folder === 'arkiv').length, [messages]);
+  const flaggedCount = useMemo(
+    () => messages.filter((message) => message.isFlagged && message.folder !== 'arkiv').length,
+    [messages]
+  );
+  const quoteMessageCount = useMemo(
+    () => messages.filter((message) => isQuoteRelatedMessage(message) && message.folder !== 'arkiv').length,
+    [messages]
+  );
+  const respondedCount = useMemo(() => messages.filter((message) => message.hasReply).length, [messages]);
+
+  const quickFilterCounts = useMemo(() => ({
+    all: folderMessages.length,
+    unread: folderMessages.filter((message) => !message.isRead).length,
+    flagged: folderMessages.filter((message) => message.isFlagged).length,
+    quote: folderMessages.filter((message) => isQuoteRelatedMessage(message)).length,
+  }), [folderMessages]);
+
+  const statsCards = useMemo(
+    () => [
+      { label: 'Uleste', value: unreadCount },
+      { label: 'Flagget', value: flaggedCount },
+      { label: 'Tilknyttet tilbud', value: quoteMessageCount },
+      { label: 'Besvart', value: respondedCount },
+    ],
+    [unreadCount, flaggedCount, quoteMessageCount, respondedCount]
+  );
+
+  const quickFilterOptions: Array<{ id: typeof activeQuickFilter; label: string; count: number }> = [
+    { id: 'all', label: 'Alle', count: quickFilterCounts.all },
+    { id: 'unread', label: 'Uleste', count: quickFilterCounts.unread },
+    { id: 'flagged', label: 'Flagget', count: quickFilterCounts.flagged },
+    { id: 'quote', label: 'Tilbud', count: quickFilterCounts.quote },
+  ];
+
+  const messageCardPadding = viewDensity === 'compact' ? 'p-3' : 'p-4';
+  const previewClampClass = viewDensity === 'compact' ? 'line-clamp-1' : 'line-clamp-2';
+  const metaSpacingClass = viewDensity === 'compact' ? 'gap-1.5' : 'gap-2';
+
+  const showDialog = (title: string, message: string, type: 'success' | 'error' = 'success') => {
+    setDialogTitle(title);
+    setDialogMessage(message);
+    setDialogType(type);
+    setDialogOpen(true);
+  };
+
+  const clearSelection = () => setSelectedMessageIds([]);
+
+  const handleToggleMessageSelection = (messageId: string, shouldSelect?: boolean) => {
+    setSelectedMessageIds((prev) => {
+      const isSelected = prev.includes(messageId);
+      const nextShouldSelect = shouldSelect !== undefined ? shouldSelect : !isSelected;
+
+      if (nextShouldSelect && !isSelected) {
+        return [...prev, messageId];
+      }
+
+      if (!nextShouldSelect && isSelected) {
+        return prev.filter((id) => id !== messageId);
+      }
+
+      return prev;
+    });
+  };
+
+  const handleSelectAllVisible = (shouldSelect: boolean) => {
+    if (shouldSelect) {
+      setSelectedMessageIds((prev) => Array.from(new Set([...prev, ...visibleMessageIds])));
+      return;
+    }
+
+    setSelectedMessageIds((prev) => prev.filter((id) => !visibleMessageIdSet.has(id)));
+  };
+
+  const handleBulkAction = async (
+    action: 'read' | 'unread' | 'archive' | 'unarchive' | 'flag' | 'unflag'
+  ) => {
+    if (selectedMessageIds.length === 0) return;
+
+    const idsToUpdate = [...selectedMessageIds];
+    setIsBulkActionRunning(true);
+
+    try {
+      await Promise.all(
+        idsToUpdate.map((messageId) => {
+          switch (action) {
+            case 'read':
+              return markMessageAsRead(messageId);
+            case 'unread':
+              return markMessageAsUnread(messageId);
+            case 'archive':
+              return archiveInboxMessage(messageId);
+            case 'unarchive':
+              return unarchiveInboxMessage(messageId);
+            case 'flag':
+              return flagMessage(messageId);
+            case 'unflag':
+              return unflagMessage(messageId);
+            default:
+              return Promise.resolve();
+          }
+        })
+      );
+
+      setMessages((prev) =>
+        prev.map((message) => {
+          if (!idsToUpdate.includes(message.id)) return message;
+
+          switch (action) {
+            case 'read':
+              return { ...message, isRead: true };
+            case 'unread':
+              return { ...message, isRead: false };
+            case 'archive':
+              return { ...message, folder: 'arkiv' };
+            case 'unarchive':
+              return { ...message, folder: 'innboks', archivedAt: undefined };
+            case 'flag':
+              return { ...message, isFlagged: true };
+            case 'unflag':
+              return { ...message, isFlagged: false };
+            default:
+              return message;
+          }
+        })
+      );
+
+      if (
+        ((action === 'archive' && currentFolder === 'innboks') ||
+          (action === 'unarchive' && currentFolder === 'arkiv')) &&
+        selectedMessage &&
+        idsToUpdate.includes(selectedMessage.id)
+      ) {
+        setSelectedMessage(null);
+      }
+
+      clearSelection();
+
+      const actionLabels: Record<'read' | 'unread' | 'archive' | 'unarchive' | 'flag' | 'unflag', string> = {
+        read: 'markert som lest',
+        unread: 'markert som ulest',
+        archive: 'arkivert',
+        unarchive: 'flyttet til innboks',
+        flag: 'flagget',
+        unflag: 'fjernet flagg',
+      };
+
+      showDialog('Suksess', `Meldinger ${actionLabels[action]}.`, 'success');
+    } catch (bulkError) {
+      console.error('Error performing bulk action:', bulkError);
+      showDialog('Feil', 'Kunne ikke utføre handlingen. Prøv igjen.', 'error');
+    } finally {
+      setIsBulkActionRunning(false);
+    }
+  };
+
   const handleMessageClick = async (message: InboxMessage) => {
-    // On mobile/tablet, open dialog instead of selecting
     if (window.innerWidth < 1024) {
       setSelectedMessage(message);
       setIsMessageDetailOpen(true);
     } else {
       setSelectedMessage(message);
     }
-    
+
     if (!message.isRead) {
       try {
         await markMessageAsRead(message.id);
-        setMessages(prev =>
-          prev.map(m =>
-            m.id === message.id ? { ...m, isRead: true } : m
-          )
+        setMessages((prev) =>
+          prev.map((m) => (m.id === message.id ? { ...m, isRead: true } : m))
         );
-      } catch (error) {
-        console.error('Error marking message as read:', error);
+      } catch (readError) {
+        console.error('Error marking message as read:', readError);
       }
     }
   };
@@ -291,8 +540,8 @@ export default function InnboksPage() {
         console.error('Customer not found:', customerId);
         showDialog('Feil', 'Kunne ikke finne kunden', 'error');
       }
-    } catch (error) {
-      console.error('Error fetching customer:', error);
+    } catch (customerError) {
+      console.error('Error fetching customer:', customerError);
       showDialog('Feil', 'Kunne ikke hente kundedata', 'error');
     }
   };
@@ -378,6 +627,7 @@ export default function InnboksPage() {
           m.id === messageToArchive ? { ...m, folder: 'arkiv' } : m
         )
       );
+      setSelectedMessageIds(prev => prev.filter(id => id !== messageToArchive));
       if (selectedMessage?.id === messageToArchive) {
         setSelectedMessage(null);
       }
@@ -413,6 +663,7 @@ export default function InnboksPage() {
           m.id === messageToUnarchive ? { ...m, folder: 'innboks', archivedAt: undefined } : m
         )
       );
+      setSelectedMessageIds(prev => prev.filter(id => id !== messageToUnarchive));
       if (selectedMessage?.id === messageToUnarchive) {
         setSelectedMessage(null);
       }
@@ -446,6 +697,29 @@ export default function InnboksPage() {
     } catch (error) {
       console.error('Error toggling flag:', error);
       showDialog('Feil', 'Kunne ikke endre flagg-status. Prøv igjen.', 'error');
+    }
+  };
+
+  const handleToggleReadState = async (message: InboxMessage) => {
+    try {
+      if (message.isRead) {
+        await markMessageAsUnread(message.id);
+      } else {
+        await markMessageAsRead(message.id);
+      }
+
+      setMessages(prev =>
+        prev.map(m =>
+          m.id === message.id ? { ...m, isRead: !message.isRead } : m
+        )
+      );
+
+      setSelectedMessage(prev =>
+        prev && prev.id === message.id ? { ...prev, isRead: !message.isRead } : prev
+      );
+    } catch (toggleError) {
+      console.error('Error toggling read state:', toggleError);
+      showDialog('Feil', 'Kunne ikke oppdatere lest-status. Prøv igjen.', 'error');
     }
   };
 
@@ -487,11 +761,25 @@ export default function InnboksPage() {
 
       const emailResult = await response.json();
       console.log('✅ Email sent:', emailResult);
+      const emailId = emailResult.messageId ?? null;
 
       const outgoingInboxRef = ref(db, `users/${userId}/inbox`);
       const outgoingMessageRef = push(outgoingInboxRef);
 
-      const outgoingMessage = {
+      const outgoingMessage: {
+        from: string;
+        subject: string;
+        message: string;
+        timestamp: number;
+        isRead: boolean;
+        type: 'outgoing_reply';
+        isFlagged: boolean;
+        folder: string;
+        sentTo: string;
+        opprettet: number;
+        oppdatert: number;
+        emailId?: string | null;
+      } = {
         from: 'Deg',
         subject: newMessageSubject,
         message: newMessageContent,
@@ -501,10 +789,13 @@ export default function InnboksPage() {
         isFlagged: false,
         folder: 'innboks',
         sentTo: newMessageTo,
-        emailId: emailResult.messageId,
         opprettet: Date.now(),
         oppdatert: Date.now(),
       };
+
+      if (emailId) {
+        outgoingMessage.emailId = emailId;
+      }
 
       await set(outgoingMessageRef, outgoingMessage);
       console.log('✅ Outgoing message log created in "innboks" folder');
@@ -529,18 +820,6 @@ export default function InnboksPage() {
     setNewMessageContent('');
   };
 
-  const filteredMessages = messages.filter(message => {
-    const shouldShow = message.type !== 'outgoing_reply' || !message.relatedMessageId;
-    
-    // Treat all folders except 'arkiv' as 'innboks'
-    const messageFolder = message.folder === 'arkiv' ? 'arkiv' : 'innboks';
-    const inCorrectFolder = messageFolder === currentFolder;
-    
-    return shouldShow && inCorrectFolder;
-  });
-
-  const unreadCount = messages.filter(m => !m.isRead && m.folder !== 'arkiv').length;
-  const archivedCount = messages.filter(m => m.folder === 'arkiv').length;
 
   if (isLoading) {
     return (
@@ -568,31 +847,83 @@ export default function InnboksPage() {
       <div className="h-full flex flex-col w-full">
         {/* Header */}
         <div className="border-b bg-white">
-          <div className="flex flex-col sm:flex-row h-auto justify-center sm:h-16 items-start sm:items-center px-6 py-4 sm:py-0 gap-4">
-            <div className="flex items-center gap-2">
-              <Inbox className="h-5 w-5" />
-              <h1 className="text-xl font-semibold">Innboks</h1>
-            </div>
-            <div className="flex-1 max-w-md">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Søk i meldinger..."
-                    className="pl-10 pr-4"
-                  />
+          <div className="px-4 sm:px-6 py-6 space-y-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-12 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+                  <Inbox className="h-5 w-5" />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-semibold leading-tight">Innboks</h1>
+                  <p className="text-sm text-muted-foreground">Alt av kundedialog rundt tilbud samlet ett sted</p>
                 </div>
               </div>
-            <div className="flex flex-col sm:flex-row justify-end items-stretch sm:items-center gap-2 flex-1">
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm">
-                  <Filter className="h-4 w-4 mr-2" />
-                  Filter
-                </Button>
-                <Button onClick={handleCreateNewMessage} size="sm">
-                  <Plus className="h-4 w-4 mr-2" />
+              <div className="flex flex-wrap items-center gap-2">
+                <Button onClick={handleCreateNewMessage} size="sm" className="gap-2">
+                  <Plus className="h-4 w-4" />
                   Ny melding
                 </Button>
               </div>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {statsCards.map((stat) => (
+                <div key={stat.label} className="rounded-xl border bg-muted/30 px-4 py-3">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">{stat.label}</p>
+                  <p className="text-2xl font-semibold mt-1">{stat.value}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Søk i meldinger..."
+                  className="pl-10 pr-4"
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                />
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Select value={sortOrder} onValueChange={(value) => setSortOrder(value as 'asc' | 'desc')}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Sorter" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="desc">Nyeste først</SelectItem>
+                    <SelectItem value="asc">Eldste først</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              {quickFilterOptions.map((option) => (
+                <Button
+                  key={option.id}
+                  variant={activeQuickFilter === option.id ? 'default' : 'ghost'}
+                  size="sm"
+                  className={`h-8 rounded-full px-4 text-xs ${activeQuickFilter === option.id ? 'shadow-sm' : 'text-muted-foreground'}`}
+                  onClick={() => setActiveQuickFilter(option.id)}
+                >
+                  {option.label}
+                  <span className={`ml-2 text-[0.7rem] ${activeQuickFilter === option.id ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}>
+                    {option.count}
+                  </span>
+                </Button>
+              ))}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 px-3 text-xs text-muted-foreground"
+                onClick={() => {
+                  setSearchTerm('');
+                  setActiveQuickFilter('all');
+                }}
+              >
+                Nullstill filter
+              </Button>
             </div>
           </div>
         </div>
@@ -602,26 +933,21 @@ export default function InnboksPage() {
           {/* Message List and Detail */}
           <div className="flex flex-col lg:flex-row min-h-0">
             {/* Message List */}
-            <div className="lg:w-2/5 border-r flex flex-col min-h-0">
-              <div className="p-4 border-b space-y-3">
+            <div className="lg:w-2/5 border-r flex flex-col min-h-0 bg-muted/5">
+              <div className="p-4 border-b space-y-4">
                 <div className="flex items-center justify-between">
                   <h2 className="text-lg font-semibold">
                     {currentFolder === 'innboks' ? 'Innboks' : 'Arkiv'}
                   </h2>
                   {currentFolder === 'innboks' && unreadCount > 0 && (
-                    <Badge variant="secondary">
-                      {unreadCount} ulest
-                    </Badge>
+                    <Badge variant="secondary">{unreadCount} ulest</Badge>
                   )}
                   {currentFolder === 'arkiv' && archivedCount > 0 && (
-                    <Badge variant="secondary">
-                      {archivedCount} arkivert
-                    </Badge>
+                    <Badge variant="secondary">{archivedCount} arkivert</Badge>
                   )}
                 </div>
-                
-                {/* Folder Tabs */}
-                <div className="flex gap-2">
+
+                <div className="grid grid-cols-2 gap-2">
                   <Button
                     variant={currentFolder === 'innboks' ? 'default' : 'outline'}
                     size="sm"
@@ -629,12 +955,12 @@ export default function InnboksPage() {
                       setCurrentFolder('innboks');
                       setSelectedMessage(null);
                     }}
-                    className="flex-1"
+                    className="gap-2"
                   >
-                    <Inbox className="h-4 w-4 mr-2" />
+                    <Inbox className="h-4 w-4" />
                     Innboks
                     {unreadCount > 0 && (
-                      <Badge variant="secondary" className="ml-2">
+                      <Badge variant="secondary" className="ml-auto">
                         {unreadCount}
                       </Badge>
                     )}
@@ -646,168 +972,291 @@ export default function InnboksPage() {
                       setCurrentFolder('arkiv');
                       setSelectedMessage(null);
                     }}
-                    className="flex-1"
+                    className="gap-2"
                   >
-                    <Archive className="h-4 w-4 mr-2" />
+                    <Archive className="h-4 w-4" />
                     Arkiv
                     {archivedCount > 0 && (
-                      <Badge variant="secondary" className="ml-2">
+                      <Badge variant="secondary" className="ml-auto">
                         {archivedCount}
                       </Badge>
                     )}
                   </Button>
                 </div>
+
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      aria-label="Velg alle synlige meldinger"
+                      checked={selectionCheckboxState}
+                      onCheckedChange={(checked) => handleSelectAllVisible(Boolean(checked))}
+                      disabled={filteredMessages.length === 0}
+                    />
+                    <span>Velg alle</span>
+                  </div>
+                  <span className="font-medium text-foreground/70">
+                    {filteredMessages.length} meldinger
+                  </span>
+                </div>
+
+                {hasSelection && (
+                  <div className="rounded-lg border bg-background/90 px-3 py-2 space-y-2 shadow-sm">
+                    <div className="flex items-center justify-between text-sm font-medium">
+                      <span>{selectedMessageIds.length} valgt</span>
+                      {isBulkActionRunning && (
+                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          Jobber...
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 gap-1 text-xs"
+                        disabled={isBulkActionRunning}
+                        onClick={() => handleBulkAction('read')}
+                      >
+                        <MailOpen className="h-3.5 w-3.5" />
+                        Lest
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 gap-1 text-xs"
+                        disabled={isBulkActionRunning}
+                        onClick={() => handleBulkAction('unread')}
+                      >
+                        <Mail className="h-3.5 w-3.5" />
+                        Ulest
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 gap-1 text-xs"
+                        disabled={isBulkActionRunning}
+                        onClick={() => handleBulkAction('flag')}
+                      >
+                        <Flag className="h-3.5 w-3.5" />
+                        Flagg
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 gap-1 text-xs"
+                        disabled={isBulkActionRunning}
+                        onClick={() => handleBulkAction('unflag')}
+                      >
+                        <FlagOff className="h-3.5 w-3.5" />
+                        Fjern
+                      </Button>
+                      {currentFolder === 'innboks' ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 gap-1 text-xs"
+                          disabled={isBulkActionRunning}
+                          onClick={() => handleBulkAction('archive')}
+                        >
+                          <Archive className="h-3.5 w-3.5" />
+                          Arkiver
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 gap-1 text-xs"
+                          disabled={isBulkActionRunning}
+                          onClick={() => handleBulkAction('unarchive')}
+                        >
+                          <Inbox className="h-3.5 w-3.5" />
+                          Til innboks
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 px-3 text-xs"
+                        disabled={isBulkActionRunning}
+                        onClick={clearSelection}
+                      >
+                        Tøm utvalg
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
 
-              <ScrollArea className="flex-1 max-h-[calc(100vh-200px)]">
+              <ScrollArea className="flex-1">
                 {filteredMessages.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
+                  <div className="flex flex-col items-center justify-center h-64 text-center text-muted-foreground">
                     {currentFolder === 'innboks' ? (
                       <>
-                        <Inbox className="h-12 w-12 mb-4" />
-                        <p className="text-lg font-medium">Ingen meldinger</p>
+                        <Inbox className="h-12 w-12 mb-4 text-muted-foreground/70" />
+                        <p className="text-base font-medium">Ingen meldinger</p>
                         <p className="text-sm">Nye meldinger vil dukke opp her</p>
                       </>
                     ) : (
                       <>
-                        <Archive className="h-12 w-12 mb-4" />
-                        <p className="text-lg font-medium">Ingen arkiverte meldinger</p>
-                        <p className="text-sm">Arkiverte meldinger vil dukke opp her</p>
+                        <Archive className="h-12 w-12 mb-4 text-muted-foreground/70" />
+                        <p className="text-base font-medium">Ingen arkiverte meldinger</p>
+                        <p className="text-sm">Flytt meldinger hit for å rydde innboksen</p>
                       </>
                     )}
                   </div>
                 ) : (
-                  <div className="p-3 grid grid-cols-1 gap-2 w-full">
-                    {filteredMessages.map((message) => (
-                      <Card
-                        key={message.id}
-                        className={`cursor-pointer transition-all w-full hover:shadow-md ${
-                          selectedMessage?.id === message.id
-                            ? 'ring-2 ring-primary bg-background'
-                            : message.isFlagged
-                            ? 'bg-yellow-50 dark:bg-yellow-950/20 border-yellow-500 border-l-4'
-                            : !message.isRead
-                            ? 'bg-gray-100 border-gray-300'
-                            : ''
-                        }`}
-                        onClick={() => handleMessageClick(message)}
-                      >
-                        <CardContent className="p-2 sm:p-3">
-                          <div className="flex items-start gap-2">
-                            {isQuoteRelatedMessage(message) && (
-                              <div className="flex items-center mt-1">
-                                <div className="w-1 h-3 sm:h-4 bg-gray-300 rounded-full mr-1"></div>
-                                <div className="w-1 h-3 sm:h-4 bg-gray-300 rounded-full"></div>
-                              </div>
-                            )}
-                            <Avatar className="h-6 w-6 sm:h-8 sm:w-8 flex-shrink-0">
+                  <div className="p-3 space-y-2">
+                    {filteredMessages.map((message) => {
+                      const isSelected = selectedMessageIds.includes(message.id);
+                      const isActive = selectedMessage?.id === message.id;
+                      const isUnread = !message.isRead;
+
+                      return (
+                        <Card
+                          key={message.id}
+                          className={cn(
+                            'cursor-pointer border border-transparent bg-background/70 shadow-none backdrop-blur-sm transition-all hover:border-primary/40',
+                            (isSelected || isActive) && 'ring-2 ring-primary/60 shadow-sm',
+                            isUnread && 'border-primary/40 bg-primary/5',
+                            message.isFlagged && 'border-amber-400/70'
+                          )}
+                          onClick={() => handleMessageClick(message)}
+                        >
+                          <CardContent className={cn('flex items-start gap-3', messageCardPadding)}>
+                            <div className="flex flex-col items-center gap-2 pt-1">
+                              <Checkbox
+                                aria-label="Velg melding"
+                                checked={isSelected}
+                                onCheckedChange={(checked) => handleToggleMessageSelection(message.id, Boolean(checked))}
+                                onClick={(event) => event.stopPropagation()}
+                              />
+                              {isUnread && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
+                            </div>
+                            <Avatar className="h-8 w-8 flex-shrink-0">
                               <AvatarFallback className="text-xs">
                                 {message.type === 'outgoing_reply' ? (
-                                  <Building2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                                  <Building2 className="h-3.5 w-3.5" />
                                 ) : (
-                                  <User className="h-3 w-3 sm:h-4 sm:w-4" />
+                                  <User className="h-3.5 w-3.5" />
                                 )}
                               </AvatarFallback>
                             </Avatar>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center justify-between mb-1">
-                                <div className="flex items-center gap-1 sm:gap-2 flex-1 min-w-0">
+                            <div className="flex-1 min-w-0 space-y-2">
+                              <div className={cn('flex flex-wrap items-center justify-between gap-2', metaSpacingClass)}>
+                                <div className="flex flex-wrap items-center gap-2 min-w-0">
                                   {message.type === 'outgoing_reply' ? (
-                                    <span className="text-xs sm:text-sm font-medium truncate">
+                                    <span className="text-sm font-medium truncate">
                                       Til: {message.customerName || message.from}
                                     </span>
                                   ) : (
                                     <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
+                                      type="button"
+                                      onClick={(event) => {
+                                        event.stopPropagation();
                                         if (message.customerId) {
                                           handleCustomerClick(message.customerId);
                                         }
                                       }}
-                                      className="text-xs sm:text-sm font-medium hover:text-primary transition-colors truncate"
+                                      className="text-sm font-medium hover:text-primary transition-colors truncate"
                                     >
                                       {message.customerName || message.from}
                                     </button>
                                   )}
-                                  {/*}
-                                  <Badge variant="outline" className="text-xs px-1 py-0 hidden sm:inline-flex">
+                                  <Badge variant="outline" className="text-[0.65rem] font-medium">
                                     {getMessageTypeLabel(message.type)}
                                   </Badge>
-                                  {*/}
                                 </div>
-                                <div className="flex items-center gap-1 sm:gap-2 text-xs text-muted-foreground flex-shrink-0">
-                                  <Clock className="h-3 w-3" />
+                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                  <Clock className="h-3.5 w-3.5" />
                                   <span className="hidden sm:inline">{formatDate(message.timestamp)}</span>
-                                  <span className="sm:hidden">{new Date(message.timestamp).toLocaleDateString('nb-NO', { month: 'short', day: 'numeric' })}</span>
+                                  <span className="sm:hidden">
+                                    {new Date(message.timestamp).toLocaleDateString('nb-NO', { month: 'short', day: 'numeric' })}
+                                  </span>
                                 </div>
                               </div>
-                              <p className={`text-xs sm:text-sm truncate ${
-                                !message.isRead ? 'font-medium' : ''
-                              }`}>
-                                {message.subject}
-                              </p>
-                              <p className="text-xs text-muted-foreground truncate hidden md:block">
-                                {message.message}
-                              </p>
-                              {message.quoteTitle && (
-                                <div className="flex items-center gap-1 mt-1">
-                                  <FileText className="h-3 w-3 text-muted-foreground" />
+                              <div>
+                                <p className={cn('text-sm font-medium text-foreground', isUnread && 'text-primary')}>
+                                  {message.subject || 'Uten emne'}
+                                </p>
+                                <p className={cn('text-xs text-muted-foreground mt-1', previewClampClass)}>
+                                  {message.message || 'Ingen forhåndsvisning tilgjengelig'}
+                                </p>
+                              </div>
+                              <div className="flex flex-wrap items-center gap-2 text-[0.7rem] text-muted-foreground">
+                                {message.quoteTitle && (
                                   <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
+                                    type="button"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
                                       if (message.quoteId) {
                                         handleQuoteClick(message.quoteId);
                                       }
                                     }}
-                                    className="text-xs text-primary hover:underline truncate"
+                                    className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 hover:bg-muted/70"
                                   >
-                                    {message.quoteTitle}
+                                    <FileText className="h-3 w-3" />
+                                    <span className="truncate max-w-[120px] sm:max-w-[180px]">
+                                      {message.quoteTitle}
+                                    </span>
                                   </button>
-                                </div>
-                              )}
-                              <div className="flex items-center justify-end mt-2">
-                                <div className="flex items-center gap-1">
-                                  {currentFolder === 'innboks' && (
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        console.log('Archive button clicked, message ID:', message.id);
-                                        handleDeleteMessage(message.id);
-                                      }}
-                                      className="h-6 w-6 sm:h-8 sm:w-8 p-0 text-muted-foreground hover:text-primary"
-                                      type="button"
-                                      title="Arkiver melding"
-                                    >
-                                      <Archive className="h-3 w-3 sm:h-4 sm:w-4" />
-                                    </Button>
-                                  )}
-                                  {currentFolder === 'arkiv' && (
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        console.log('Unarchive button clicked, message ID:', message.id);
-                                        handleUnarchiveMessage(message.id);
-                                      }}
-                                      className="h-6 w-6 sm:h-8 sm:w-8 p-0 text-muted-foreground hover:text-green-600"
-                                      type="button"
-                                      title="Flytt til innboks"
-                                    >
-                                      <Inbox className="h-3 w-3 sm:h-4 sm:w-4" />
-                                    </Button>
-                                  )}
-                                </div>
+                                )}
+                                {message.hasReply && (
+                                  <Badge variant="secondary" className="text-[0.65rem]">
+                                    Besvart
+                                  </Badge>
+                                )}
                               </div>
                             </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
+                            <div className="flex flex-col items-end gap-2">
+                              {message.isFlagged && <Flag className="h-4 w-4 text-yellow-500" />}
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-muted-foreground hover:text-primary"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    handleToggleFlag(message.id, message.isFlagged || false);
+                                  }}
+                                >
+                                  {message.isFlagged ? <FlagOff className="h-4 w-4" /> : <Flag className="h-4 w-4" />}
+                                </Button>
+                                {currentFolder === 'innboks' ? (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-muted-foreground hover:text-primary"
+                                    onClick={(event) => {
+                                      event.preventDefault();
+                                      event.stopPropagation();
+                                      handleDeleteMessage(message.id);
+                                    }}
+                                    title="Arkiver melding"
+                                  >
+                                    <Archive className="h-4 w-4" />
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-muted-foreground hover:text-green-600"
+                                    onClick={(event) => {
+                                      event.preventDefault();
+                                      event.stopPropagation();
+                                      handleUnarchiveMessage(message.id);
+                                    }}
+                                    title="Flytt til innboks"
+                                  >
+                                    <Inbox className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
                   </div>
                 )}
               </ScrollArea>
@@ -941,6 +1390,24 @@ export default function InnboksPage() {
                         <Button onClick={handleReply} className="flex items-center gap-2">
                           <Reply className="h-4 w-4" />
                           Svar
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="flex items-center gap-2"
+                          onClick={() => selectedMessage && handleToggleReadState(selectedMessage)}
+                        >
+                          {selectedMessage.isRead ? (
+                            <>
+                              <Mail className="h-4 w-4" />
+                              Marker som ulest
+                            </>
+                          ) : (
+                            <>
+                              <MailOpen className="h-4 w-4" />
+                              Marker som lest
+                            </>
+                          )}
                         </Button>
                         <Button
                           variant="ghost"
@@ -1258,6 +1725,24 @@ export default function InnboksPage() {
                     <Button onClick={handleReply} className="flex items-center gap-2">
                       <Reply className="h-4 w-4" />
                       Svar
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="flex items-center gap-2"
+                      onClick={() => selectedMessage && handleToggleReadState(selectedMessage)}
+                    >
+                      {selectedMessage.isRead ? (
+                        <>
+                          <Mail className="h-4 w-4" />
+                          Marker som ulest
+                        </>
+                      ) : (
+                        <>
+                          <MailOpen className="h-4 w-4" />
+                          Marker som lest
+                        </>
+                      )}
                     </Button>
                     <Button
                       variant="ghost"

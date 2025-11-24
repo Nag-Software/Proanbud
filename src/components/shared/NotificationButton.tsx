@@ -8,8 +8,8 @@ import { ref, onValue, off } from 'firebase/database';
 import { db, auth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 
-const formatTimeAgo = (dateString: string) => {
-  const date = new Date(dateString);
+const formatTimeAgo = (dateInput: number | string) => {
+  const date = typeof dateInput === 'number' ? new Date(dateInput) : new Date(dateInput);
   const now = new Date();
   const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
   
@@ -36,6 +36,15 @@ const getMessageTypeLabel = (type: InboxMessage['type']) => {
     default:
       return 'Generell';
   }
+};
+
+const msgTimestampForSort = (message: InboxMessage) => {
+  if (message.lastMessageAt) {
+    return message.lastMessageAt;
+  }
+
+  const parsed = Date.parse(message.timestamp);
+  return Number.isNaN(parsed) ? 0 : parsed;
 };
 
 export const NotificationButton = () => {
@@ -69,23 +78,35 @@ export const NotificationButton = () => {
             }
 
             const messagesArray: InboxMessage[] = Object.entries(data)
-              .map(([key, value]: [string, any]) => ({
-                id: key,
-                from: value.from,
-                subject: value.subject,
-                message: value.message,
-                timestamp: new Date(value.timestamp).toISOString().slice(0, 16).replace('T', ' '),
-                isRead: value.isRead,
-                quoteId: value.quoteId,
-                customerId: value.customerId,
-                type: value.type,
-                customerName: value.customerName,
-                quoteTitle: value.quoteTitle,
-                isFlagged: value.isFlagged || false,
-                folder: value.folder || 'innboks',
-              }))
+              .map(([key, value]: [string, any]) => {
+                const activityTimestamp = value.lastMessageAt || value.oppdatert || value.timestamp;
+                const formattedTimestamp = activityTimestamp
+                  ? new Date(activityTimestamp).toISOString().slice(0, 16).replace('T', ' ')
+                  : new Date().toISOString().slice(0, 16).replace('T', ' ');
+
+                return {
+                  id: key,
+                  from: value.from,
+                  subject: value.subject,
+                  message: value.message,
+                  timestamp: formattedTimestamp,
+                  isRead: value.isRead,
+                  quoteId: value.quoteId,
+                  customerId: value.customerId,
+                  type: value.type,
+                  customerName: value.customerName,
+                  quoteTitle: value.quoteTitle,
+                  isFlagged: value.isFlagged || false,
+                  folder: value.folder || 'innboks',
+                  lastMessageAt: value.lastMessageAt,
+                };
+              })
               .filter(msg => !msg.isRead && (msg.folder === 'innboks' || msg.folder === 'tilbud'))
-              .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+              .sort((a, b) => {
+                const timeA = msgTimestampForSort(a);
+                const timeB = msgTimestampForSort(b);
+                return timeB - timeA;
+              })
               .slice(0, 5); // Show only latest 5 unread messages
 
             setUnreadMessages(messagesArray);
@@ -198,7 +219,7 @@ export const NotificationButton = () => {
                             {getMessageTypeLabel(message.type)}
                           </span>
                           <span className="text-xs text-muted-text">
-                            {formatTimeAgo(message.timestamp)}
+                            {formatTimeAgo(message.lastMessageAt ?? message.timestamp)}
                           </span>
                         </div>
                         <p className="text-sm font-medium text-text truncate mb-1">
