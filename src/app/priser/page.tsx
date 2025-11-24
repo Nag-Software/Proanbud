@@ -51,15 +51,14 @@ export default function PricingPage() {
               yearly: 6990
             },
             features: [
-              'Inntil 15 tilbud per måned',
-              'Inntil 10 kunder',
+              'Inntil 15 nye tilbud per måned',
+              'Inntil 10 nye kunder per måned',
               'Grunnleggende rapporter',
               'E-post support',
-              '1GB lagring',
             ],
             color: 'blue',
             cta: 'Velg Standard',
-            popular: false
+            popular: true
           },
           {
             id: 'proff',
@@ -74,12 +73,11 @@ export default function PricingPage() {
               'Ubegrenset kunder',
               'Avanserte rapporter og analyser',
               'Prioritert support',
-              '10GB lagring',
               'Integrasjoner',
             ],
             color: 'purple',
             cta: 'Velg Proff',
-            popular: true
+            popular: false
           }
         ]);
       } finally {
