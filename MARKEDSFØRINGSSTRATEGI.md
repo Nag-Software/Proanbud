@@ -13,7 +13,7 @@
 - AI-drevet prissetting
 - Profesjonelle tilbudsmaler
 - Tidsbesparelse: Fra 1-3 timer til 5 minutter per tilbud
-- Prismodell: Standard (699 NOK/mnd) og Proff (1999 NOK/mnd)
+- Prismodell: Standard (399 NOK/mnd) og Proff (799 NOK/mnd)
 - 14 dagers gratis prøveperiode
 
 ### Målgruppen
@@ -107,7 +107,7 @@ La oss ta oss av tilbudene.
 
 Proanbud = Mindre papirarbeid, flere oppdrag.
 
-Fra 699 kr/mnd. Prøv gratis i 14 dager.
+Fra 399 kr/mnd. Prøv gratis i 14 dager.
 ```
 
 #### 2. Direct Outreach (LinkedIn-meldinger)
@@ -253,7 +253,7 @@ Gratis prøve i 14 dager. Ingen kredittkort.
 **Annonse 2:**
 ```
 Spar Tid på Tilbudsskriving | Proanbud
-Fra 699 kr/mnd. Profesjonelle maler. AI-prissetting.
+Fra 399 kr/mnd. Profesjonelle maler. AI-prissetting.
 Brukt av hundrevis av norske håndverkere.
 [proanbud.no]
 ```
@@ -435,8 +435,8 @@ Skriv artikler som rangerer i Google:
 | **Total** | **450 NOK** | **3 150 NOK** | **18 900 NOK** |
 
 **Kostnad per kunde (mål):** 1 890 NOK  
-**ROI ved Standard-plan (699/mnd):** Dekket etter ~3 måneder  
-**ROI ved Proff-plan (1999/mnd):** Dekket etter ~1 måned
+**ROI ved Standard-plan (399/mnd):** Dekket etter ~5 måneder  
+**ROI ved Proff-plan (799/mnd):** Dekket etter ~2-3 måneder
 
 ---
 
