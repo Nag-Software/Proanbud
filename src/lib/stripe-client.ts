@@ -98,7 +98,7 @@ export const getSubscriptionPlans = async (): Promise<SubscriptionPlanDetails[]>
       features: ['Inntil 15 nye tilbud', 'Inntil 10 nye kunder', 'Grunnleggende rapporter', 'E-post support', '1GB lagring (kommer)', 'Kunde-database'],
       color: 'blue',
       cta: 'Velg Standard',
-      popular: true,
+      popular: false,
       limits: { quotes: 15, customers: 10, storage: 1 },
       stripePriceId: {
         monthly: PRICE_IDS.STANDARD,
@@ -110,10 +110,10 @@ export const getSubscriptionPlans = async (): Promise<SubscriptionPlanDetails[]>
       name: 'Proff',
       description: 'For voksende bedrifter med profesjonelle behov',
       price: prices.proff || { monthly: 1999, yearly: 19990 },
-      features: ['Ubegrenset tilbud', 'Ubegrenset kunder', 'Avanserte rapporter og analyser', 'Prioritert support', '10GB lagring (kommer)', 'API-tilgang', 'Integrasjoner', 'Automasjon', 'Team-samarbeid (kommer)'],
+      features: ['Ubegrenset nye tilbud', 'Ubegrenset nye kunder', 'Avanserte rapporter og analyser', 'Prioritert support', '10GB lagring (kommer)', 'API-tilgang', 'Integrasjoner', 'Automasjon', 'Team-samarbeid (kommer)'],
       color: 'purple',
       cta: 'Velg Proff',
-      popular: false,
+      popular: true,
       limits: { quotes: -1, customers: -1, storage: 10 },
       stripePriceId: {
         monthly: PRICE_IDS.PROFF,
@@ -144,7 +144,7 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlanDetails[] = [
     features: ['Inntil 15 nye tilbud', 'Inntil 10 nye kunder', 'Grunnleggende rapporter', 'E-post support', '1GB lagring (kommer)', 'Kunde-database'],
     color: 'blue',
     cta: 'Velg Standard',
-    popular: true,
+    popular: false,
     limits: { quotes: 15, customers: 10, storage: 1 },
     stripePriceId: {
       monthly: PRICE_IDS.STANDARD,
@@ -156,10 +156,10 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlanDetails[] = [
     name: 'Proff',
     description: 'For voksende bedrifter med profesjonelle behov',
     price: { monthly: 1999, yearly: 19990 },
-    features: ['Ubegrenset tilbud', 'Ubegrenset kunder', 'Avanserte rapporter og analyser', 'Prioritert support', '10GB lagring (kommer)', 'API-tilgang', 'Integrasjoner', 'Automasjon', 'Team-samarbeid (kommer)'],
+    features: ['Ubegrenset nye tilbud', 'Ubegrenset nye kunder', 'Avanserte rapporter og analyser', 'Prioritert support', '10GB lagring (kommer)', 'API-tilgang', 'Integrasjoner', 'Automasjon', 'Team-samarbeid (kommer)'],
     color: 'purple',
     cta: 'Velg Proff',
-    popular: false,
+    popular: true,
     limits: { quotes: -1, customers: -1, storage: 10 },
     stripePriceId: {
       monthly: PRICE_IDS.PROFF,

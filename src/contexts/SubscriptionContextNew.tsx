@@ -418,6 +418,13 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
 
     console.log('Creating checkout session for user:', user.uid, 'with price:', priceId);
 
+    // Skip the Firebase extension if we do not have a Stripe customer yet
+    const hasStripeCustomer = Boolean(subscription?.stripeCustomerId);
+    if (!hasStripeCustomer) {
+      console.log('No Stripe customer detected for user, using direct API fallback.');
+      return createCheckoutSessionFallback(priceId);
+    }
+
     // First, try the Firebase extension approach
     try {
       const checkoutSessionsRef = collection(firestore, `customers/${user.uid}/checkout_sessions`);
@@ -440,7 +447,7 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
       console.log('Checkout session document created:', docRef.id);
 
       // Wait for the session to be created by the extension (with shorter timeout)
-      return new Promise<{ id: string; url: string }>((resolve, reject) => {
+      return await new Promise<{ id: string; url: string }>((resolve, reject) => {
         let attempts = 0;
         const maxAttempts = 10; // 10 seconds total
         
@@ -480,7 +487,7 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
       // If extension fails, try fallback
       return createCheckoutSessionFallback(priceId);
     }
-  }, [user?.uid]);
+  }, [user?.uid, subscription?.stripeCustomerId]);
 
   // Fallback method using direct Stripe API
   const createCheckoutSessionFallback = async (priceId: string) => {

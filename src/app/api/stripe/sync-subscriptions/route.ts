@@ -77,11 +77,33 @@ export async function POST(request: NextRequest) {
     }
 
     // Get all subscriptions for this customer from Stripe
-    const subscriptions = await stripe.subscriptions.list({
-      customer: customerId,
-      status: 'all', // Get all statuses including canceled
-      limit: 10,
-    });
+    let subscriptions;
+    try {
+      subscriptions = await stripe.subscriptions.list({
+        customer: customerId,
+        status: 'all', // Get all statuses including canceled
+        limit: 10,
+      });
+    } catch (stripeError: any) {
+      const message = stripeError?.message || '';
+      const isMissingCustomer = stripeError?.code === 'resource_missing' && message.includes('No such customer');
+
+      if (isMissingCustomer) {
+        console.warn(`⚠️ Stripe customer ${customerId} no longer exists. Clearing stored customer reference for user ${userId}.`);
+        try {
+          await firestore.collection('users').doc(userId).set({ stripeCustomerId: null }, { merge: true });
+        } catch (docError) {
+          console.error('Failed to clear stale stripeCustomerId for user', userId, docError);
+        }
+
+        return NextResponse.json({
+          error: 'No subscription data found. Please create a subscription first.',
+          code: 'NO_SUBSCRIPTION'
+        }, { status: 404 });
+      }
+
+      throw stripeError;
+    }
 
     console.log(`🔍 Found ${subscriptions.data.length} subscriptions for customer ${customerId}`);
 
