@@ -45,7 +45,7 @@ export interface InboxMessage {
   isRead: boolean;
   quoteId?: string;
   customerId?: string;
-  type: 'quote_sent' | 'quote_opened' | 'quote_question' | 'quote_approved' | 'quote_rejected' | 'quote_conversation' | 'general_inquiry' | 'outgoing_reply';
+  type: 'quote_sent' | 'quote_draft' | 'quote_opened' | 'quote_question' | 'quote_approved' | 'quote_rejected' | 'quote_conversation' | 'general_inquiry' | 'outgoing_reply';
   customerName?: string;
   quoteTitle?: string;
   isFlagged?: boolean;
@@ -112,12 +112,17 @@ export interface PriceComponent {
   name: string;
   description: string;
   produsent?: string;
+  projectCategory?: string; // High-level AI grouping like "Bygge terrasse"
+  projectCategoryDescription?: string;
   amount: number;
   quantity?: number;
   unit?: string;
   unitPrice?: number;
   priceMarkup?: number; // Percentage markup on base price
   materialMarkup?: number; // Additional markup for materials
+  componentTotal?: number; // Raw total from AI response before recalculation
+  catalogMatch?: string;
+  catalogSource?: string;
   isEditable: boolean;
   confidence: number; // 0-100, how confident AI is in this estimate
 }

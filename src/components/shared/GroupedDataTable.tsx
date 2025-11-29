@@ -11,13 +11,29 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { ChevronDown, Edit2, Trash2 } from "lucide-react";
-import { useEffect, useState, Fragment } from "react";
+import { useEffect, useState, Fragment, useMemo } from "react";
 import { Card, CardContent, CardHeader } from "./Card";
 import { PriceComponent } from "@/lib/types";
 import { PriceComponentDrawer } from "@/components/tilbud/PriceComponentDrawer";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,6 +59,7 @@ const DEFAULT_CATEGORIES = [
 ] as const;
 
 const DEFAULT_CATEGORY_SET = new Set<string>(DEFAULT_CATEGORIES);
+const FALLBACK_PROJECT_CATEGORY = "Ingen prosjekt";
 
 interface GroupedDataTableProps {
   items: PriceComponent[];
@@ -53,6 +70,7 @@ interface GroupedDataTableProps {
   customCategories?: string[];
   onCustomCategoriesChange?: (categories: string[]) => void;
   variant?: "default" | "public";
+  enableProjectGrouping?: boolean;
 }
 
 export default function GroupedDataTable({
@@ -64,6 +82,7 @@ export default function GroupedDataTable({
   customCategories,
   onCustomCategoriesChange,
   variant = "default",
+  enableProjectGrouping = false,
 }: GroupedDataTableProps) {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [showAddCategory, setShowAddCategory] = useState(false);
@@ -76,6 +95,20 @@ export default function GroupedDataTable({
   const [renameError, setRenameError] = useState<string | null>(null);
   const [selectedComponent, setSelectedComponent] = useState<PriceComponent | null>(null);
   const [isComponentDrawerOpen, setIsComponentDrawerOpen] = useState(false);
+  const [hiddenProjects, setHiddenProjects] = useState<Set<string>>(new Set());
+  const [manualProjects, setManualProjects] = useState<string[]>([]);
+  const [isAddProjectDialogOpen, setIsAddProjectDialogOpen] = useState(false);
+  const [newProjectName, setNewProjectName] = useState("");
+  const [isAddManualComponentOpen, setIsAddManualComponentOpen] = useState(false);
+  const [newComponentForm, setNewComponentForm] = useState({
+    name: "",
+    description: "",
+    category: DEFAULT_CATEGORIES[0],
+    project: FALLBACK_PROJECT_CATEGORY,
+    quantity: "1",
+    unit: "",
+    unitPrice: "0",
+  });
   const VAT_RATE = 0.25;
   const isPublicView = variant === "public";
   const showActionsColumn = editable && !isPublicView;
@@ -94,6 +127,165 @@ export default function GroupedDataTable({
       setLocalCustomCategories((prev) => updater(prev));
     }
   };
+
+  const getComponentTotal = (component: PriceComponent) => {
+    if (typeof component.amount === "number") {
+      return component.amount;
+    }
+    const quantity = component.quantity ?? 1;
+    const unitPrice = component.unitPrice ?? 0;
+    const markupMultiplier = 1 + ((component.priceMarkup ?? 0) / 100);
+    return unitPrice * quantity * markupMultiplier;
+  };
+
+  const projectSummary = useMemo(() => {
+    const groups: Record<string, PriceComponent[]> = {};
+    const totals: Record<string, number> = {};
+
+    items.forEach((component) => {
+      const label = component.projectCategory?.trim() || FALLBACK_PROJECT_CATEGORY;
+      if (!groups[label]) {
+        groups[label] = [];
+      }
+      groups[label].push(component);
+    });
+
+    Object.entries(groups).forEach(([label, comps]) => {
+      totals[label] = comps.reduce((sum, comp) => sum + getComponentTotal(comp), 0);
+    });
+
+    const order = Object.keys(groups).sort((a, b) => a.localeCompare(b, "nb-NO", { sensitivity: "base" }));
+
+    return { groups, totals, order };
+  }, [items]);
+
+  const projectChipOrder = useMemo(() => {
+    if (!enableProjectGrouping) {
+      return [] as string[];
+    }
+    const combined = new Set<string>([...projectSummary.order, ...manualProjects]);
+    return Array.from(combined).filter(Boolean).sort((a, b) => a.localeCompare(b, "nb-NO", { sensitivity: "base" }));
+  }, [enableProjectGrouping, manualProjects, projectSummary.order]);
+
+  const isProjectVisible = (project: string) => !hiddenProjects.has(project);
+
+  const toggleProjectVisibility = (project: string) => {
+    setHiddenProjects((prev) => {
+      const next = new Set(prev);
+      if (next.has(project)) {
+        next.delete(project);
+      } else {
+        next.add(project);
+      }
+      return next;
+    });
+  };
+
+  const resetProjectVisibility = () => {
+    setHiddenProjects(new Set());
+  };
+
+  const handleCreateManualProject = () => {
+    const trimmed = newProjectName.trim();
+    if (!trimmed) return;
+    const exists = projectChipOrder.some((project) => project.toLowerCase() === trimmed.toLowerCase());
+    if (exists) {
+      setIsAddProjectDialogOpen(false);
+      setNewProjectName("");
+      return;
+    }
+    setManualProjects((prev) => [...prev, trimmed]);
+    setHiddenProjects((prev) => {
+      if (!prev.has(trimmed)) {
+        return prev;
+      }
+      const next = new Set(prev);
+      next.delete(trimmed);
+      return next;
+    });
+    setIsAddProjectDialogOpen(false);
+    setNewProjectName("");
+  };
+
+  useEffect(() => {
+    if (!isAddProjectDialogOpen) {
+      setNewProjectName("");
+    }
+  }, [isAddProjectDialogOpen]);
+
+  const resetNewComponentForm = () => {
+    setNewComponentForm({
+      name: "",
+      description: "",
+      category: DEFAULT_CATEGORIES[0],
+      project: FALLBACK_PROJECT_CATEGORY,
+      quantity: "1",
+      unit: "",
+      unitPrice: "0",
+    });
+  };
+
+  const updateNewComponentForm = <K extends keyof typeof newComponentForm>(field: K, value: string) => {
+    setNewComponentForm((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const handleCreateManualComponent = () => {
+    if (!onItemsChange) return;
+
+    const parsedQuantity = Number(newComponentForm.quantity);
+    const parsedUnitPrice = Number(newComponentForm.unitPrice);
+    const quantity = Number.isFinite(parsedQuantity) && parsedQuantity > 0 ? parsedQuantity : 1;
+    const unitPrice = Number.isFinite(parsedUnitPrice) && parsedUnitPrice >= 0 ? parsedUnitPrice : 0;
+    const projectValue =
+      enableProjectGrouping && newComponentForm.project !== FALLBACK_PROJECT_CATEGORY
+        ? newComponentForm.project
+        : undefined;
+
+    const newComponent: PriceComponent = {
+      id: `manual-${Date.now()}`,
+      name: newComponentForm.name.trim() || "Ny vare",
+      description: newComponentForm.description.trim(),
+      category: newComponentForm.category as PriceComponent["category"],
+      projectCategory: projectValue,
+      quantity,
+      unit: newComponentForm.unit.trim() || undefined,
+      unitPrice,
+      amount: quantity * unitPrice,
+      priceMarkup: 0,
+      materialMarkup: 0,
+      isEditable: true,
+      confidence: 0,
+    };
+
+    onItemsChange([...items, newComponent]);
+    setIsAddManualComponentOpen(false);
+    resetNewComponentForm();
+  };
+
+  useEffect(() => {
+    if (!isAddManualComponentOpen) {
+      resetNewComponentForm();
+    }
+  }, [isAddManualComponentOpen]);
+
+  useEffect(() => {
+    if (!enableProjectGrouping) return;
+    setHiddenProjects((prev) => {
+      let hasChanges = false;
+      const next = new Set(prev);
+      const available = new Set([...projectSummary.order, ...manualProjects]);
+      prev.forEach((project) => {
+        if (!available.has(project)) {
+          next.delete(project);
+          hasChanges = true;
+        }
+      });
+      return hasChanges ? next : prev;
+    });
+  }, [enableProjectGrouping, projectSummary.order, manualProjects]);
 
   useEffect(() => {
     if (!editable) {
@@ -118,7 +310,11 @@ export default function GroupedDataTable({
     setExpandedGroups(newExpanded);
   };
 
-  const groupedItems = items.reduce((acc, item) => {
+  const displayItems = enableProjectGrouping
+    ? items.filter((item) => isProjectVisible(item.projectCategory?.trim() || FALLBACK_PROJECT_CATEGORY))
+    : items;
+
+  const groupedItems = displayItems.reduce((acc, item) => {
     const category = item.category || "annet";
     if (!acc[category]) {
       acc[category] = [];
@@ -127,7 +323,20 @@ export default function GroupedDataTable({
     return acc;
   }, {} as Record<string, PriceComponent[]>);
 
-  const categoriesFromItems = Array.from(new Set(items.map((item) => item.category)));
+  const categoriesFromItems = Array.from(new Set(displayItems.map((item) => item.category)));
+
+  const hasItems = items.length > 0;
+  const hasVisibleItems = displayItems.length > 0;
+  const showHiddenProjectNotice = enableProjectGrouping && hasItems && !hasVisibleItems;
+  const projectFilterActive = enableProjectGrouping && hiddenProjects.size > 0;
+  const getProjectLabel = (value: string) => (value === FALLBACK_PROJECT_CATEGORY ? "Ingen prosjekt" : value);
+  const canSaveNewComponent = Boolean(newComponentForm.name.trim() && onItemsChange);
+  const normalizedProjectName = newProjectName.trim();
+  const normalizedProjectNameLower = normalizedProjectName.toLowerCase();
+  const projectNameExists =
+    normalizedProjectNameLower === FALLBACK_PROJECT_CATEGORY.toLowerCase() ||
+    projectChipOrder.some((project) => project.toLowerCase() === normalizedProjectNameLower);
+  const canSaveNewProject = Boolean(normalizedProjectName) && !projectNameExists;
 
   const mergedCustomCategories = Array.from(
     new Set([
@@ -151,7 +360,24 @@ export default function GroupedDataTable({
     isCustom: !DEFAULT_CATEGORY_SET.has(category),
   }));
 
-  const columnCount = isPublicView ? 4 : 6 + (showActionsColumn ? 1 : 0);
+  const categoryOptions = useMemo(() => {
+    return Array.from(
+      new Set<string>([
+        ...DEFAULT_CATEGORIES,
+        ...mergedCustomCategories,
+      ])
+    ).filter((category) => Boolean(category));
+  }, [mergedCustomCategories]);
+
+  const projectOptions = useMemo(() => {
+    if (!enableProjectGrouping) {
+      return [FALLBACK_PROJECT_CATEGORY];
+    }
+    return Array.from(new Set([FALLBACK_PROJECT_CATEGORY, ...projectChipOrder]));
+  }, [enableProjectGrouping, projectChipOrder]);
+
+  const baseColumnCount = isPublicView ? 4 : 6 + (showActionsColumn ? 1 : 0);
+  const columnCount = baseColumnCount + (enableProjectGrouping ? 1 : 0);
 
   const handleAddCategory = () => {
     const trimmed = newCategoryName.trim();
@@ -316,14 +542,14 @@ export default function GroupedDataTable({
   };
 
   // Calculate totals
-  const subtotal = items.reduce((sum, item) => {
+  const subtotal = displayItems.reduce((sum, item) => {
     const unitPrice = item.unitPrice ?? 0;
     const quantity = item.quantity ?? 1;
     const markup = item.priceMarkup ?? 0;
     return sum + unitPrice * quantity * (1 + markup / 100);
   }, 0);
   
-  const profit = items.reduce((sum, item) => {
+  const profit = displayItems.reduce((sum, item) => {
     const unitPrice = item.unitPrice ?? 0;
     const quantity = item.quantity ?? 1;
     const markup = item.priceMarkup ?? 0;
@@ -357,10 +583,24 @@ export default function GroupedDataTable({
                         <DropdownMenuPortal>
                           <DropdownMenuSubContent>
                             <DropdownMenuItem onClick={handleOpenCatalog}>fra katalog</DropdownMenuItem>
-                            <DropdownMenuItem>ny vare</DropdownMenuItem>
+                              <DropdownMenuItem
+                                onSelect={() => {
+                                  setIsAddManualComponentOpen(true);
+                                }}
+                              >
+                                ny vare
+                              </DropdownMenuItem>
                           </DropdownMenuSubContent>
                         </DropdownMenuPortal>
                       </DropdownMenuSub>
+                      {enableProjectGrouping && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onSelect={() => setIsAddProjectDialogOpen(true)}>
+                            nytt prosjekt
+                          </DropdownMenuItem>
+                        </>
+                      )}
 
                     </DropdownMenuGroup>
                   </DropdownMenuContent>
@@ -388,11 +628,72 @@ export default function GroupedDataTable({
           )}
         </CardHeader>
         <CardContent>
+          {enableProjectGrouping && (
+            <div className="mb-4 rounded-lg border border-dashed border-primary/20 bg-muted/50 p-4">
+              <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <h4 className="text-sm font-semibold text-foreground">Prosjekter</h4>
+                  <p className="text-xs text-muted-foreground">Filtrer prislinjer per prosjekt og fokuser raskt på riktige grupper.</p>
+                </div>
+                {projectChipOrder.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-primary hover:text-primary/80"
+                      onClick={resetProjectVisibility}
+                      disabled={!projectFilterActive}
+                    >
+                      Vis alle
+                    </Button>
+                  </div>
+                )}
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {projectChipOrder.length > 0 ? (
+                  projectChipOrder.map((project) => {
+                    const count = projectSummary.groups[project]?.length ?? 0;
+                    const total = projectSummary.totals[project] ?? 0;
+                    const visible = isProjectVisible(project);
+                    return (
+                      <button
+                        key={project}
+                        type="button"
+                        onClick={() => toggleProjectVisibility(project)}
+                        className={cn(
+                          "flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                          visible
+                            ? "border-primary/30 bg-primary/10 text-primary"
+                            : "border-border bg-white text-muted-foreground"
+                        )}
+                      >
+                        <span>{getProjectLabel(project)}</span>
+                        <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                          {count} linjer
+                        </span>
+                        <span className="text-xs font-semibold text-foreground">
+                          {formatCurrency(total)}
+                        </span>
+                        {!visible && <span className="text-[10px] text-muted-foreground">(skjult)</span>}
+                      </button>
+                    );
+                  })
+                ) : (
+                  <span className="text-xs text-muted-foreground">
+                    Legg til et prosjekt og tilordne linjer for å komme i gang.
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
           <div className="w-full overflow-hidden rounded-lg border border-border bg-card shadow-sm">
             <Table>
               <TableHeader>
               <TableRow>
                 <TableHead className="font-semibold text-foreground">Produktnavn</TableHead>
+                {enableProjectGrouping && (
+                  <TableHead className="font-semibold text-foreground">Prosjekt</TableHead>
+                )}
                 {isPublicView ? (
                   <>
                     <TableHead className="font-semibold text-foreground">Antall</TableHead>
@@ -521,6 +822,11 @@ export default function GroupedDataTable({
                           )}
                         >
                           <TableCell className="font-medium">{item.name}</TableCell>
+                          {enableProjectGrouping && (
+                            <TableCell className="text-sm text-muted-foreground">
+                              {getProjectLabel(item.projectCategory?.trim() || FALLBACK_PROJECT_CATEGORY)}
+                            </TableCell>
+                          )}
                           {isPublicView ? (
                             <>
                               <TableCell>
@@ -572,7 +878,9 @@ export default function GroupedDataTable({
               {categoryEntries.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={columnCount} className="py-6 text-center text-sm text-muted-foreground">
-                    Ingen prisgrunnlag er lagt til enda.
+                    {showHiddenProjectNotice
+                      ? "Ingen prosjekter er synlige. Bruk filteret over for å vise minst én gruppe."
+                      : "Ingen prisgrunnlag er lagt til enda."}
                   </TableCell>
                 </TableRow>
               )}
@@ -617,6 +925,146 @@ export default function GroupedDataTable({
       </CardContent>
     </Card>
 
+    {enableProjectGrouping && (
+      <Dialog open={isAddProjectDialogOpen} onOpenChange={setIsAddProjectDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Nytt prosjekt</DialogTitle>
+            <DialogDescription>Opprett et prosjekt du kan filtrere på og knytte prislinjer til.</DialogDescription>
+          </DialogHeader>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">Prosjektnavn</label>
+            <Input
+              value={newProjectName}
+              onChange={(event) => setNewProjectName(event.target.value)}
+              placeholder="F.eks. Tilbygg inngangsparti"
+              autoFocus
+            />
+            {normalizedProjectName && projectNameExists && (
+              <p className="mt-1 text-xs text-destructive">Prosjektnavnet finnes allerede.</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setIsAddProjectDialogOpen(false)}>
+              Avbryt
+            </Button>
+            <Button onClick={handleCreateManualProject} disabled={!canSaveNewProject}>
+              Opprett prosjekt
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    )}
+
+    <Dialog open={isAddManualComponentOpen} onOpenChange={setIsAddManualComponentOpen}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Ny prislinje</DialogTitle>
+          <DialogDescription>Opprett en tom komponent du kan fylle ut senere eller redigere direkte i tabellen.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">Navn</label>
+            <Input
+              value={newComponentForm.name}
+              onChange={(event) => updateNewComponentForm("name", event.target.value)}
+              placeholder="F.eks. Rigg og drift"
+            />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">Kategori</label>
+              <Select
+                value={newComponentForm.category}
+                onValueChange={(value) => updateNewComponentForm("category", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Velg kategori" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categoryOptions.map((category) => (
+                    <SelectItem key={category} value={category}>
+                      {category.charAt(0).toUpperCase() + category.slice(1)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {enableProjectGrouping && (
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">Prosjekt</label>
+                <Select
+                  value={newComponentForm.project}
+                  onValueChange={(value) => updateNewComponentForm("project", value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Velg prosjekt" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {projectOptions.map((project) => (
+                      <SelectItem key={project} value={project}>
+                        {getProjectLabel(project)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">Beskrivelse</label>
+            <Textarea
+              value={newComponentForm.description}
+              onChange={(event) => updateNewComponentForm("description", event.target.value)}
+              placeholder="Kort beskrivelse (valgfritt)"
+              rows={3}
+            />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">Antall</label>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                value={newComponentForm.quantity}
+                onChange={(event) => updateNewComponentForm("quantity", event.target.value)}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">Enhet</label>
+              <Input
+                value={newComponentForm.unit}
+                onChange={(event) => updateNewComponentForm("unit", event.target.value)}
+                placeholder="stk, m²"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">Enhetspris</label>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                value={newComponentForm.unitPrice}
+                onChange={(event) => updateNewComponentForm("unitPrice", event.target.value)}
+              />
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button
+            variant="ghost"
+            onClick={() => setIsAddManualComponentOpen(false)}
+          >
+            Avbryt
+          </Button>
+          <Button onClick={handleCreateManualComponent} disabled={!canSaveNewComponent}>
+            Opprett komponent
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
     {!isPublicView && selectedComponent && (
       <PriceComponentDrawer
         open={isComponentDrawerOpen}
@@ -630,6 +1078,7 @@ export default function GroupedDataTable({
             ...mergedCustomCategories,
           ])
         )}
+        projectOptions={projectOptions}
       />
     )}
     </>

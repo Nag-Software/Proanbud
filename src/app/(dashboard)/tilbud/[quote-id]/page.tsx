@@ -37,6 +37,7 @@ import GroupedDataTable from '@/components/shared/GroupedDataTable';
 
 
 const EDITABLE_QUOTE_STATUSES = new Set(['draft', 'venter', 'avvist', 'vunnet', 'tapt']);
+const DEFAULT_PROJECT_CATEGORY = 'Generelt prosjekt';
 type QuoteDetailsPatch = Partial<TilbudFormData> & { notater?: string };
 
 
@@ -445,6 +446,7 @@ export default function QuoteDetailsPage() {
       name: '',
       description: '',
       produsent: '',
+      projectCategory: resolveDefaultProjectCategory(),
       amount: 0,
       quantity: 1,
       unit: 'stk',
@@ -482,6 +484,17 @@ export default function QuoteDetailsPage() {
     const baseAmount = (component.quantity || 1) * (component.unitPrice || 0);
     const markupMultiplier = 1 + ((component.priceMarkup || 0) / 100);
     return Math.round(baseAmount * markupMultiplier);
+  };
+
+  const resolveDefaultProjectCategory = () => {
+    const source = editedPriceComponents.length > 0
+      ? editedPriceComponents
+      : quote?.prisgrunnlag ?? [];
+    const existing = source.find((component) => component.projectCategory?.trim());
+    if (existing?.projectCategory) {
+      return existing.projectCategory;
+    }
+    return DEFAULT_PROJECT_CATEGORY;
   };
 
   const sanitizePriceComponents = (components: PriceComponent[]): PriceComponent[] => {
@@ -562,7 +575,7 @@ export default function QuoteDetailsPage() {
       }
     } catch (error) {
       console.error('Failed to auto-save prisgrunnlag:', error);
-      setPriceAutosaveError('Kunne ikke lagre prisgrunnlag. Prøv igjen.');
+      setPriceAutosaveError('Kunne ikke lagre prisgrunnlag. Sjekk at alle linjer har et prosjekt før du prøver igjen.');
     } finally {
       isPersistingPriceRef.current = false;
       setIsPriceAutosaving(false);
@@ -757,6 +770,7 @@ export default function QuoteDetailsPage() {
         name: product.produktnavn,
         description: product.beskrivelse || `${product.produsent ? `${product.produsent} - ` : ''}${product.produktnavn}`,
         produsent: product.produsent || '',
+        projectCategory: resolveDefaultProjectCategory(),
         amount: 0,
         quantity,
         unit: product.enhet || 'stk',
@@ -1081,21 +1095,21 @@ export default function QuoteDetailsPage() {
               </CardHeader>
               <CardContent>
               <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-slate-700">Prosjekt</label>
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        value={editedQuote.prosjekt || ''}
-                        onChange={(e) => handleQuoteFieldChange('prosjekt', e.target.value)}
-                        className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                        placeholder="Prosjektnavn"
-                      />
-                    ) : (
-                      <p className="text-slate-900 font-medium text-md leading-relaxed">{quote.prosjekt}</p>
-                    )}
-                  </div>
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-slate-700">Prosjekt</label>
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      value={editedQuote.prosjekt || ''}
+                      onChange={(e) => handleQuoteFieldChange('prosjekt', e.target.value)}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      placeholder="Prosjektnavn"
+                    />
+                  ) : (
+                    <p className="text-slate-900 font-medium text-md leading-relaxed">{quote.prosjekt}</p>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <label className="block text-sm font-medium text-slate-700">Jobbtype</label>
                     {isEditing ? (
@@ -1110,29 +1124,13 @@ export default function QuoteDetailsPage() {
                       <p className="text-slate-700 text-lg">{quote.jobbtype}</p>
                     )}
                   </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-slate-700">Totalbeløp</label>
-                    {isEditing ? (
-                      <input
-                        type="number"
-                        value={editedQuote.belop || ''}
-                        onChange={(e) => handleQuoteFieldChange('belop', Number(e.target.value))}
-                        className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                        placeholder="Beløp"
-                      />
-                    ) : (
-                      <p className="text-slate-900 font-bold text-lg text-blue-600">{formatCurrency(quote.belop)}</p>
-                    )}
-                  </div>
                   <div className="space-y-2">
                     <label className="block text-sm font-medium text-slate-700">Status</label>
                     {isEditing ? (
                       <select
                         value={editedQuote.status || ''}
                         onChange={(e) => handleQuoteFieldChange('status', e.target.value as 'venter' | 'vunnet' | 'tapt')}
-                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                        className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                       >
                         <option value="venter">Venter</option>
                         <option value="vunnet">Vunnet</option>
@@ -1198,6 +1196,7 @@ export default function QuoteDetailsPage() {
             onOpenCatalog={() => openProductCatalog('grid')}
             customCategories={customCategories}
             onCustomCategoriesChange={setCustomCategories}
+            enableProjectGrouping
           />
           <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-slate-500">
             {isPriceAutosaving && (

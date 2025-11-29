@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import {
   Drawer,
   DrawerContent,
@@ -33,7 +33,9 @@ import {
   Trash2,
   Calculator,
   Check,
-  ChevronsUpDown
+  ChevronsUpDown,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
 import { createTilbud, updateTilbud, getTilbudById, TilbudFormData, getUniqueCategoriesFromQuotes } from '@/lib/services/tilbudService';
 import { getCustomers } from '@/lib/services/customerService';
@@ -88,6 +90,9 @@ const STEPS = [
   { id: 3, title: 'Prissammendrag', description: 'Gjennomgå og bekreft prising', icon: Calculator },
 ];
 
+const DEFAULT_PROJECT_CATEGORY = 'Generelt prosjekt';
+const FALLBACK_PROJECT_CATEGORY = 'Ingen prosjekt';
+
 export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChange, onTilbudCreated, editingQuote }) => {
   const breakpoints = useBreakpoint();
   const isMobile = !breakpoints.md;
@@ -119,7 +124,14 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
   const [editingField, setEditingField] = useState<'name' | 'description' | null>(null);
   const [editValue, setEditValue] = useState('');
   const productCatalogRef = useRef<ProductCatalogHandle>(null);
+  const skipAutoSaveRef = useRef(false);
+  const previousOpenRef = useRef(open);
   const [unitPriceInputs, setUnitPriceInputs] = useState<Map<string, string>>(new Map());
+  const [visibleProjectCategories, setVisibleProjectCategories] = useState<Record<string, boolean>>({});
+  const [collapsedProjectCategories, setCollapsedProjectCategories] = useState<Record<string, boolean>>({});
+  const [manualProjects, setManualProjects] = useState<string[]>([]);
+  const [showAddProject, setShowAddProject] = useState(false);
+  const [newProjectName, setNewProjectName] = useState('');
 
   // When the edit dialog is open, hide lower z-index overlays to avoid stacking glitches.
   useEffect(() => {
@@ -211,6 +223,98 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
     }
   }, [editingQuote, open, customers]);
 
+  const projectCategorySummary = useMemo(() => {
+    const groups: Record<string, PriceComponent[]> = {};
+    const totals: Record<string, number> = {};
+    const order: string[] = [];
+
+    quoteData.adjustedComponents.forEach(component => {
+      const label = component.projectCategory?.trim() || FALLBACK_PROJECT_CATEGORY;
+      if (!groups[label]) {
+        groups[label] = [];
+        totals[label] = 0;
+        order.push(label);
+      }
+      groups[label].push(component);
+      totals[label] += component.amount || 0;
+    });
+
+    if (order.length === 0) {
+      order.push(FALLBACK_PROJECT_CATEGORY);
+      groups[FALLBACK_PROJECT_CATEGORY] = groups[FALLBACK_PROJECT_CATEGORY] || [];
+      totals[FALLBACK_PROJECT_CATEGORY] = totals[FALLBACK_PROJECT_CATEGORY] || 0;
+    }
+
+    return { groups, totals, order };
+  }, [quoteData.adjustedComponents]);
+
+  const projectOptions = useMemo(() => {
+    const set = new Set<string>();
+    set.add(DEFAULT_PROJECT_CATEGORY);
+    set.add(FALLBACK_PROJECT_CATEGORY);
+    manualProjects.forEach(name => {
+      const trimmed = name.trim();
+      if (trimmed) set.add(trimmed);
+    });
+    projectCategorySummary.order.forEach(name => {
+      if (name) set.add(name);
+    });
+    return Array.from(set);
+  }, [manualProjects, projectCategorySummary.order]);
+
+  const projectDropdownOptions = useMemo(() => {
+    return [...projectOptions].sort((a, b) => a.localeCompare(b, 'nb')); // keep dropdown deterministic
+  }, [projectOptions]);
+
+  useEffect(() => {
+    setVisibleProjectCategories(prev => {
+      const next = { ...prev };
+      let changed = false;
+      projectCategorySummary.order.forEach(category => {
+        if (next[category] === undefined) {
+          next[category] = true;
+          changed = true;
+        }
+      });
+      Object.keys(next).forEach(category => {
+        if (!projectCategorySummary.order.includes(category)) {
+          delete next[category];
+          changed = true;
+        }
+      });
+      return changed ? next : prev;
+    });
+  }, [projectCategorySummary.order]);
+
+  useEffect(() => {
+    setCollapsedProjectCategories(prev => {
+      const next = { ...prev };
+      let changed = false;
+      projectCategorySummary.order.forEach(category => {
+        if (next[category] === undefined) {
+          next[category] = false;
+          changed = true;
+        }
+      });
+      Object.keys(next).forEach(category => {
+        if (!projectCategorySummary.order.includes(category)) {
+          delete next[category];
+          changed = true;
+        }
+      });
+      return changed ? next : prev;
+    });
+  }, [projectCategorySummary.order]);
+
+  const resolveDefaultProjectCategory = useCallback(() => {
+    const firstWithCategory = quoteData.adjustedComponents.find(comp => comp.projectCategory?.trim());
+    if (firstWithCategory?.projectCategory) {
+      return firstWithCategory.projectCategory;
+    }
+    const firstRegistered = projectCategorySummary.order.find(category => category !== FALLBACK_PROJECT_CATEGORY);
+    return firstRegistered || DEFAULT_PROJECT_CATEGORY;
+  }, [quoteData.adjustedComponents, projectCategorySummary.order]);
+
   const loadCustomers = async () => {
     try {
       const customerList = await getCustomers();
@@ -237,6 +341,7 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
         name: product.produktnavn,
         description: product.beskrivelse || `${product.produsent ? `${product.produsent} - ` : ''}${product.produktnavn}`,
         produsent: product.produsent || '',
+        projectCategory: resolveDefaultProjectCategory(),
         amount: 0,
         quantity,
         unit: product.enhet,
@@ -273,7 +378,7 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
     }
   };
 
-  const handleClose = () => {
+  const resetFormState = useCallback(() => {
     setCurrentStep(1);
     setQuoteData({
       jobDescription: '',
@@ -289,7 +394,15 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
     setShowAddCategory(false);
     setNewCategoryName('');
     setUnitPriceInputs(new Map());
+    setVisibleProjectCategories({});
+    setCollapsedProjectCategories({});
+    setManualProjects([]);
+    setShowAddProject(false);
+    setNewProjectName('');
     productCatalogRef.current?.close();
+  }, []);
+
+  const handleClose = () => {
     onOpenChange(false);
   };
 
@@ -395,6 +508,7 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
               unitPrice: Number(comp.unitPrice) || 0,
               priceMarkup: Number(comp.priceMarkup) || 0,
               materialMarkup: Number(comp.materialMarkup) || 0,
+              componentTotal: Number(comp.componentTotal ?? comp.total ?? comp.component_total) || 0,
             };
 
             console.log('Processing component:', numericComp);
@@ -405,6 +519,10 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
               quantity: numericComp.amount, // API amount is actually the quantity
               priceMarkup: numericComp.priceMarkup, // Override with user settings
               materialMarkup: numericComp.materialMarkup, // Override with user settings
+              projectCategory: comp.projectCategory || comp.project_category || resolveDefaultProjectCategory(),
+              projectCategoryDescription: comp.projectCategoryDescription || comp.project_category_description,
+              catalogMatch: comp.catalogMatch || comp.catalog_match,
+              catalogSource: comp.catalogSource || comp.catalog_source,
               isEditable: true, // Ensure all components are always editable
             };
 
@@ -452,61 +570,96 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
     }
   };
 
-  const handleSaveDraft = async () => {
-    if (!selectedCustomerId || !projectName) {
-      alert('Vennligst velg kunde og skriv prosjektnavn');
-      return;
+  const saveDraft = useCallback(async (options?: { skipValidation?: boolean; silent?: boolean }) => {
+    const { skipValidation = false, silent = false } = options || {};
+
+    if (!skipValidation && (!selectedCustomerId || !projectName.trim())) {
+      if (!silent) {
+        alert('Vennligst velg kunde og skriv prosjektnavn');
+      }
+      return false;
     }
 
-    setIsSubmitting(true);
-    try {
-      const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
-      
-      const tilbudData: TilbudFormData = {
-        kundenavn: selectedCustomer?.navn || '',
-        prosjekt: projectName,
-        jobbtype: 'Generell',
-        belop: quoteData.finalPrice,
-        status: 'draft' as const,
-        dato: new Date().toISOString().split('T')[0],
-        svarfrist: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 14 days from now
-        beskrivelse: quoteMessage || quoteData.jobDescription,
-        notater: ``,
-        prisgrunnlag: quoteData.adjustedComponents,
-      };
+    const selectedCustomer = selectedCustomerId ? customers.find(c => c.id === selectedCustomerId) : null;
+    const selectedCustomerName = selectedCustomer?.navn ? selectedCustomer.navn.trim() : '';
+    const editingCustomerName = editingQuote?.kundenavn ? editingQuote.kundenavn.trim() : '';
+    const resolvedCustomerName = (selectedCustomerName || editingCustomerName || (skipValidation ? 'Uspesifisert kunde' : '')).trim();
 
-      // Create or update the draft quote
+    if (!resolvedCustomerName) {
+      if (!silent) {
+        alert('Vennligst velg kunde');
+      }
+      return false;
+    }
+
+    const manualProjectName = projectName.trim();
+    const editingProjectName = editingQuote?.prosjekt ? editingQuote.prosjekt.trim() : '';
+    const resolvedProjectName = (() => {
+      if (manualProjectName) return manualProjectName;
+      if (editingProjectName) return editingProjectName;
+      if (skipValidation) {
+        const jobLine = quoteData.jobDescription.trim().split('\n').find(line => line.trim()) || '';
+        if (jobLine) {
+          return jobLine.length > 80 ? `${jobLine.slice(0, 77)}...` : jobLine;
+        }
+        return `Prosjekt uten navn ${new Date().toLocaleDateString('nb-NO')}`;
+      }
+      return '';
+    })();
+
+    if (!resolvedProjectName) {
+      if (!silent) {
+        alert('Vennligst skriv prosjektnavn');
+      }
+      return false;
+    }
+
+    const tilbudData: TilbudFormData = {
+      kundenavn: resolvedCustomerName,
+      prosjekt: resolvedProjectName,
+      jobbtype: 'Generell',
+      belop: quoteData.finalPrice,
+      status: 'draft',
+      dato: new Date().toISOString().split('T')[0],
+      svarfrist: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      beskrivelse: quoteMessage || quoteData.jobDescription,
+      notater: ``,
+      prisgrunnlag: quoteData.adjustedComponents,
+    };
+
+    if (!skipValidation) {
+      setIsSubmitting(true);
+    }
+
+    try {
       if (editingQuote) {
         await updateTilbud(editingQuote.id, tilbudData);
       } else {
         await createTilbud(tilbudData);
       }
-
-      // Reset form and close drawer
-      setCurrentStep(1);
-      setQuoteData({
-        jobDescription: '',
-        images: [],
-        aiSuggestion: null,
-        adjustedComponents: [],
-        finalPrice: 0,
-      });
-      setSelectedCustomerId('');
-      setProjectName('');
-      setQuoteMessage('');
-      setUnitPriceInputs(new Map());
-      onOpenChange(false);
-      
-      if (onTilbudCreated) {
-        onTilbudCreated();
-      }
+      return true;
     } catch (error) {
       console.error('Error saving draft:', error);
-      alert('Kunne ikke lagre utkast. Prøv igjen.');
-
+      if (!silent) {
+        alert('Kunne ikke lagre utkast. Prøv igjen.');
+      }
+      return false;
     } finally {
-      setIsSubmitting(false);
+      if (!skipValidation) {
+        setIsSubmitting(false);
+      }
     }
+  }, [customers, editingQuote, projectName, quoteData, quoteMessage, selectedCustomerId]);
+
+  const handleSaveDraft = async () => {
+    const saved = await saveDraft();
+    if (!saved) {
+      return;
+    }
+
+    onTilbudCreated?.();
+    skipAutoSaveRef.current = true;
+    onOpenChange(false);
   };
 
   const handleSubmit = async () => {
@@ -624,7 +777,7 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
       }
 
       onTilbudCreated?.();
-      handleClose();
+      skipAutoSaveRef.current = true;
       onOpenChange(false);
     } catch (error) {
       console.error('Error creating tilbud:', error);
@@ -633,6 +786,37 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
       setIsSubmitting(false);
     }
   };
+
+  const handleAutoSaveOnClose = useCallback(async () => {
+    if (skipAutoSaveRef.current) {
+      skipAutoSaveRef.current = false;
+      resetFormState();
+      return;
+    }
+
+    const hasComponents = quoteData.adjustedComponents.length > 0;
+    const editingNonDraft = editingQuote && editingQuote.status !== 'draft';
+
+    if (!hasComponents || editingNonDraft) {
+      resetFormState();
+      return;
+    }
+
+    const saved = await saveDraft({ skipValidation: true, silent: true });
+    if (saved) {
+      onTilbudCreated?.();
+    } else {
+      console.warn('Auto-lagring av tilbudsutkast feilet ved lukking av NewQuoteDrawer.');
+    }
+    resetFormState();
+  }, [editingQuote, onTilbudCreated, quoteData.adjustedComponents.length, resetFormState, saveDraft]);
+
+  useEffect(() => {
+    if (previousOpenRef.current && !open) {
+      void handleAutoSaveOnClose();
+    }
+    previousOpenRef.current = open;
+  }, [open, handleAutoSaveOnClose]);
 
   // Helper to generate full quote HTML for emails using selected template
   const generateQuoteHtml = async (quote: any, customer: Kunde, businessSettings: BusinessSettings | null, viewUrl?: string) => {
@@ -985,6 +1169,7 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
         name: 'Ny komponent',
         description: 'Beskrivelse av komponenten',
         produsent: '',
+        projectCategory: resolveDefaultProjectCategory(),
         amount: 0, // Will be calculated below
         quantity: 1,
         unit: 'stk',
@@ -1078,6 +1263,53 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
       return labels[category] || category.charAt(0).toUpperCase() + category.slice(1);
     };
 
+    const toggleProjectCategoryVisibility = (category: string) => {
+      setVisibleProjectCategories(prev => ({
+        ...prev,
+        [category]: prev[category] === false,
+      }));
+    };
+
+    const resetProjectCategoryVisibility = () => {
+      const nextState = projectCategorySummary.order.reduce((acc, category) => {
+        acc[category] = true;
+        return acc;
+      }, {} as Record<string, boolean>);
+      setVisibleProjectCategories(nextState);
+    };
+
+    const handleShowOnlyCategory = (category: string) => {
+      const nextState = projectCategorySummary.order.reduce((acc, current) => {
+        acc[current] = current === category;
+        return acc;
+      }, {} as Record<string, boolean>);
+      setVisibleProjectCategories(nextState);
+    };
+
+    const toggleProjectCategoryCollapse = (category: string) => {
+      setCollapsedProjectCategories(prev => ({
+        ...prev,
+        [category]: !prev[category],
+      }));
+    };
+
+    const isCategoryVisible = (category: string) => visibleProjectCategories[category] !== false;
+
+    const visibleCategoryCount = projectCategorySummary.order.filter(isCategoryVisible).length;
+
+    const handleAddProject = () => {
+      const trimmed = newProjectName.trim();
+      if (!trimmed) return;
+      setManualProjects(prev => (prev.includes(trimmed) ? prev : [...prev, trimmed]));
+      setNewProjectName('');
+      setShowAddProject(false);
+    };
+
+    const handleCancelAddProject = () => {
+      setShowAddProject(false);
+      setNewProjectName('');
+    };
+
     return (
       <div className="space-y-6">
         {isAnalyzing ? (
@@ -1141,62 +1373,138 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
                 </div>
               </CardHeader>
               <CardContent>
-                {/* Category Management */}
-                <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="text-sm font-medium text-gray-700">Kategorier</h4>
-                    <Button 
-                      onClick={() => setShowAddCategory(!showAddCategory)} 
-                      size="sm" 
-                      variant="ghost"
-                      className="text-primary hover:text-primary/80"
-                    >
-                      <Plus className="w-4 h-4 mr-1" />
-                      Ny kategori
-                    </Button>
-                  </div>
-                  
-                  {showAddCategory && (
-                    <div className="flex gap-2 mb-2">
-                      <input
-                        type="text"
-                        value={newCategoryName}
-                        onChange={(e) => setNewCategoryName(e.target.value)}
-                        placeholder="Kategorinavn..."
-                        className="flex-1 px-2 py-1 text-sm border rounded focus:ring-1 focus:ring-primary"
-                        onKeyPress={(e) => e.key === 'Enter' && addCategory()}
-                      />
-                      <Button onClick={addCategory} size="sm" variant="outline">
-                        Legg til
+                {/* Project Management */}
+                <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                  <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-800">Prosjekter</h4>
+                      <p className="text-xs text-gray-500">Hold prislinjer samlet per prosjekt og filtrer tabellen raskt.</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button 
+                        onClick={resetProjectCategoryVisibility} 
+                        size="sm" 
+                        variant="ghost"
+                        className="text-primary hover:text-primary/80"
+                      >
+                        Vis alle
                       </Button>
-                      <Button onClick={() => setShowAddCategory(false)} size="sm" variant="ghost">
-                        Avbryt
+                      <Button
+                        onClick={() => setShowAddProject(!showAddProject)}
+                        size="sm"
+                        variant="outline"
+                        className="text-primary border-primary/30"
+                      >
+                        <Plus className="w-4 h-4 mr-1" />
+                        Nytt prosjekt
                       </Button>
                     </div>
-                  )}
-                  
-                  <div className="flex flex-wrap gap-2">
-                    {getAllCategories().map((cat) => (
-                      <div key={cat.value} className="flex items-center gap-1 bg-white px-2 py-1 rounded border text-xs">
-                        <span>{cat.label}</span>
-                        {cat.isCustom && (
-                          <button
-                            onClick={() => removeCategory(cat.value)}
-                            className="text-red-500 hover:text-red-700 ml-1"
-                            title="Fjern kategori"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                        )}
+                  </div>
+
+                  {showAddProject && (
+                    <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                      <input
+                        type="text"
+                        value={newProjectName}
+                        onChange={(e) => setNewProjectName(e.target.value)}
+                        placeholder="Prosjektnavn..."
+                        className="flex-1 px-2 py-1 text-sm border rounded focus:ring-1 focus:ring-primary"
+                        onKeyDown={(e) => e.key === 'Enter' && handleAddProject()}
+                      />
+                      <div className="flex gap-2">
+                        <Button onClick={handleAddProject} size="sm" variant="outline">
+                          Lagre
+                        </Button>
+                        <Button onClick={handleCancelAddProject} size="sm" variant="ghost">
+                          Avbryt
+                        </Button>
                       </div>
+                    </div>
+                  )}
+
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {projectCategorySummary.order.map((category) => (
+                      <button
+                        key={category}
+                        type="button"
+                        onClick={() => toggleProjectCategoryVisibility(category)}
+                        className={cn(
+                          'px-3 py-1 rounded-full text-xs font-medium border transition-colors flex items-center gap-1',
+                          !isCategoryVisible(category)
+                            ? 'bg-white text-gray-500 border-gray-200'
+                            : 'bg-primary/10 text-primary border-primary/20'
+                        )}
+                      >
+                        <span>{category}</span>
+                        <span className="text-[10px] uppercase tracking-wide text-gray-400">{projectCategorySummary.groups[category]?.length || 0} linjer</span>
+                        {!isCategoryVisible(category) && (
+                          <span className="ml-1 text-gray-400">(skjult)</span>
+                        )}
+                      </button>
                     ))}
+                    {projectCategorySummary.order.length === 0 && (
+                      <span className="text-xs text-gray-500">Legg til et prosjekt og tilordne linjer for å komme i gang.</span>
+                    )}
                   </div>
                 </div>
+
+                {/* Category Management */}
+                <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="text-sm font-medium text-gray-700">Kategorier</h4>
+                      <Button 
+                        onClick={() => setShowAddCategory(!showAddCategory)} 
+                        size="sm" 
+                        variant="ghost"
+                        className="text-primary hover:text-primary/80"
+                      >
+                        <Plus className="w-4 h-4 mr-1" />
+                        Ny kategori
+                      </Button>
+                    </div>
+                  
+                    {showAddCategory && (
+                      <div className="flex gap-2 mb-2">
+                        <input
+                          type="text"
+                          value={newCategoryName}
+                          onChange={(e) => setNewCategoryName(e.target.value)}
+                          placeholder="Kategorinavn..."
+                          className="flex-1 px-2 py-1 text-sm border rounded focus:ring-1 focus:ring-primary"
+                          onKeyPress={(e) => e.key === 'Enter' && addCategory()}
+                        />
+                        <Button onClick={addCategory} size="sm" variant="outline">
+                          Legg til
+                        </Button>
+                        <Button onClick={() => setShowAddCategory(false)} size="sm" variant="ghost">
+                          Avbryt
+                        </Button>
+                      </div>
+                    )}
+                  
+                    <div className="flex flex-wrap gap-2">
+                      {getAllCategories().map((cat) => (
+                        <div key={cat.value} className="flex items-center gap-1 bg-white px-2 py-1 rounded border text-xs">
+                          <span>{cat.label}</span>
+                          {cat.isCustom && (
+                            <button
+                              onClick={() => removeCategory(cat.value)}
+                              className="text-red-500 hover:text-red-700 ml-1"
+                              title="Fjern kategori"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
 
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
                       <tr className="border-b">
+                          <th className="text-left py-2 px-2">Prosjekt</th>
                         <th className="text-left py-2 px-2">Kategori</th>
                         <th className="text-left py-2 px-2 min-w-[200px]">Navn</th>
                         <th className="text-left py-2 px-2">Beskrivelse</th>
@@ -1210,164 +1518,254 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
                       </tr>
                     </thead>
                     <tbody>
-                      {quoteData.adjustedComponents.map((component) => (
-                        <tr key={component.id} className="border-b hover:bg-gray-50">
-                          <td className="py-2 px-2">
-                            {component.isEditable ? (
-                              <Select
-                                value={component.category}
-                                onValueChange={(value) => updateComponent(component.id, { category: value as PriceComponent['category'] })}
-                              >
-                                <SelectTrigger className="w-full">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {getAllCategories().map((cat) => (
-                                    <SelectItem key={cat.value} value={cat.value}>
-                                      {cat.label}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            ) : (
-                              <span className="text-sm font-medium">
-                                {getCategoryLabel(component.category)}
-                              </span>
-                            )}
-                          </td>
-                          <td className="py-2 px-2 min-w-[200px]">
-                            {component.isEditable ? (
-                              <input
-                                type="text"
-                                value={component.name}
-                                onClick={() => openEditDialog(component, 'name')}
-                                readOnly
-                                className="w-full px-2 py-1 text-sm border rounded focus:ring-1 focus:ring-primary cursor-pointer"
-                              />
-                            ) : (
-                              <span className="text-sm">{component.name}</span>
-                            )}
-                          </td>
-                          <td className="py-2 px-2">
-                            {component.isEditable ? (
-                              <input
-                                type="text"
-                                value={component.description}
-                                onClick={() => openEditDialog(component, 'description')}
-                                readOnly
-                                className="w-full px-2 py-1 text-sm border rounded focus:ring-1 focus:ring-primary cursor-pointer"
-                              />
-                            ) : (
-                              <span className="text-sm text-gray-600">{component.description}</span>
-                            )}
-                          </td>
-                          <td className="py-2 px-2 text-right">
-                            {component.isEditable ? (
-                              <input
-                                type="text"
-                                value={component.quantity ?? 1}
-                                onChange={(e) => {
-                                  const quantity = Number(e.target.value);
-                                  updateComponent(component.id, {
-                                    quantity,
-                                  });
-                                }}
-                                className="w-16 px-2 py-1 text-sm border rounded text-right focus:ring-1 focus:ring-primary"
-                                min="0"
-                                step="1"
-                              />
-                            ) : (
-                              <span className="text-sm">{component.quantity || 1}</span>
-                            )}
-                          </td>
-                          <td className="py-2 px-2 text-right">
-                            {component.isEditable ? (
-                              <input
-                                type="text"
-                                value={component.unit || ''}
-                                onChange={(e) => updateComponent(component.id, { unit: e.target.value })}
-                                className="w-16 px-2 py-1 text-sm border rounded text-right focus:ring-1 focus:ring-primary"
-                                placeholder="stk"
-                              />
-                            ) : (
-                              <span className="text-sm">{component.unit}</span>
-                            )}
-                          </td>
-                          <td className="py-2 px-2 text-right">
-                            {component.isEditable ? (
-                              <input
-                                type="text"
-                                step="10"
-                                value={unitPriceInputs.get(component.id) ?? (component.unitPrice || 0)}
-                                onChange={(e) => {
-                                  const value = e.target.value.replace(/,/g, ''); // Remove commas
-                                  // Update the input display value
-                                  setUnitPriceInputs(prev => new Map(prev).set(component.id, value));
-                                  
-                                  // Only update component if it's a valid number (not ending with just a dot)
-                                  if (value === '' || (!value.endsWith('.'))) {
-                                    const unitPrice = parseFloat(value) || 0;
-                                    updateComponent(component.id, { unitPrice });
-                                  }
-                                }}
-                                className="w-20 px-2 py-1 text-sm border rounded text-right focus:ring-1 focus:ring-primary"
-                                min="0"
-                              />
-                            ) : (
-                              <span className="text-sm">kr {component.unitPrice ? (component.unitPrice % 1 === 0 ? Math.round(component.unitPrice).toLocaleString('nb-NO') : component.unitPrice.toLocaleString('nb-NO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })) : '0'}</span>
-                            )}
-                          </td>
-                          <td className="py-2 px-2 text-right">
-                            {component.isEditable ? (
-                              <input
-                                type="text"
-                                step="1"
-                                value={component.priceMarkup ?? 0}
-                                onChange={(e) => {
-                                  const priceMarkup = Number(e.target.value) || 0;
-                                  updateComponent(component.id, {
-                                    priceMarkup,
-                                  });
-                                }}
-                                className="w-16 px-2 py-1 text-sm border rounded text-right focus:ring-1 focus:ring-primary"
-                                min="0"
-                              />
-                            ) : (
-                              <span className="text-sm">{component.priceMarkup || 0}%</span>
-                            )}
-                          </td>
-                          <td className="py-2 px-2 text-right">
-                            <span className="text-sm font-medium">
-                              kr {component.amount.toLocaleString('nb-NO')}
-                            </span>
-                          </td>
-                          <td className="py-2 px-2 text-center">
-                            {component.confidence > 0 ? (
-                              <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getConfidenceColor(component.confidence)}`}>
-                                {component.confidence}%
-                              </div>
-                            ) : (
-                              <span className="text-xs text-gray-400">—</span>
-                            )}
-                          </td>
-                          <td className="py-2 px-2 text-center">
-                            {component.isEditable && (
-                              <Button
-                                onClick={() => removeComponent(component.id)}
-                                size="sm"
-                                variant="outline"
-                                className="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
-                                title="Fjern komponent"
-                              >
-                                <Trash2 className="w-4 h-4 mr-1" />
-                                Fjern
-                              </Button>
-                            )}
+                      {quoteData.adjustedComponents.length === 0 ? (
+                        <tr>
+                          <td colSpan={11} className="py-6 text-center text-sm text-gray-500">
+                            Ingen prislinjer ennå. Legg til et produkt eller en komponent for å komme i gang.
                           </td>
                         </tr>
-                      ))}
+                      ) : visibleCategoryCount === 0 ? (
+                        <tr>
+                          <td colSpan={11} className="py-6 text-center text-sm text-gray-500">
+                            Ingen prosjekter er synlige. Bruk filteret over for å vise minst én gruppe.
+                          </td>
+                        </tr>
+                      ) : (
+                        projectCategorySummary.order.map(category => {
+                          if (!isCategoryVisible(category)) {
+                            return null;
+                          }
+                          const componentsInGroup = projectCategorySummary.groups[category] || [];
+                          const isCollapsed = collapsedProjectCategories[category];
+                          const groupTotal = projectCategorySummary.totals[category] || 0;
+                          return (
+                            <React.Fragment key={category}>
+                              <tr className="bg-gray-100/70">
+                                <td colSpan={11} className="py-2 px-2">
+                                  <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+                                    <div className="flex items-center gap-2">
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="px-2 h-7"
+                                        onClick={() => toggleProjectCategoryCollapse(category)}
+                                      >
+                                        {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                                      </Button>
+                                      <span className="font-semibold text-sm">{category}</span>
+                                      <span className="text-xs text-gray-500">({componentsInGroup.length} linjer)</span>
+                                    </div>
+                                    <div className="flex flex-wrap items-center gap-2 text-sm">
+                                      <span className="font-semibold text-primary">
+                                        kr {groupTotal.toLocaleString('nb-NO')}
+                                      </span>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-7 text-xs"
+                                        onClick={() => handleShowOnlyCategory(category)}
+                                      >
+                                        Vis kun denne
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-7 text-xs"
+                                        onClick={() => toggleProjectCategoryVisibility(category)}
+                                      >
+                                        {isCategoryVisible(category) ? 'Skjul' : 'Vis'}
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </td>
+                              </tr>
+                              {!isCollapsed && componentsInGroup.map(component => (
+                                <tr key={component.id} className="border-b hover:bg-gray-50">
+                                  <td className="py-2 px-2">
+                                    {component.isEditable ? (
+                                      <Select
+                                        value={component.projectCategory || FALLBACK_PROJECT_CATEGORY}
+                                        onValueChange={(value) => {
+                                          const normalized = value === FALLBACK_PROJECT_CATEGORY ? undefined : value;
+                                          updateComponent(component.id, { projectCategory: normalized });
+                                        }}
+                                      >
+                                        <SelectTrigger className="w-full">
+                                          <SelectValue placeholder="Velg prosjekt" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {projectDropdownOptions.map(option => (
+                                            <SelectItem key={option} value={option}>
+                                              {option === FALLBACK_PROJECT_CATEGORY ? 'Ingen prosjekt' : option}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    ) : (
+                                      <span className="text-sm text-gray-600">
+                                        {component.projectCategory || FALLBACK_PROJECT_CATEGORY}
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td className="py-2 px-2">
+                                    {component.isEditable ? (
+                                      <Select
+                                        value={component.category}
+                                        onValueChange={(value) => updateComponent(component.id, { category: value as PriceComponent['category'] })}
+                                      >
+                                        <SelectTrigger className="w-full">
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {getAllCategories().map((cat) => (
+                                            <SelectItem key={cat.value} value={cat.value}>
+                                              {cat.label}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    ) : (
+                                      <span className="text-sm font-medium">
+                                        {getCategoryLabel(component.category)}
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td className="py-2 px-2 min-w-[200px]">
+                                    {component.isEditable ? (
+                                      <input
+                                        type="text"
+                                        value={component.name}
+                                        onClick={() => openEditDialog(component, 'name')}
+                                        readOnly
+                                        className="w-full px-2 py-1 text-sm border rounded focus:ring-1 focus:ring-primary cursor-pointer"
+                                      />
+                                    ) : (
+                                      <span className="text-sm">{component.name}</span>
+                                    )}
+                                  </td>
+                                  <td className="py-2 px-2">
+                                    {component.isEditable ? (
+                                      <input
+                                        type="text"
+                                        value={component.description}
+                                        onClick={() => openEditDialog(component, 'description')}
+                                        readOnly
+                                        className="w-full px-2 py-1 text-sm border rounded focus:ring-1 focus:ring-primary cursor-pointer"
+                                      />
+                                    ) : (
+                                      <span className="text-sm text-gray-600">{component.description}</span>
+                                    )}
+                                  </td>
+                                  <td className="py-2 px-2 text-right">
+                                    {component.isEditable ? (
+                                      <input
+                                        type="text"
+                                        value={component.quantity ?? 1}
+                                        onChange={(e) => {
+                                          const quantity = Number(e.target.value);
+                                          updateComponent(component.id, {
+                                            quantity,
+                                          });
+                                        }}
+                                        className="w-16 px-2 py-1 text-sm border rounded text-right focus:ring-1 focus:ring-primary"
+                                        min="0"
+                                        step="1"
+                                      />
+                                    ) : (
+                                      <span className="text-sm">{component.quantity || 1}</span>
+                                    )}
+                                  </td>
+                                  <td className="py-2 px-2 text-right">
+                                    {component.isEditable ? (
+                                      <input
+                                        type="text"
+                                        value={component.unit || ''}
+                                        onChange={(e) => updateComponent(component.id, { unit: e.target.value })}
+                                        className="w-16 px-2 py-1 text-sm border rounded text-right focus:ring-1 focus:ring-primary"
+                                        placeholder="stk"
+                                      />
+                                    ) : (
+                                      <span className="text-sm">{component.unit}</span>
+                                    )}
+                                  </td>
+                                  <td className="py-2 px-2 text-right">
+                                    {component.isEditable ? (
+                                      <input
+                                        type="text"
+                                        step="10"
+                                        value={unitPriceInputs.get(component.id) ?? (component.unitPrice || 0)}
+                                        onChange={(e) => {
+                                          const value = e.target.value.replace(/,/g, '');
+                                          setUnitPriceInputs(prev => new Map(prev).set(component.id, value));
+                                          if (value === '' || (!value.endsWith('.'))) {
+                                            const unitPrice = parseFloat(value) || 0;
+                                            updateComponent(component.id, { unitPrice });
+                                          }
+                                        }}
+                                        className="w-20 px-2 py-1 text-sm border rounded text-right focus:ring-1 focus:ring-primary"
+                                        min="0"
+                                      />
+                                    ) : (
+                                      <span className="text-sm">
+                                        kr {component.unitPrice ? (component.unitPrice % 1 === 0 ? Math.round(component.unitPrice).toLocaleString('nb-NO') : component.unitPrice.toLocaleString('nb-NO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })) : '0'}
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td className="py-2 px-2 text-right">
+                                    {component.isEditable ? (
+                                      <input
+                                        type="text"
+                                        step="1"
+                                        value={component.priceMarkup ?? 0}
+                                        onChange={(e) => {
+                                          const priceMarkup = Number(e.target.value) || 0;
+                                          updateComponent(component.id, {
+                                            priceMarkup,
+                                          });
+                                        }}
+                                        className="w-16 px-2 py-1 text-sm border rounded text-right focus:ring-1 focus:ring-primary"
+                                        min="0"
+                                      />
+                                    ) : (
+                                      <span className="text-sm">{component.priceMarkup || 0}%</span>
+                                    )}
+                                  </td>
+                                  <td className="py-2 px-2 text-right">
+                                    <span className="text-sm font-medium">
+                                      kr {component.amount.toLocaleString('nb-NO')}
+                                    </span>
+                                  </td>
+                                  <td className="py-2 px-2 text-center">
+                                    {component.confidence > 0 ? (
+                                      <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getConfidenceColor(component.confidence)}`}>
+                                        {component.confidence}%
+                                      </div>
+                                    ) : (
+                                      <span className="text-xs text-gray-400">—</span>
+                                    )}
+                                  </td>
+                                  <td className="py-2 px-2 text-center">
+                                    {component.isEditable && (
+                                      <Button
+                                        onClick={() => removeComponent(component.id)}
+                                        size="sm"
+                                        variant="outline"
+                                        className="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
+                                        title="Fjern komponent"
+                                      >
+                                        <Trash2 className="w-4 h-4 mr-1" />
+                                        Fjern
+                                      </Button>
+                                    )}
+                                  </td>
+                                </tr>
+                              ))}
+                            </React.Fragment>
+                          );
+                        })
+                      )}
                       <tr className="border-t-2 font-bold">
-                        <td colSpan={7} className="py-3 px-2 text-right">Total:</td>
+                        <td colSpan={8} className="py-3 px-2 text-right">Total:</td>
                         <td className="py-3 px-2 text-right text-lg whitespace-nowrap">
                           kr {quoteData.finalPrice.toLocaleString('nb-NO')}
                         </td>

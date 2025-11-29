@@ -51,6 +51,8 @@ const getMessageTypeIcon = (type: InboxMessage['type']) => {
   switch (type) {
     case 'quote_sent':
       return <Send className="h-4 w-4 text-blue-500" />;
+    case 'quote_draft':
+      return <FileText className="h-4 w-4 text-gray-500" />;
     case 'quote_opened':
       return <Eye className="h-4 w-4 text-green-500" />;
     case 'quote_question':
@@ -70,6 +72,8 @@ const getMessageTypeLabel = (type: InboxMessage['type']) => {
   switch (type) {
     case 'quote_sent':
       return 'Tilbud sendt';
+    case 'quote_draft':
+      return 'Utkast lagret';
     case 'quote_opened':
       return 'Tilbud åpnet';
     case 'quote_question':

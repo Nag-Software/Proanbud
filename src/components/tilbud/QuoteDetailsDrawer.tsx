@@ -681,21 +681,21 @@ export function QuoteDetailsDrawer({
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <label className="block text-sm font-medium text-slate-700">Prosjekt</label>
-                          {isEditing ? (
-                            <input
-                              type="text"
-                              value={editedQuote.prosjekt || ''}
-                              onChange={(e) => setEditedQuote({ ...editedQuote, prosjekt: e.target.value })}
-                              className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                              placeholder="Prosjektnavn"
-                            />
-                          ) : (
-                            <p className="text-slate-900 font-medium text-md leading-relaxed">{quote.prosjekt}</p>
-                          )}
-                        </div>
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-slate-700">Prosjekt</label>
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            value={editedQuote.prosjekt || ''}
+                            onChange={(e) => setEditedQuote({ ...editedQuote, prosjekt: e.target.value })}
+                            className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                            placeholder="Prosjektnavn"
+                          />
+                        ) : (
+                          <p className="text-slate-900 font-medium text-md leading-relaxed">{quote.prosjekt}</p>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
                           <label className="block text-sm font-medium text-slate-700">Jobbtype</label>
                           {isEditing ? (
@@ -710,29 +710,13 @@ export function QuoteDetailsDrawer({
                             <p className="text-slate-700 text-lg">{quote.jobbtype}</p>
                           )}
                         </div>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                          <label className="block text-sm font-medium text-slate-700">Totalbeløp</label>
-                          {isEditing ? (
-                            <input
-                              type="number"
-                              value={editedQuote.belop || ''}
-                              onChange={(e) => setEditedQuote({ ...editedQuote, belop: Number(e.target.value) })}
-                              className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                              placeholder="Beløp"
-                            />
-                          ) : (
-                            <p className="text-slate-900 font-bold text-lg text-blue-600">{formatCurrency(quote.belop)}</p>
-                          )}
-                        </div>
                         <div className="space-y-2">
                           <label className="block text-sm font-medium text-slate-700">Status</label>
                           {isEditing ? (
                             <select
                               value={editedQuote.status || ''}
                               onChange={(e) => setEditedQuote({ ...editedQuote, status: e.target.value as 'venter' | 'vunnet' | 'tapt' })}
-                              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                              className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                             >
                               <option value="venter">Venter</option>
                               <option value="vunnet">Vunnet</option>

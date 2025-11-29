@@ -28,12 +28,14 @@ interface PriceComponentDrawerProps {
   onSave: (component: PriceComponent) => void;
   readOnly?: boolean;
   categoryOptions?: string[];
+  projectOptions?: string[];
 }
 
 type ComponentFormState = {
   name: string;
   description: string;
   category: string;
+  projectCategory: string;
   unit: string;
   quantity: string;
   unitPrice: string;
@@ -50,10 +52,13 @@ const parseNumberInput = (value: string): number => {
   return Number.isFinite(parsed) ? parsed : NaN;
 };
 
+const FALLBACK_PROJECT_LABEL = 'Ingen prosjekt';
+
 const buildFormState = (component: PriceComponent | null): ComponentFormState => ({
   name: component?.name ?? '',
   description: component?.description ?? '',
   category: component?.category ?? 'annet',
+  projectCategory: component?.projectCategory ?? FALLBACK_PROJECT_LABEL,
   unit: component?.unit ?? 'stk',
   quantity: component?.quantity?.toString() ?? '1',
   unitPrice: component?.unitPrice?.toString() ?? '0',
@@ -75,6 +80,7 @@ export function PriceComponentDrawer({
   onSave,
   readOnly = false,
   categoryOptions,
+  projectOptions,
 }: PriceComponentDrawerProps) {
   const [formState, setFormState] = useState<ComponentFormState>(buildFormState(component));
   const [errors, setErrors] = useState<Partial<Record<keyof ComponentFormState, string>>>({});
@@ -91,6 +97,13 @@ export function PriceComponentDrawer({
     const extras = categoryOptions ?? [];
     return Array.from(new Set([...base, ...extras])).filter(Boolean);
   }, [categoryOptions]);
+
+  const resolvedProjects = useMemo(() => {
+    if (!projectOptions || projectOptions.length === 0) {
+      return [] as string[];
+    }
+    return Array.from(new Set([FALLBACK_PROJECT_LABEL, ...projectOptions])).filter(Boolean);
+  }, [projectOptions]);
 
   const parsedQuantity = parseNumberInput(formState.quantity);
   const parsedUnitPrice = parseNumberInput(formState.unitPrice);
@@ -148,6 +161,12 @@ export function PriceComponentDrawer({
       name: formState.name.trim(),
       description: formState.description.trim(),
       category: formState.category as PriceComponent['category'],
+      projectCategory:
+        !projectOptions || resolvedProjects.length === 0
+          ? formState.projectCategory.trim() || undefined
+          : formState.projectCategory === FALLBACK_PROJECT_LABEL
+            ? undefined
+            : formState.projectCategory.trim() || undefined,
       unit: formState.unit.trim() || 'stk',
       quantity: Number.isNaN(parsedQuantity) ? 0 : parsedQuantity,
       unitPrice: Number.isNaN(parsedUnitPrice) ? 0 : parsedUnitPrice,
@@ -187,7 +206,7 @@ export function PriceComponentDrawer({
 
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
           <div className="p-6 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Navn *</label>
                 <input
@@ -219,6 +238,33 @@ export function PriceComponentDrawer({
                   ))}
                 </select>
                 {errors.category && <p className="mt-1 text-sm text-red-600">{errors.category}</p>}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Prosjekt</label>
+                {resolvedProjects.length > 0 ? (
+                  <select
+                    value={formState.projectCategory}
+                    onChange={(e) => handleChange('projectCategory', e.target.value)}
+                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    disabled={readOnly}
+                  >
+                    {resolvedProjects.map((project) => (
+                      <option key={project} value={project}>
+                        {project}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    value={formState.projectCategory}
+                    onChange={(e) => handleChange('projectCategory', e.target.value)}
+                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    disabled={readOnly}
+                    placeholder="f.eks. Bygge terrasse"
+                  />
+                )}
               </div>
             </div>
 

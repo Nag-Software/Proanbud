@@ -294,15 +294,25 @@ export const createTilbud = async (tilbudData: TilbudFormData): Promise<string> 
     // Create inbox message for quote created
     try {
       const customerId = await findCustomerIdByName(tilbudData.kundenavn);
+      const isDraftNotification = tilbudData.status === 'draft';
+      const recipientDisplay = tilbudData.kundenavn || 'kunden';
+      const formattedAmount = tilbudData.belop.toLocaleString('nb-NO');
+      const notificationSubject = isDraftNotification
+        ? `Utkast lagret: ${tilbudData.prosjekt}`
+        : `Tilbud sendt: ${tilbudData.prosjekt}`;
+      const notificationMessage = isDraftNotification
+        ? `Tilbudet på ${formattedAmount} kr for prosjektet "${tilbudData.prosjekt}" er lagret som utkast for ${recipientDisplay}. Du kan åpne utkastet igjen når du er klar til å sende.`
+        : `Et nytt tilbud på ${formattedAmount} kr for prosjektet "${tilbudData.prosjekt}" har blitt sendt til ${recipientDisplay}.`;
+
       await createInboxMessage({
         from: tilbudData.kundenavn,
-        subject: `Tilbud opprettet: ${tilbudData.prosjekt}`,
-        message: `Et nytt tilbud på ${tilbudData.belop.toLocaleString('nb-NO')} kr for prosjektet "${tilbudData.prosjekt}" har blitt opprettet for ${tilbudData.kundenavn}.`,
+        subject: notificationSubject,
+        message: notificationMessage,
         timestamp: new Date().toISOString(),
         isRead: false,
         quoteId: newTilbudRef.key!,
         customerId: customerId || undefined,
-        type: 'quote_sent',
+        type: isDraftNotification ? 'quote_draft' : 'quote_sent',
         customerName: tilbudData.kundenavn,
         quoteTitle: tilbudData.prosjekt,
         folder: 'tilbud',

@@ -25,6 +25,8 @@ const getMessageTypeLabel = (type: InboxMessage['type']) => {
   switch (type) {
     case 'quote_sent':
       return 'Tilbud sendt';
+    case 'quote_draft':
+      return 'Utkast lagret';
     case 'quote_opened':
       return 'Tilbud åpnet';
     case 'quote_question':

@@ -3,15 +3,110 @@
 import Link from "next/link";
 import dashboardImage from "../../public/assets/4.jpg";
 import Image from "next/image";
+import { Button } from "@/components/ui/button";
 import { ArrowRight, Check } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import { getLaunchSpecialBanner, getDiscountTypeLabel, LaunchSpecialBanner } from "@/lib/sanity/launchBanner";
 import white from "../../public/logo/light/icon-muted.svg";
+import { storage } from "@/lib/firebase";
+import { ref, getDownloadURL } from 'firebase/storage';
+
+const HERO_VIDEO_PATH = process.env.NEXT_PUBLIC_HERO_VIDEO_PATH ?? "videos/Proanbud 2025-11-28 22:27:42.mp4";
+
+
+
+interface VideoPlayerProps {
+  videoPath: string;
+  className?: string;
+}
+
+const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoPath, className }) => {
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchVideoUrl = async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const videoRef = ref(storage, videoPath);
+        const url = await getDownloadURL(videoRef);
+
+        if (isMounted) {
+          setVideoUrl(url);
+        }
+      } catch (err) {
+        console.error("Error fetching video URL:", err);
+        if (isMounted) {
+          setError("Kunne ikke laste videoen.");
+          setVideoUrl(null);
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchVideoUrl();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [videoPath]);
+
+  const containerClassName = [
+    "relative aspect-video w-full overflow-hidden rounded-[14px] bg-black",
+    className ?? ""
+  ]
+    .join(" ")
+    .trim();
+
+  return (
+    <div className={containerClassName}>
+      {loading && (
+        <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-black text-white/80">
+          <div className="h-10 w-10 animate-spin rounded-full border-2 border-white/40 border-t-white" aria-hidden />
+          <p className="text-sm">Laster demo-video …</p>
+        </div>
+      )}
+
+      {!loading && error && (
+        <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-black/90 px-6 text-center text-white">
+          <p className="text-sm font-medium">{error}</p>
+          <p className="text-xs text-white/70">
+            Kontroller at filstien "{videoPath}" finnes i Firebase Storage.
+          </p>
+        </div>
+      )}
+
+      {!loading && !error && videoUrl && (
+        <video
+          className="h-full w-full object-cover"
+          src={videoUrl}
+          autoPlay
+          controls
+          playsInline
+          preload="metadata"
+          poster={dashboardImage.src}
+        >
+          Din nettleser støtter ikke video-elementet.
+        </video>
+      )}
+    </div>
+  );
+};
+
 
 export function NewHero() {
   const [banner, setBanner] = useState<LaunchSpecialBanner | null>(null);
   const [loading, setLoading] = useState(true);
   const [isVisible, setIsVisible] = useState(false);
+  const [showVideo, setShowVideo] = useState(false);
   const logoRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -49,6 +144,10 @@ export function NewHero() {
       }
     };
   }, []);
+
+  const handleShowVideo = () => {
+    setShowVideo(true);
+  };
   return (
     <section className="w-full py-16 md:py-20 bg-white">
       <div 
@@ -173,19 +272,36 @@ export function NewHero() {
                 </div>
               </div>
               
-              {/* Dashboard image - pristine presentation */}
-              <div className="relative bg-gradient-to-br from-gray-50 to-white overflow-hidden">
-                <Image
-                  src={dashboardImage} 
-                  alt="Proanbud Dashboard" 
-                  className="w-full h-auto"
-                  priority
-                  style={{
-                    marginTop: "-1px",
-                    marginLeft: "3px"
-                  }}
-                />
-              </div>
+              {/* Dashboard presentation */}
+              {showVideo ? (
+                <div className="relative bg-gradient-to-br from-gray-50 to-white overflow-hidden p-3">
+                  <VideoPlayer videoPath={HERO_VIDEO_PATH} className="rounded-[12px]" />
+                </div>
+              ) : (
+                <div className="group relative bg-gradient-to-br from-gray-50 to-white overflow-hidden">
+                  <Image
+                    src={dashboardImage}
+                    alt="Proanbud Dashboard"
+                    className="w-full h-auto"
+                    priority
+                    style={{
+                      marginTop: "-1px",
+                      marginLeft: "3px"
+                    }}
+                  />
+                  <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition-all duration-300 group-hover:bg-black/30 group-hover:opacity-100 group-focus-within:bg-black/30 group-focus-within:opacity-100">
+                    <Button
+                      type="button"
+                      size="lg"
+                      variant="outline"
+                      className="pointer-events-auto rounded-lg bg-white/90 text-gray-900 hover:bg-white"
+                      onClick={handleShowVideo}
+                    >
+                      Vis demo
+                    </Button>
+                  </div>
+                </div>
+              )}
               
               {/* Bottom status bar - adds realism */}
               <div className="bg-gradient-to-b from-white to-gray-50 border-t border-gray-100 px-5 py-2 flex items-center justify-between">
