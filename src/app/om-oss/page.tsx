@@ -128,7 +128,7 @@ export default async function OmOss() {
       </section>
 
       {/* Founder Story */}
-      <section className="py-20 bg-white">
+      <section className="py-15 bg-white">
         <div className="max-w-4xl mx-auto px-6 sm:px-8 lg:px-12">
           <div className="grid md:grid-cols-[300px_1fr] gap-12 items-start">
             <div className="space-y-4">

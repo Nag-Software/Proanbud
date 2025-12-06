@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth, firestore } from './src/lib/firebaseAdmin';
 import { getUserSubscriptions } from './src/utils/subscription';
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const token = request.cookies.get('token')?.value;
 
   if (!token) {

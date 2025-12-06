@@ -62,7 +62,7 @@ function VerifyEmailContent() {
   }, [searchParams, router]);
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4" data-dashboard>
       <div className="fixed left-5 top-5">
         <Logo size="lg" />
       </div>

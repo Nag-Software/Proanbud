@@ -4,10 +4,7 @@
 import React, { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/shared/Card';
-import { FeatureSection } from '@/components/shared/Features';
 import {NewHero} from '@/components/NewHero';
 import { 
   Zap, 
@@ -29,7 +26,6 @@ import {
   Shield,
   Brain
 } from 'lucide-react';
-import Logo from '@/components/shared/Logo';
 import { FaqSection } from '@/components/shared/FaqSection';
 import Footer from '@/components/shared/Footer';
 import Header from '@/components/shared/Header';
