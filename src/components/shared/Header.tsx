@@ -17,7 +17,6 @@ import {
 } from '@/components/ui/navigation-menu';
 import {
   Drawer,
-  DrawerClose,
   DrawerContent,
   DrawerTrigger,
 } from '@/components/ui/drawer';
@@ -68,10 +67,10 @@ export const NAV_ITEMS: any[] = [
           "Send profesjonelle tilbud på under 5 minutter med autogenererte mengdeberegninger og AI-prisestimat.",
       },
       {
-        title: "Mobilvennlig",
-        href: "/docs/funksjoner/mobilvennlig",
+        title: "Nettbrettvennlig",
+        href: "/docs/funksjoner/nettbrettvennlig",
         description:
-          "Full funksjonalitet på mobil, nettbrett og PC — send tilbud direkte fra befaring.",
+          "Full funksjonalitet på nettbrett og PC — send tilbud direkte fra befaring.",
       },
       {
         title: "Profesjonell kundehåndtering",

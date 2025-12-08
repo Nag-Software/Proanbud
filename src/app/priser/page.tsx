@@ -125,6 +125,7 @@ export default function PricingPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
+      <ForceTheme theme="light" />
       <Header currentPage="priser" />
 
       {/* Hero Section */}

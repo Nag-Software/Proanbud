@@ -9,6 +9,7 @@ import * as Icons from 'lucide-react'
 import Logo from '@/components/shared/Logo'
 import ShareButton from '@/components/shared/ShareButton'
 import Footer from '@/components/shared/Footer'
+import Header from '@/components/shared/Header'
 
 /**
  * TypeScript-grensesnitt for blogginnlegg
@@ -212,40 +213,10 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
   // ...existing code...
 
   return (
+    <>
     <div className="min-h-screen bg-white">
       {/* Header - server-compatible, no client hooks */}
-      <header className="sticky top-0 z-50 backdrop-blur-lg bg-white/80 border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-20">
-            <Logo size="lg" />
-            <nav className="hidden md:flex items-center gap-8">
-              <Link href="/#features" className="text-gray-700 hover:text-[#00b85b] transition-colors font-medium">
-                Funksjoner
-              </Link>
-              <Link href="/#showcase" className="text-gray-700 hover:text-[#00b85b] transition-colors font-medium">
-                Plattform
-              </Link>
-              <Link href="/priser" className='text-gray-700 hover:text-[#00b85b] transition-colors font-medium'>
-                Priser
-              </Link>
-              <Link href="/#faq" className="text-gray-700 hover:text-[#00b85b] transition-colors font-medium">
-                FAQ
-              </Link>
-              <Link href="/blogg" className="text-[#00b85b] font-semibold">
-                Blogg
-              </Link>
-            </nav>
-            <div className="hidden md:flex items-center gap-4">
-              <Link href="/login" className="text-gray-700 hover:text-[#00b85b] transition-colors font-medium">
-                Logg inn
-              </Link>
-              <Link href="/signup" className="bg-[#82ffb2] text-gray-900 px-6 py-2.5 rounded-xl transition-all font-semibold shadow-lg shadow-[#82ffb2]/20 hover:shadow-xl hover:shadow-[#82ffb2]/30">
-                Kom igang
-              </Link>
-            </div>
-          </div>
-        </div>
-      </header>
+      <Header currentPage="blogg" />
 
       {/* Back to blog link */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
@@ -359,5 +330,6 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
       {/* Footer - shared component */}
       <Footer />
     </div>
+    </>
   )
 }

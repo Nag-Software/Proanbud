@@ -13,7 +13,12 @@ export default function Layout({ children }: { children: ReactNode }) {
         suppressHydrationWarning
 
       >
-        <RootProvider>
+        <RootProvider
+          theme={{
+            enabled: false, // Disable theme switching completely
+            defaultTheme: 'dark', // Always use dark theme for docs
+          }}
+        >
           <DocsLayout tree={source.pageTree} {...baseOptions()}>
             {children}
           </DocsLayout>

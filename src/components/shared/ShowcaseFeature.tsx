@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 
 import {
   Accordion,
@@ -109,21 +110,23 @@ const Feature197 = ({
           <div className="bg-muted relative m-auto hidden w-1/2 overflow-hidden rounded-xl md:block">
             <div className="relative">
               <div className="relative rounded-2xl overflow-hidden shadow-2xl border-4 border-white">
-                <img
-                  src="/assets/3.png"
+                <Image
+                  src="/assets/hero/smiler.png"
                   alt="Platform dashboard"
-                  className="w-full h-auto"
+                  className="w-full h-auto max-h-[400px] object-cover"
+                  width={1280}
+                  height={720}
+                  loading="lazy"
                 />
                 {/* Floating cards */}
-                <div className="absolute top-8 right-8 bg-white rounded-xl p-4 shadow-xl animate-float">
-                  <div className="flex items-center gap-3">
+                <div className="absolute top-4 right-4 bg-white rounded-xl p-3 shadow-xl animate-float">
+                  <div className="flex items-center justify-around gap-3">
                     <div className="w-3 h-3 bg-[#82ffb2] rounded-full animate-pulse"></div>
-                    <span className="text-sm font-semibold">+23% konvertering</span>
+                    <span className="text-sm font-semibold">Jeg sparer 12 375 kr/mnd.</span>
                   </div>
+                  <span className="ml-6 text-xs font-normal text-gray-500">Nag Snekkerservice</span>
                 </div>
               </div>
-              <div className="absolute -top-8 -left-8 w-32 h-32 bg-[#ff82d0]/10 rounded-full blur-3xl"></div>
-              <div className="absolute -bottom-8 -right-8 w-40 h-40 bg-[#82b2ff]/10 rounded-full blur-3xl"></div>
             </div>
           </div>
         </div>

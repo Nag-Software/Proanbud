@@ -4,6 +4,8 @@ export function baseOptions(): BaseLayoutProps {
   return {
     nav: {
       title: 'Proanbud Hjelpesenter',
+      // Disable theme toggle completely
+      enableThemeSwitch: false,
     },
   };
 }
