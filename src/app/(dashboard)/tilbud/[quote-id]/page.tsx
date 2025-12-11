@@ -522,6 +522,9 @@ export default function QuoteDetailsPage() {
         produsent: component.produsent ?? '',
         name: component.name ?? '',
         category: component.category || 'annet',
+        projectCategoryDescription: component.projectCategoryDescription || '',
+        catalogMatch: component.catalogMatch || '',
+        catalogSource: component.catalogSource || '',
       };
 
       return {

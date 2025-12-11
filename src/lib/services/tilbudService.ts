@@ -15,6 +15,24 @@ import { updateCustomerQuoteStats, getCustomers } from './customerService';
 import { updateUserAnalytics } from './analyticsService';
 import { createInboxMessage } from './inboxService';
 
+// Helper to sanitize price components before saving to Firebase
+const sanitizePriceComponents = (components: PriceComponent[]): PriceComponent[] => {
+  if (!Array.isArray(components)) return [];
+  
+  return components.map((component) => ({
+    ...component,
+    projectCategoryDescription: component.projectCategoryDescription || '',
+    catalogMatch: component.catalogMatch || '',
+    catalogSource: component.catalogSource || '',
+    // Ensure other optional fields are safe
+    confidence: component.confidence ?? 0,
+    description: component.description ?? '',
+    produsent: component.produsent ?? '',
+    name: component.name ?? '',
+    category: component.category || 'annet',
+  }));
+};
+
 // Get unique categories from all user's quotes
 export const getUniqueCategoriesFromQuotes = async (): Promise<string[]> => {
   try {
@@ -260,7 +278,7 @@ export const createTilbud = async (tilbudData: TilbudFormData): Promise<string> 
       (newTilbud as any).notater = tilbudData.notater.trim();
     }
     if (tilbudData.prisgrunnlag) {
-      (newTilbud as any).prisgrunnlag = tilbudData.prisgrunnlag;
+      (newTilbud as any).prisgrunnlag = sanitizePriceComponents(tilbudData.prisgrunnlag);
     }
     if (tilbudData.template) {
       (newTilbud as any).template = tilbudData.template;
@@ -507,7 +525,7 @@ export const updateTilbud = async (tilbudId: string, updates: Partial<TilbudForm
     if (updates.svarfrist !== undefined) updateData.svarfrist = updates.svarfrist;
     if (updates.beskrivelse !== undefined) updateData.beskrivelse = updates.beskrivelse?.trim() || null;
     if (updates.notater !== undefined) updateData.notater = updates.notater?.trim() || null;
-    if (updates.prisgrunnlag !== undefined) updateData.prisgrunnlag = updates.prisgrunnlag;
+    if (updates.prisgrunnlag !== undefined) updateData.prisgrunnlag = sanitizePriceComponents(updates.prisgrunnlag);
     if (updates.template !== undefined) updateData.template = updates.template;
 
     // Get current data to check status change and update stats accordingly

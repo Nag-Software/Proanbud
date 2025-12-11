@@ -520,9 +520,9 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
               priceMarkup: numericComp.priceMarkup, // Override with user settings
               materialMarkup: numericComp.materialMarkup, // Override with user settings
               projectCategory: comp.projectCategory || comp.project_category || resolveDefaultProjectCategory(),
-              projectCategoryDescription: comp.projectCategoryDescription || comp.project_category_description,
-              catalogMatch: comp.catalogMatch || comp.catalog_match,
-              catalogSource: comp.catalogSource || comp.catalog_source,
+              projectCategoryDescription: comp.projectCategoryDescription || comp.project_category_description || "",
+              catalogMatch: comp.catalogMatch || comp.catalog_match || "",
+              catalogSource: comp.catalogSource || comp.catalog_source || "",
               isEditable: true, // Ensure all components are always editable
             };
 
