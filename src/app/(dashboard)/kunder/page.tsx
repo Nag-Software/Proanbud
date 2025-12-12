@@ -26,8 +26,10 @@ export default function KunderPage() {
   
   const [isNewCustomerOpen, setIsNewCustomerOpen] = useState(false);
   const [isCustomerDetailsOpen, setIsCustomerDetailsOpen] = useState(false);
-  const [selectedCustomer, setSelectedCustomer] = useState<Kunde | null>(null);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [customers, setCustomers] = useState<Kunde[]>([]); // Fallback to static data
+
+  const selectedCustomer = customers.find(c => c.id === selectedCustomerId) || null;
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -155,9 +157,8 @@ export default function KunderPage() {
     // Refresh usage data to update subscription limits
     await refreshUsage();
   };
-
   const handleCustomerClick = (customer: Kunde) => {
-    setSelectedCustomer(customer);
+    setSelectedCustomerId(customer.id);
     setIsCustomerDetailsOpen(true);
   };
 
@@ -187,7 +188,7 @@ export default function KunderPage() {
   };
 
   const handleEditCustomer = (customer: Kunde) => {
-    setSelectedCustomer(customer);
+    setSelectedCustomerId(customer.id);
     setIsCustomerDetailsOpen(true);
   };
 

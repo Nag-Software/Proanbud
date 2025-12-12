@@ -46,6 +46,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { DataTable } from '@/components/ui/data-table';
 import { Kunde, Tilbud } from '@/lib/types';
 import { updateCustomer, type CustomerFormData } from '@/lib/services/customerService';
+import { getTilbud } from '@/lib/services/tilbudService';
 import { cn } from '@/lib/utils';
 
 interface CustomerDetailsDrawerProps {
@@ -75,7 +76,12 @@ const statusColors: Record<string, string> = {
   tapt: 'bg-rose-50 text-rose-700 border-rose-100',
   draft: 'bg-slate-50 text-slate-600 border-slate-100',
 };
-const pieColors = ['#22c55e', '#fbee77ff', '#f97316', '#a855f7', '#e11d48'];
+const statusPieColors: Record<string, string> = {
+  vunnet: '#21ca5fff', // Green
+  venter: '#ffdf0fff', // Yellow
+  tapt: '#ef4444',   // Red
+  draft: '#94a3b8',  // Gray
+};
 
 export function CustomerDetailsDrawer({
   customer,
@@ -86,6 +92,7 @@ export function CustomerDetailsDrawer({
 }: CustomerDetailsDrawerProps) {
   const formInitialState = useMemo(() => createFormState(customer), [customer]);
   const [formState, setFormState] = useState<EditableFormState>(formInitialState);
+  const [fallbackQuotes, setFallbackQuotes] = useState<Tilbud[]>([]);
   const [fieldStatus, setFieldStatus] = useState<Record<EditableField, SavingState>>(createStatusState());
   const [fieldErrors, setFieldErrors] = useState<Record<EditableField, string | null>>(createErrorState());
   const debounceRefs = useRef<Partial<Record<EditableField, ReturnType<typeof setTimeout>>>>({});
@@ -94,6 +101,7 @@ export function CustomerDetailsDrawer({
   // Sync when customer changes
   useEffect(() => {
     setFormState(formInitialState);
+    setFallbackQuotes([]);
     savedSnapshotRef.current = formInitialState;
     setFieldStatus(createStatusState());
     setFieldErrors(createErrorState());
@@ -107,13 +115,39 @@ export function CustomerDetailsDrawer({
     };
   }, []);
 
-  const quotes = useMemo(() => customer?.tilbud ?? [], [customer]);
+  const quotes = useMemo(() => (customer?.tilbud?.length ? customer.tilbud : fallbackQuotes), [customer, fallbackQuotes]);
   const winRate = useMemo(() => calcWinRate(customer), [customer]);
   const totalQuoteValue = useMemo(() => calcTotalValue(quotes), [quotes]);
   const averageQuoteValue = useMemo(() => calcAverageValue(quotes), [quotes]);
   const quoteTrendData = useMemo(() => buildTrendData(quotes), [quotes]);
   const statusDistribution = useMemo(() => buildStatusDistribution(quotes), [quotes]);
   const quoteColumns = useMemo<ColumnDef<Tilbud>[]>(() => buildQuoteColumns(), []);
+
+  // Fallback: fetch quotes for this customer if none are attached (e.g. dashboard quick view)
+  useEffect(() => {
+    if (!customer || !open) return;
+    if (customer.tilbud?.length) return;
+
+    let isCancelled = false;
+
+    const loadQuotes = async () => {
+      try {
+        const allQuotes = await getTilbud();
+        const customerQuotes = allQuotes.filter((quote) => quote.kundenavn === customer.navn);
+        if (!isCancelled) {
+          setFallbackQuotes(customerQuotes);
+        }
+      } catch (error) {
+        console.error('Klarte ikke hente tilbud for kunden', error);
+      }
+    };
+
+    void loadQuotes();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [customer, open]);
 
   const handleFieldChange = (field: EditableField, value: string) => {
     setFormState((prev) => ({ ...prev, [field]: value }));
@@ -278,7 +312,12 @@ export function CustomerDetailsDrawer({
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} />
                         <XAxis dataKey="date" tickLine={false} axisLine={false} fontSize={12} />
-                        <YAxis tickLine={false} axisLine={false} fontSize={12} tickFormatter={(value) => formatYAxis(value)} />
+                        <YAxis
+                          tickLine={false}
+                          axisLine={false}
+                          fontSize={12}
+                          tickFormatter={(value) => String(formatYAxis(Number(value)))}
+                        />
                         <RechartsTooltip formatter={(value) => formatCurrency(Number(value))} />
                         <Area type="monotone" dataKey="verdi" stroke="#2563eb" fill="url(#quoteValue)" strokeWidth={2} />
                         <Area type="monotone" dataKey="vunnet" stroke="#16a34a" fill="url(#wonValue)" strokeWidth={2} />
@@ -300,8 +339,8 @@ export function CustomerDetailsDrawer({
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie data={statusDistribution} dataKey="value" nameKey="label" innerRadius={60} outerRadius={90} paddingAngle={4}>
-                          {statusDistribution.map((_, index) => (
-                            <Cell key={`cell-${index}`} fill={pieColors[index % pieColors.length]} />
+                          {statusDistribution.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={statusPieColors[entry.status] || '#94a3b8'} />
                           ))}
                         </Pie>
                         <RechartsTooltip formatter={(value, name) => [`${value} stk`, name as string]} />
@@ -482,7 +521,7 @@ const StatsGrid = ({
 };
 
 const EmptyState = ({ message }: { message: string }) => (
-  <div className="flex h-full flex-col items-center justify-center rounded-lg border border-dashed text-sm text-muted-foreground">
+  <div className="flex h-full flex-col py-10 items-center justify-center rounded-xl border border-gray-300 border-dashed text-sm text-muted-foreground">
     {message}
   </div>
 );
@@ -557,6 +596,7 @@ const buildStatusDistribution = (quotes: Tilbud[]) => {
   return Object.entries(counts).map(([status, value]) => ({
     label: formatStatusLabel(status),
     value,
+    status,
   }));
 };
 

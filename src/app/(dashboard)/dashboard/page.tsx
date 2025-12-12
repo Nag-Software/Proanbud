@@ -19,6 +19,8 @@ import { Settings, Plus, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { deleteCustomer } from '@/lib/services/customerService';
 import { deleteTilbud, updateTilbud } from '@/lib/services/tilbudService';
+import { ref, onValue } from 'firebase/database';
+import { db } from '@/lib/firebase';
 import { Kunde, Tilbud } from '@/lib/types';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
@@ -57,6 +59,43 @@ export default function DashboardPage() {
   // State for detail drawers
   const [selectedCustomer, setSelectedCustomer] = useState<Kunde | null>(null);
   const [isCustomerDetailsOpen, setIsCustomerDetailsOpen] = useState(false);
+
+  // Fetch quotes for selected customer
+  useEffect(() => {
+    if (!selectedCustomer?.id || !user) return;
+
+    const quotesRef = ref(db, `users/${user.uid}/tilbud`);
+    const unsubscribe = onValue(quotesRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const allQuotes = snapshot.val();
+        const customerQuotes: Tilbud[] = Object.entries(allQuotes)
+          .map(([key, data]: [string, any]) => ({
+            id: key,
+            kundenavn: data.kundenavn,
+            prosjekt: data.prosjekt,
+            jobbtype: data.jobbtype,
+            belop: data.belop,
+            status: data.status,
+            dato: data.dato,
+            svarfrist: data.svarfrist,
+            prisgrunnlag: data.prisgrunnlag || [],
+            template: data.template
+          }))
+          .filter((quote) => quote.kundenavn === selectedCustomer.navn);
+        
+        setSelectedCustomer(prev => {
+            if (!prev || prev.id !== selectedCustomer.id) return prev;
+            // Only update if quotes count changed or we have no quotes yet
+            // Actually, just update to be safe and ensure fresh data
+            return { ...prev, tilbud: customerQuotes };
+        });
+      } else {
+         setSelectedCustomer(prev => prev ? ({ ...prev, tilbud: [] }) : null);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [selectedCustomer?.id, user, selectedCustomer?.navn]);
 
   // Callback functions for table actions
   const handleEditCustomer = (customer: Kunde) => {
