@@ -34,8 +34,8 @@ export default function PricingPage() {
               yearly: 0
             },
             features: [
-              'Inntil 3 tilbud',
-              'Inntil 1 kunder',
+              'Inntil 10 tilbud',
+              'Inntil 10 kunder',
               'Grunnleggende statistikk'
             ],
             color: 'gray',
