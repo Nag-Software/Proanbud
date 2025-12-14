@@ -9,9 +9,9 @@ import {
   applyActionCode
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
-
 import {ref, set} from 'firebase/database';
 import { db } from '@/lib/firebase';
+import { Resend } from 'resend';
 
 export const loginWithEmail = async (email: string, password: string) => {
   try {
@@ -58,7 +58,7 @@ export const signupWithEmail = async (
     try {
       const userRef = ref(db, `users/${result.user.uid}`);
       const userData: any = {
-        email: result.user.email,
+        email: result.user.email || '',
         displayName,
         profile: {
           createdAt: Date.now(),
@@ -78,6 +78,20 @@ export const signupWithEmail = async (
           jobbypeStats: [],
         }
       };
+
+      // Add contact to resend audience
+      try {
+        const resend = new Resend("re_5Mbnm3k2_FKxvm8s3zh6msAL19T41FpgS");
+        await resend.contacts.create({
+          audienceId: result.user.uid,
+          email: email,
+          firstName: displayName || '',
+          unsubscribed: false,
+        })
+      } catch (resendError) {
+        console.error('Error adding contact to Resend:', resendError);
+      }
+
 
       // Add business settings if provided
       if (businessSettings && (businessSettings.companyName || businessSettings.organizationNumber)) {

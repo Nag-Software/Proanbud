@@ -4,17 +4,17 @@ import { getDatabase, connectDatabaseEmulator } from 'firebase/database';
 import { getStorage } from 'firebase/storage';
 import { getFirestore } from 'firebase/firestore';
 
-// Firebase configuration
+
 const firebaseConfig = {
-  apiKey: "AIzaSyAhSC5u_d12f2Y5GipOAD6TDEOWPlwDBVs",
-  authDomain: "proanbudas.firebaseapp.com",
-  databaseURL: "https://proanbudas-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "proanbudas",
-  storageBucket: "proanbudas.firebasestorage.app",
-  messagingSenderId: "956288932829",
-  appId: "1:956288932829:web:5ac25a69767f31ed507434",
-  measurementId: "G-B35G6SB47M"
-};
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+}
+
 
 // NOTE: CRITICAL - Phone authentication setup required:
 // 1. Go to Firebase Console: https://console.firebase.google.com/

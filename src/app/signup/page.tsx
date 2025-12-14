@@ -5,14 +5,13 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/shared/Card';
 import { signupWithEmail, getAuthErrorMessage } from '@/lib/auth';
-import { updateProfile } from 'firebase/auth';
 import { UserPlus, Eye, EyeOff, Mail, Lock, User, CheckCircle, Building, ArrowRight, Check } from 'lucide-react';
-import * as Icons from 'lucide-react';
 import Logo from '@/components/shared/Logo';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
+
 
 interface Business {
   organisasjonsnummer: string;
