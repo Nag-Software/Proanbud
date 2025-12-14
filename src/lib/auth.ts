@@ -83,7 +83,6 @@ export const signupWithEmail = async (
       try {
         const resend = new Resend("re_5Mbnm3k2_FKxvm8s3zh6msAL19T41FpgS");
         await resend.contacts.create({
-          audienceId: result.user.uid,
           email: email,
           firstName: displayName || '',
           unsubscribed: false,
