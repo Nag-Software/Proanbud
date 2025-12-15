@@ -43,10 +43,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to find customer' }, { status: 500 });
     }
 
-    // Create customer portal session
+    // Create customer portal session with a stable return URL (avoid 0.0.0.0 from dev host headers)
+    const baseReturnUrl = (process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000').replace(/\/$/, '');
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: customer.id,
-      return_url: `${request.nextUrl.origin}/innstillinger`,
+      return_url: `${baseReturnUrl}/innstillinger`,
     });
 
     return NextResponse.json({

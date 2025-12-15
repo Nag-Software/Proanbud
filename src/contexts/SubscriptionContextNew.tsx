@@ -71,6 +71,12 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
   // Ensure usage counters are reset once per billing period (first login/reload in the new period)
   const ensureUsageResetIfNeeded = useCallback(async (subscription: UserSubscription | null) => {
     if (!user?.uid || !subscription) return;
+    // Only paid, active plans should ever trigger a usage reset. Free/trial users must not get fresh counters.
+    const isPaidPlan = subscription.plan === 'standard' || subscription.plan === 'proff';
+    const isActive = subscription.status === 'active' || subscription.status === 'past_due';
+    if (!isPaidPlan || !isActive) {
+      return;
+    }
     // Do not reset usage when subscription is canceled (user explicitly cancelled)
     // Check both explicit 'canceled' status and the Stripe 'cancel_at_period_end' marker
     if (subscription.status === 'canceled' || subscription.cancelAtPeriodEnd === true) {

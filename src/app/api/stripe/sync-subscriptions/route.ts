@@ -107,6 +107,32 @@ export async function POST(request: NextRequest) {
 
     console.log(`🔍 Found ${subscriptions.data.length} subscriptions for customer ${customerId}`);
 
+    // Guard: require at least one active paid subscription before proceeding
+    const activeSubscriptions = subscriptions.data.filter(sub =>
+      ['active', 'trialing', 'past_due'].includes(sub.status)
+    );
+
+    // Identify paid Stripe prices we support
+    const paidPriceIds = [
+      process.env.NEXT_PUBLIC_STRIPE_BASIC_PRICE_ID,
+      process.env.NEXT_PUBLIC_STRIPE_BASIC_YEARLY_PRICE_ID,
+      process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID,
+      process.env.NEXT_PUBLIC_STRIPE_PRO_YEARLY_PRICE_ID,
+    ].filter(Boolean);
+
+    const activePaidSubscriptions = activeSubscriptions.filter(sub => {
+      const priceId = sub.items?.data?.[0]?.price?.id;
+      return priceId && paidPriceIds.includes(priceId);
+    });
+
+    if (activePaidSubscriptions.length === 0) {
+      console.warn(`❌ No active paid Stripe subscription found for customer ${customerId}. Skipping usage reset and returning NO_SUBSCRIPTION.`);
+      return NextResponse.json({
+        error: 'No active subscription found. Please create a subscription first.',
+        code: 'NO_SUBSCRIPTION'
+      }, { status: 404 });
+    }
+
     // Normalize timestamps (handle ms vs s), compute latest period end across subscriptions,
     // and perform a single reset decision per-user to avoid repeated/residual resets.
     const normalizeSeconds = (v: any) => {
@@ -119,8 +145,8 @@ export async function POST(request: NextRequest) {
 
     // Compute period starts and ends for each subscription
     const now = Math.floor(Date.now() / 1000);
-    const periodStarts = subscriptions.data.map(sub => normalizeSeconds((sub as any).current_period_start) || now);
-    const periodEnds = subscriptions.data.map(sub => normalizeSeconds((sub as any).current_period_end) || (now + (30 * 24 * 60 * 60)));
+    const periodStarts = activePaidSubscriptions.map(sub => normalizeSeconds((sub as any).current_period_start) || now);
+    const periodEnds = activePaidSubscriptions.map(sub => normalizeSeconds((sub as any).current_period_end) || (now + (30 * 24 * 60 * 60)));
     // Choose the most recent period start and corresponding end
     const latestPeriodStart = periodStarts.length > 0 ? Math.max(...periodStarts) : now;
     const latestPeriodEnd = periodEnds.length > 0 ? Math.max(...periodEnds) : (now + (30 * 24 * 60 * 60));
