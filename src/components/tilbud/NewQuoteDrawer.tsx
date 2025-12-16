@@ -42,6 +42,7 @@ import { getCustomers } from '@/lib/services/customerService';
 import { getBusinessContextForAI, getBusinessSettings } from '@/lib/services/businessService';
 import { Kunde, PriceComponent, AIPriceSuggestion, BusinessSettings, Tilbud } from '@/lib/types';
 import { useBreakpoint } from '@/hooks/useResponsive';
+import { generateQuoteEmailHtml } from '@/lib/email/generateQuoteEmailHtml';
 
 import {
   Select,
@@ -741,7 +742,12 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
           viewToken: viewToken
         };
 
-        const emailHtml = await generateQuoteHtml(quoteForEmail, selectedCustomer!, businessSettings, viewUrl);
+        const emailHtml = generateQuoteEmailHtml({
+          quote: quoteForEmail,
+          customer: selectedCustomer!,
+          businessSettings,
+          viewUrl,
+        });
 
         const emailResponse = await fetch('/api/send-email', {
           method: 'POST',
@@ -819,101 +825,6 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
   }, [open, handleAutoSaveOnClose]);
 
   // Helper to generate full quote HTML for emails using selected template
-  const generateQuoteHtml = async (quote: any, customer: Kunde, businessSettings: BusinessSettings | null, viewUrl?: string) => {
-    // Generate a nice email with the view link
-    const companyName = businessSettings?.companyName || 'Håndverksbedrift';
-    
-    console.log('🔗 Generating email HTML with viewUrl:', viewUrl);
-    console.log('🔗 Quote viewToken:', quote.viewToken);
-    
-    return `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff;">
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 20px; text-align: center;">
-          ${businessSettings?.logoUrl ? `<img src="${businessSettings.logoUrl}" alt="${companyName}" style="max-height: 60px; margin-bottom: 20px;">` : ''}
-          <h1 style="color: #ffffff; margin: 0; font-size: 28px;">Nytt tilbud fra ${companyName}</h1>
-        </div>
-        
-        <div style="padding: 40px 20px;">
-          <h2 style="color: #333333; margin-top: 0;">${quote.prosjekt}</h2>
-          
-          <p style="color: #666666; font-size: 16px; line-height: 1.6;">
-            Hei ${customer.navn},
-          </p>
-          
-          <p style="color: #666666; font-size: 16px; line-height: 1.6;">
-            Takk for henvendelsen! Vi har laget et tilbud for prosjektet "${quote.prosjekt}".
-          </p>
-          
-          <div style="background-color: #f8f9fa; border-left: 4px solid #667eea; padding: 20px; margin: 30px 0;">
-            <p style="margin: 0 0 10px 0; color: #333333;"><strong>Totalpris:</strong></p>
-            <p style="margin: 0; font-size: 32px; font-weight: bold; color: #667eea;">${quote.belop?.toLocaleString('nb-NO') || 0} kr</p>
-          </div>
-          
-          <div style="margin: 30px 0;">
-            <p style="color: #666666; font-size: 14px; margin: 5px 0;">
-              <strong>Tilbudsdato:</strong> ${quote.dato || new Date().toLocaleDateString('nb-NO')}
-            </p>
-            <p style="color: #666666; font-size: 14px; margin: 5px 0;">
-              <strong>Svarfrist:</strong> ${quote.svarfrist || new Date(Date.now() + 14*24*60*60*1000).toLocaleDateString('nb-NO')}
-            </p>
-          </div>
-          
-          ${viewUrl ? `
-          <div style="text-align: center; margin: 40px 0;">
-            <a href="${viewUrl}" style="display: inline-block; background-color: #667eea; color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-size: 18px; font-weight: bold;">
-              Se tilbud og svar
-            </a>
-          </div>
-          
-          <p style="color: #666666; font-size: 14px; text-align: center; margin-top: 20px;">
-            På tilbudssiden kan du:
-          </p>
-          <ul style="color: #666666; font-size: 14px; text-align: left; max-width: 400px; margin: 10px auto;">
-            <li>Se full prissammendrag og beskrivelse</li>
-            <li>Godkjenne eller avvise tilbudet</li>
-            <li>Stille spørsmål eller komme med innspill</li>
-          </ul>
-          ` : ''}
-          
-          ${quote.beskrivelse ? `
-          <div style="margin: 30px 0;">
-            <h3 style="color: #333333;">Beskrivelse:</h3>
-            <p style="color: #666666; font-size: 14px; line-height: 1.6; white-space: pre-wrap;">
-              ${quote.beskrivelse}
-            </p>
-          </div>
-          ` : ''}
-          
-          <div style="border-top: 1px solid #e0e0e0; margin-top: 40px; padding-top: 20px;">
-            <p style="color: #666666; font-size: 14px; margin: 5px 0;">
-              <strong>${companyName}</strong>
-            </p>
-            ${businessSettings?.organizationNumber ? `
-            <p style="color: #999999; font-size: 12px; margin: 5px 0;">
-              Org.nr: ${businessSettings.organizationNumber}
-            </p>
-            ` : ''}
-            ${businessSettings?.phone ? `
-            <p style="color: #666666; font-size: 14px; margin: 5px 0;">
-              📞 ${businessSettings.phone}
-            </p>
-            ` : ''}
-            ${businessSettings?.email ? `
-            <p style="color: #666666; font-size: 14px; margin: 5px 0;">
-              ✉️ ${businessSettings.email}
-            </p>
-            ` : ''}
-          </div>
-        </div>
-        
-        <div style="background-color: #f8f9fa; padding: 20px; text-align: center;">
-          <p style="color: #999999; font-size: 12px; margin: 0;">
-            Powered by Proanbud AI
-          </p>
-        </div>
-      </div>
-    `;
-  };
 
   const handlePrevious = () => {
     if (currentStep > 1) {
@@ -1000,14 +911,14 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
         <textarea
           value={quoteData.jobDescription}
           onChange={(e) => setQuoteData(prev => ({ ...prev, jobDescription: e.target.value }))}
-          placeholder="Beskriv jobben som skal utføres..."
+          placeholder="Beskriv spesifikt jobben som skal utføres..."
           className="w-full h-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
         />
       </div>
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Bilder (Valgfritt)
+          Bilder (Ikke tilgjengelig for øyeblikket)
         </label>
         <div
           className={`

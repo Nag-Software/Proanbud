@@ -9,6 +9,7 @@ import { updateTilbud, deleteTilbud, getTilbudById, TilbudFormData } from '@/lib
 import { getBusinessSettings } from '@/lib/services/businessService';
 import { getCustomers } from '@/lib/services/customerService';
 import { useBreakpoint } from '@/hooks/useResponsive';
+import { generateQuoteEmailHtml } from '@/lib/email/generateQuoteEmailHtml';
 import {
   Dialog,
   DialogContent,
@@ -248,7 +249,12 @@ export default function QuoteDetailsPage() {
       console.log('🔗 Generated viewUrl:', viewUrl);
 
       // Generate email HTML
-      const emailHtml = generateEmailHtml(quote, relatedCustomer, viewUrl);
+      const emailHtml = generateQuoteEmailHtml({
+        quote,
+        customer: relatedCustomer,
+        businessSettings,
+        viewUrl,
+      });
 
       const emailResponse = await fetch('/api/send-email', {
         method: 'POST',
@@ -307,7 +313,12 @@ export default function QuoteDetailsPage() {
       console.log('🔗 Generated viewUrl:', viewUrl);
 
       // Generate email HTML
-      const emailHtml = generateEmailHtml(quote, relatedCustomer, viewUrl);
+      const emailHtml = generateQuoteEmailHtml({
+        quote,
+        customer: relatedCustomer,
+        businessSettings,
+        viewUrl,
+      });
 
       const emailResponse = await fetch('/api/send-email', {
         method: 'POST',
@@ -347,97 +358,6 @@ export default function QuoteDetailsPage() {
     }
   };
 
-  const generateEmailHtml = (quote: Tilbud, customer: Kunde, viewUrl: string | null) => {
-    const companyName = businessSettings?.companyName || 'Håndverksbedrift';
-    
-    return `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff;">
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 20px; text-align: center;">
-          ${businessSettings?.logoUrl ? `<img src="${businessSettings.logoUrl}" alt="${companyName}" style="max-height: 60px; margin-bottom: 20px;">` : ''}
-          <h1 style="color: #ffffff; margin: 0; font-size: 28px;">Nytt tilbud fra ${companyName}</h1>
-        </div>
-        
-        <div style="padding: 40px 20px;">
-          <h2 style="color: #333333; margin-top: 0;">${quote.prosjekt}</h2>
-          
-          <p style="color: #666666; font-size: 16px; line-height: 1.6;">
-            Hei ${customer.navn},
-          </p>
-          
-          <p style="color: #666666; font-size: 16px; line-height: 1.6;">
-            ${viewUrl ? 'Vi sender tilbudet på nytt. ' : ''}Takk for henvendelsen! Her er vårt tilbud for prosjektet "${quote.prosjekt}".
-          </p>
-          
-          <div style="background-color: #f8f9fa; border-left: 4px solid #667eea; padding: 20px; margin: 30px 0;">
-            <p style="margin: 0 0 10px 0; color: #333333;"><strong>Totalpris:</strong></p>
-            <p style="margin: 0; font-size: 32px; font-weight: bold; color: #667eea;">${quote.belop?.toLocaleString('nb-NO') || 0} kr</p>
-          </div>
-          
-          <div style="margin: 30px 0;">
-            <p style="color: #666666; font-size: 14px; margin: 5px 0;">
-              <strong>Tilbudsdato:</strong> ${quote.dato || new Date().toLocaleDateString('nb-NO')}
-            </p>
-            <p style="color: #666666; font-size: 14px; margin: 5px 0;">
-              <strong>Svarfrist:</strong> ${quote.svarfrist || new Date(Date.now() + 14*24*60*60*1000).toLocaleDateString('nb-NO')}
-            </p>
-          </div>
-          
-          ${viewUrl ? `
-          <div style="text-align: center; margin: 40px 0;">
-            <a href="${viewUrl}" style="display: inline-block; background-color: #667eea; color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-size: 18px; font-weight: bold;">
-              Se tilbud og svar
-            </a>
-          </div>
-          
-          <p style="color: #666666; font-size: 14px; text-align: center; margin-top: 20px;">
-            På tilbudssiden kan du:
-          </p>
-          <ul style="color: #666666; font-size: 14px; text-align: left; max-width: 400px; margin: 10px auto;">
-            <li>Se full prissammendrag og beskrivelse</li>
-            <li>Godkjenne eller avvise tilbudet</li>
-            <li>Stille spørsmål eller komme med innspill</li>
-          </ul>
-          ` : ''}
-          
-          ${quote.beskrivelse ? `
-          <div style="margin: 30px 0;">
-            <h3 style="color: #333333;">Beskrivelse:</h3>
-            <p style="color: #666666; font-size: 14px; line-height: 1.6; white-space: pre-wrap;">
-              ${quote.beskrivelse}
-            </p>
-          </div>
-          ` : ''}
-          
-          <div style="border-top: 1px solid #e0e0e0; margin-top: 40px; padding-top: 20px;">
-            <p style="color: #666666; font-size: 14px; margin: 5px 0;">
-              <strong>${companyName}</strong>
-            </p>
-            ${businessSettings?.organizationNumber ? `
-            <p style="color: #999999; font-size: 12px; margin: 5px 0;">
-              Org.nr: ${businessSettings.organizationNumber}
-            </p>
-            ` : ''}
-            ${businessSettings?.phone ? `
-            <p style="color: #666666; font-size: 14px; margin: 5px 0;">
-              📞 ${businessSettings.phone}
-            </p>
-            ` : ''}
-            ${businessSettings?.email ? `
-            <p style="color: #666666; font-size: 14px; margin: 5px 0;">
-              ✉️ ${businessSettings.email}
-            </p>
-            ` : ''}
-          </div>
-        </div>
-        
-        <div style="background-color: #f8f9fa; padding: 20px; text-align: center;">
-          <p style="color: #999999; font-size: 12px; margin: 0;">
-            Powered by Proanbud AI
-          </p>
-        </div>
-      </div>
-    `;
-  };
   // Add new price component
   const addPriceComponent = () => {
     const newComponent: PriceComponent = {
