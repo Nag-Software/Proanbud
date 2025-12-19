@@ -1346,9 +1346,9 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
             <Card>
               <CardHeader>
                 {isMobile ? (
-                  <div className="flex flex-col gap-2">
+                  <div className="flex flex-col sm:flex-row justify-between gap-2">
                     <CardTitle>Rediger prisforslag</CardTitle>
-                    <div className="flex flex-col gap-2">
+                    <div className="flex flex-col sm:flex-row gap-2">
                       <Button onClick={() => openProductCatalog('list')} size="sm" variant="outline" className="w-full">
                         <Plus className="w-4 h-4 mr-2" />
                         Legg til produkt
@@ -2004,12 +2004,12 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-row">
+      <div className="w-full grid grid-cols-2 gap-3 sm:flex sm:flex-row sm:space-x-3">
         {/* Save (left on mobile), becomes middle on desktop */}
-        <div className="order-1 sm:order-2">
+        <div className="order-1 sm:order-2 sm:flex-1 sm:basis-0">
           <Button
             variant="outline"
-            className="w-full sm:flex-1 min-w-0 flex items-center justify-center gap-2"
+            className="w-full min-w-0 flex items-center justify-center gap-2"
             onClick={handleSaveDraft}
             disabled={isSubmitting || !selectedCustomerId || !projectName}
           >
@@ -2019,9 +2019,9 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
         </div>
 
         {/* Send (right on mobile), stays right on desktop */}
-        <div className="order-2 sm:order-3">
+        <div className="order-2 sm:order-3 sm:flex-1 sm:basis-0">
           <Button
-            className="w-full sm:flex-1 min-w-0 flex items-center justify-center gap-2"
+            className="w-full min-w-0 flex items-center justify-center gap-2"
             onClick={handleSubmit}
             disabled={isSubmitting || !selectedCustomerId || !projectName}
           >
@@ -2031,10 +2031,10 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
         </div>
 
         {/* Back (under on mobile), left on desktop */}
-        <div className="col-span-2 order-3 sm:col-auto sm:order-1">
+        <div className="col-span-2 order-3 sm:col-auto sm:order-1 sm:flex-1 sm:basis-0">
           <Button
             variant="outline"
-            className="w-full sm:flex-1 min-w-0 flex items-center justify-center gap-2"
+            className="w-full min-w-0 flex items-center justify-center gap-2"
             onClick={handlePrevious}
           >
             <ArrowLeft className="w-4 h-4" />
