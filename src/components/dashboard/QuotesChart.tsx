@@ -56,11 +56,13 @@ export function QuotesChart({ compact }: { compact?: boolean }) {
         })
 
         const points = months.map((d) => {
-          const monthLabel = d.toLocaleDateString('nb-NO', { month: 'short' })
+          const monthShort = d.toLocaleDateString('nb-NO', { month: 'short' })
+          const monthLong = d.toLocaleDateString('nb-NO', { month: 'long' })
+          const monthLabel = monthLong.charAt(0).toUpperCase() + monthLong.slice(1)
           const year = d.getFullYear()
 
           const monthEntry = analytics?.monthlyData?.find(
-            (m) => m.month === monthLabel && m.year === year
+            (m) => m.month === monthShort && m.year === year
           )
 
           return {
@@ -121,25 +123,27 @@ export function QuotesChart({ compact }: { compact?: boolean }) {
   const maxY = chartData.length ? Math.max(...chartData.map(p => Math.max(p.sent || 0, p.won || 0))) : 0
   const yMax = Math.max(1, Math.ceil(maxY * 1.05))
 
+
+
   return (
     <Card className="h-full flex flex-col">
-      <CardHeader>
-        <CardTitle>Tilbud-statistikk</CardTitle>
-        <CardDescription>
-          {startLabel} <ArrowRight className="inline-block h-3 w-3" /> {endLabel}
-        </CardDescription>
+      <CardHeader className="flex-shrink-0 px-5 py-3 space-y-0">
+          <CardTitle className="text-base sm:text-lg text-left">Tilbud-statistikk</CardTitle>
+          <CardDescription className="text-xs text-left">
+            {startLabel} <ArrowRight className="inline-block h-3 w-3" /> {endLabel}
+          </CardDescription>
       </CardHeader>
-      <CardContent className="flex-1 min-h-0">
-        <div className="flex-1 min-h-[140px]">
-          <ChartContainer config={chartConfig} className="h-full">
-            <BarChart accessibilityLayer data={chartData} margin={{ top: 12, right: 0, left: 0, bottom: 0 }}>
+      <CardContent className="flex-1 min-h-0 flex flex-col">
+        <div className="flex-1 min-h-[140px] h-[180px] min-h-[100px] max-h-[500px] resize-y overflow-auto">
+          <ChartContainer config={chartConfig} className="h-full w-full">
+            <BarChart accessibilityLayer data={chartData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
               <CartesianGrid vertical={false} />
               <XAxis
                 dataKey="month"
                 tickLine={false}
                 tickMargin={10}
                 axisLine={false}
-                tickFormatter={(value) => String(value).slice(0, 3)}
+                tickFormatter={(value) => String(value)}
               />
               <YAxis domain={[0, yMax]} allowDecimals={false} hide />
               <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dashed" />} />
