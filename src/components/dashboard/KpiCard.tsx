@@ -6,7 +6,7 @@ type IconName = keyof typeof Icons;
 
 interface KpiCardProps {
   title: string;
-  value: string;
+  value: number;
   change?: string;
   icon: string;
   className?: string;
@@ -36,14 +36,14 @@ export const KpiCard: React.FC<KpiCardProps> = ({
           </div>
         )}
       </CardHeader>
-      <CardContent className="pt-2 !px-3 flex-1 flex flex-col justify-between">
-        <div className={`font-bold text-slate-800 mb-1 ml-2 ${compact ? 'text-xl' : 'text-2xl'} leading-tight`}>
+      <CardContent className={`pt-2 pb-2 min-h-0 flex-1 flex flex-col justify-between ${compact ? "!px-1.5" : "!px-3"}`}>
+        <div className={`font-bold text-slate-800 mb-1 ml-2 ${compact ? 'text-lg' : 'text-2xl'} leading-tight`}>
           {value}
         </div>
         {change && (
           <div className="flex items-center gap-1 flex-nowrap">
             <div className={`font-medium px-2 py-1 rounded-full flex-shrink-0 ${
-              compact ? 'text-xs' : 'text-xs'
+              compact ? 'text-[10px]' : 'text-xs'
             } ${
               isPositive
                 ? 'bg-green-50 text-green-700 border border-green-200'
@@ -51,7 +51,7 @@ export const KpiCard: React.FC<KpiCardProps> = ({
             }`}>
               {change}
             </div>
-            <span className={`text-slate-500 ${compact ? 'text-xs' : 'text-xs'} leading-tight whitespace-nowrap`}>
+            <span className={`text-slate-500 ${compact ? 'text-[11px]' : 'text-[12.5px]'} leading-tight whitespace-nowrap`}>
               fra forrige måned
             </span>
           </div>

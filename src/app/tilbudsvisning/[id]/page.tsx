@@ -8,9 +8,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { CheckCircle2, XCircle, MessageSquare, Building2, Mail, Phone, Calendar, FileText, Loader2 } from 'lucide-react';
+import { CheckCircle2, XCircle, MessageSquare, Building2, Mail, Phone, Calendar, FileText, Loader2, DollarSign } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import GroupedDataTable from '@/components/shared/GroupedDataTable';
+import { Happy_Monkey } from 'next/font/google';
 
 function TilbudsvisningContent() {
   const params = useParams();
@@ -394,8 +395,11 @@ function TilbudsvisningContent() {
             )}
 
             {/* Price Breakdown */}
-            <div>
-              <h3 className="text-lg font-semibold text-slate-900 mb-4">Prisforslag</h3>
+            <div className="">
+              <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 flex items-center">
+                  <DollarSign className="w-4 h-4 mr-2" />
+                  Prisforslag
+                </h3>
               {quote.prisgrunnlag && quote.prisgrunnlag.length > 0 ? (
                 <GroupedDataTable items={quote.prisgrunnlag ?? []} editable={false} variant="public" />
               ) : (

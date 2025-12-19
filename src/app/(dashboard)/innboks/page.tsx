@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -144,6 +144,8 @@ const getMessageActivityTimestamp = (message: InboxMessage) => {
 
 export default function InnboksPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const messageParam = searchParams?.get?.('message');
   const [messages, setMessages] = useState<InboxMessage[]>([]);
   const [selectedMessage, setSelectedMessage] = useState<InboxMessage | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -305,10 +307,16 @@ export default function InnboksPage() {
     }
   }, [messages, selectedMessage]);
 
+  // Clear selection when switching folders, but DON'T clear if a specific message is requested via query param
   useEffect(() => {
+    const messageId = messageParam;
+    if (messageId) return; // Keep selection open when navigating to a specific message via URL
+
     setSelectedMessage(null);
     setSelectedMessageIds([]);
-  }, [currentFolder]);
+  }, [currentFolder, messageParam]);
+
+  // Read query params (we open messages in a separate effect after the handlers are defined)
 
   const folderMessages = useMemo(() => {
     return messages.filter((message) => {
@@ -532,7 +540,70 @@ export default function InnboksPage() {
         console.error('Error marking message as read:', readError);
       }
     }
+
+    // Reflect selection in URL so external links / toasts can open the message directly
+    try {
+      router.replace(`/innboks?message=${message.id}`);
+    } catch (err) {
+      // Ignore router errors
+    }
   };
+
+  // Open specific message when ?message=<id> is present in URL
+  useEffect(() => {
+    const messageId = messageParam;
+    if (!messageId) return;
+
+    const target = messages.find((m) => m.id === messageId);
+    if (!target) return;
+
+    // Ensure folder is visible
+    if (target.folder === 'arkiv') {
+      setCurrentFolder('arkiv');
+    } else {
+      setCurrentFolder('innboks');
+    }
+
+    (async () => {
+      try {
+        if (window.innerWidth < 1024) {
+          setSelectedMessage(target);
+          setIsMessageDetailOpen(true);
+        } else {
+          setSelectedMessage(target);
+        }
+
+        if (!target.isRead) {
+          try {
+            await markMessageAsRead(target.id);
+            setMessages(prev => prev.map(m => m.id === target.id ? { ...m, isRead: true } : m));
+          } catch (e) {
+            console.error('Error marking message as read from query param:', e);
+          }
+        }
+
+        // Don't call router.replace here to avoid loops — the URL already contains the message param
+      } catch (err) {
+        console.error('Error opening message from query param:', err);
+      }
+    })();
+  }, [messageParam, messages]);
+
+  // When message dialog is closed, clear the message query param if present
+  useEffect(() => {
+    // Only clear the message query param when there is no open message (desktop) and the mobile dialog is closed
+    if (isMessageDetailOpen) return;
+    if (selectedMessage) return; // keep param while a message is selected (prevents immediate redirect on desktop)
+
+    const messageId = messageParam;
+    if (!messageId) return;
+
+    try {
+      router.replace('/innboks');
+    } catch (err) {
+      // ignore
+    }
+  }, [isMessageDetailOpen, messageParam, router, selectedMessage]);
 
   const handleCustomerClick = async (customerId: string) => {
     try {
@@ -540,6 +611,12 @@ export default function InnboksPage() {
       if (customer) {
         setSelectedCustomer(customer);
         setCustomerDrawerOpen(true);
+
+        // On mobile, close the message detail dialog so the drawer is visible
+        if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+          setIsMessageDetailOpen(false);
+          setSelectedMessage(null);
+        }
       } else {
         console.error('Customer not found:', customerId);
         showDialog('Feil', 'Kunne ikke finne kunden', 'error');
@@ -854,15 +931,12 @@ export default function InnboksPage() {
           <div className="px-4 sm:px-6 py-6 space-y-6">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex items-center gap-3">
-                <div className="h-12 w-12 rounded-full bg-primary/10 text-primary flex items-center justify-center">
-                  <Inbox className="h-5 w-5" />
-                </div>
                 <div>
                   <h1 className="text-2xl font-semibold leading-tight">Innboks</h1>
                   <p className="text-sm text-muted-foreground">Alt av kundedialog rundt tilbud samlet ett sted</p>
                 </div>
               </div>
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2 hidden sm:inline">
                 <Button onClick={handleCreateNewMessage} size="sm" className="gap-2">
                   <Plus className="h-4 w-4" />
                   Ny melding
@@ -889,7 +963,7 @@ export default function InnboksPage() {
                   onChange={(event) => setSearchTerm(event.target.value)}
                 />
               </div>
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2 hidden sm:inline">
                 <Select value={sortOrder} onValueChange={(value) => setSortOrder(value as 'asc' | 'desc')}>
                   <SelectTrigger className="w-[180px]">
                     <SelectValue placeholder="Sorter" />
@@ -1358,8 +1432,13 @@ export default function InnboksPage() {
                               </AvatarFallback>
                             </Avatar>
                             <button
-                              onClick={() => selectedMessage.customerId && handleCustomerClick(selectedMessage.customerId)}
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (selectedMessage?.customerId) handleCustomerClick(selectedMessage.customerId);
+                              }}
                               className="hover:text-primary transition-colors"
+                              aria-label={`Åpne kunde ${selectedMessage?.customerName || selectedMessage?.from}`}
                             >
                               {selectedMessage.customerName || selectedMessage.from}
                             </button>
@@ -1670,14 +1749,6 @@ export default function InnboksPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center justify-between">
               <span className="truncate pr-4">{selectedMessage?.subject}</span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsMessageDetailOpen(false)}
-                className="h-8 w-8 p-0 flex-shrink-0"
-              >
-                ✕
-              </Button>
             </DialogTitle>
           </DialogHeader>
           
@@ -1691,7 +1762,7 @@ export default function InnboksPage() {
                     {getMessageTypeLabel(selectedMessage.type)}
                   </Badge>
                 </div>
-                <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm text-muted-foreground mb-3">
                   <div className="flex items-center gap-2">
                     <Avatar className="h-6 w-6">
                       <AvatarFallback className="text-xs">
@@ -1703,14 +1774,22 @@ export default function InnboksPage() {
                       </AvatarFallback>
                     </Avatar>
                     <button
-                      onClick={() => selectedMessage.customerId && handleCustomerClick(selectedMessage.customerId)}
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (selectedMessage?.customerId) handleCustomerClick(selectedMessage.customerId);
+                      }}
                       className="hover:text-primary transition-colors"
+                      aria-label={`Åpne kunde ${selectedMessage?.customerName || selectedMessage?.from}`}
                     >
                       {selectedMessage.customerName || selectedMessage.from}
                     </button>
                   </div>
-                  <span>•</span>
-                  <span>{formatDateLong(selectedMessage.timestamp)}</span>
+
+                  <div className="flex items-center gap-2">
+                    <span className="hidden sm:inline">•</span>
+                    <span>{formatDateLong(selectedMessage.timestamp)}</span>
+                  </div>
                 </div>
                 {selectedMessage.quoteTitle && (
                   <div className="flex items-center gap-2 mb-3">

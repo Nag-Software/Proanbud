@@ -31,7 +31,7 @@ export function generateQuoteEmailHtml({
         <!-- Logo -->
         <tr>
           <td align="center" style="padding-bottom:24px;">
-            <img src="${businessSettings?.logoUrl || 'https://proanbud.no/logo/light/icon-primary.svg'}" alt="${companyName}" style="max-height:56px;display:block;border-radius:5px;" />
+            <img src="${businessSettings?.logoUrl || 'https://proanbud.no/logo/light/icon-primary.svg'}" alt="${companyName}" style="max-height:56px;display:block;border-radius:5px;border:none;" />
           </td>
         </tr>
 

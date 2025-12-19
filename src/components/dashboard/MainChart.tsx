@@ -1,43 +1,36 @@
-'use client';
+"use client"
 
-import React, { useEffect, useState } from 'react';
+import * as React from "react"
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts"
 import {
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-  Legend,
-} from 'recharts';
-import { getDashboardChartData } from '@/lib/services/analyticsService';
-import { updateUserAnalytics } from '@/lib/services/analyticsService';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/shared/Card';
-import { Button } from '@/components/ui/button';
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import {
+  ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from "@/components/ui/chart"
+import { Button } from "@/components/ui/button"
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
+import { HelpCircleIcon } from "lucide-react"
+import { getDashboardChartData } from "@/lib/services/analyticsService"
 
-interface CustomTooltipProps {
-  active?: boolean;
-  payload?: any[];
-  label?: string;
-}
-
-const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label }) => {
-  if (active && payload && payload.length) {
-    // Find the correct values based on dataKey
-    const omsattData = payload.find(p => p.dataKey === 'omsatt');
-    const tilbudtData = payload.find(p => p.dataKey === 'tilbudt');
-    
-    return (
-      <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-lg">
-        <p className="font-bold text-gray-800">{`${label}`}</p>
-        <p className="text-sm text-green-600">{`Omsatt: ${(omsattData?.value || 0).toLocaleString('nb-NO')} kr`}</p>
-        <p className="text-sm text-gray-500">{`Tilbudt: ${(tilbudtData?.value || 0).toLocaleString('nb-NO')} kr`}</p>
-      </div>
-    );
-  }
-  return null;
-};
+const chartConfig = {
+  omsatt: {
+    label: "Omsatt",
+    color: "var(--chart-1)",
+  },
+  tilbudt: {
+    label: "Tilbudt",
+    color: "var(--chart-2)",
+  },
+} satisfies ChartConfig
 
 interface ChartDataPoint {
   date: string;
@@ -45,21 +38,19 @@ interface ChartDataPoint {
   tilbudt: number;
 }
 
-export const MainChart = () => {
-  const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [timeRange, setTimeRange] = useState<'7d' | '30d' | '1y' | 'all'>('7d');
+export function MainChart({compact = false}: {compact?: boolean}) {
+  const [timeRange, setTimeRange] = React.useState<'7d' | '30d' | '1y' | 'all'>('7d')
+  const [chartData, setChartData] = React.useState<ChartDataPoint[]>([])
+  const [loading, setLoading] = React.useState(true)
 
-  useEffect(() => {
+  React.useEffect(() => {
     const loadChartData = async () => {
       try {
-        // Force update analytics before loading chart data
-        await updateUserAnalytics();
+        setLoading(true)
         const data = await getDashboardChartData(timeRange);
         setChartData(data);
       } catch (error) {
         console.error('Failed to load chart data:', error);
-        // Fallback to empty data
         setChartData([]);
       } finally {
         setLoading(false);
@@ -69,14 +60,20 @@ export const MainChart = () => {
     loadChartData();
   }, [timeRange]);
 
+  // Compute a safe Y max for stacked areas so they won't overflow the visible area
+  const maxStack = chartData.length
+    ? Math.max(...chartData.map(d => (d.tilbudt || 0) + (d.omsatt || 0)))
+    : 0
+  const yMax = Math.max(1, Math.ceil(maxStack * 1.05))
+
   if (loading) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle>Omsetning vs. Tilbudt Verdi</CardTitle>
+        <CardHeader className="flex flex-row items-center justify-end space-y-0 pb-2">
+           <div className="h-8 w-full bg-gray-200 animate-pulse rounded" />
         </CardHeader>
         <CardContent>
-          <div className="w-full h-[350px] bg-gray-200 animate-pulse rounded-lg flex items-center justify-center">
+          <div className="h-[250px] w-full bg-gray-200 animate-pulse rounded-lg flex items-center justify-center">
             <span className="text-gray-500">Laster diagram...</span>
           </div>
         </CardContent>
@@ -85,89 +82,130 @@ export const MainChart = () => {
   }
 
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader className="flex-shrink-0">
-        <div className="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-          <CardTitle className="text-base sm:text-lg">Omsetning vs. Tilbudt Verdi</CardTitle>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant={timeRange === '7d' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setTimeRange('7d')}
-              className="text-xs"
-            >
-              7d
-            </Button>
-            <Button
-              variant={timeRange === '30d' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setTimeRange('30d')}
-              className="text-xs"
-            >
-              30d
-            </Button>
-            <Button
-              variant={timeRange === '1y' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setTimeRange('1y')}
-              className="text-xs"
-            >
-              1år
-            </Button>
-            <Button
-              variant={timeRange === 'all' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setTimeRange('all')}
-              className="text-xs"
-            >
-              Alle
-            </Button>
-          </div>
+    <Card className="pt-0 h-full flex flex-col">
+      <CardHeader className={`flex items-center justify-end gap-2 space-y-0 border-b py-3 px-5 sm:flex-row ${compact ? '!py-2 px-3' : ''}`}>
+        <div className="flex w-full items-center justify-between gap-2">
+            {!compact && (
+                <CardTitle className="text-base sm:text-lg">Hovedgraf omsetning</CardTitle>
+            )}
+            <div className={`flex items-center ${compact ? 'w-full justify-between' : 'gap-4'}`}>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant={timeRange === '7d' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setTimeRange('7d')}
+                  className="text-xs"
+                >
+                  7d
+                </Button>
+                <Button
+                  variant={timeRange === '30d' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setTimeRange('30d')}
+                  className="text-xs"
+                >
+                  30d
+                </Button>
+                <Button
+                  variant={timeRange === '1y' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setTimeRange('1y')}
+                  className="text-xs"
+                >
+                  1år
+                </Button>
+                <Button
+                  variant={timeRange === 'all' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setTimeRange('all')}
+                  className="text-xs"
+                >
+                  Alle
+                </Button>
+              </div>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="icon" className="rounded-full w-8 h-8">
+                    <HelpCircleIcon className="h-4 w-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-[280px]">
+                  <h3 className="text-sm font-medium">Om grafen</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    "Omsatt" viser faktisk inntekt fra fullførte oppdrag i valgt periode. "Tilbudt" er summen av tilbud sendt i samme periode.
+                  </p>
+                </PopoverContent>
+              </Popover>
+            </div>
         </div>
       </CardHeader>
-      <CardContent className="flex-1 flex flex-col min-h-0">
-        <div className="flex-1 w-full min-h-[200px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
-              <XAxis 
-                dataKey="date" 
-                tick={{ fill: '#6D6D72', fontSize: 11 }}
-                interval="preserveStartEnd"
-              />
-              <YAxis
-                tickFormatter={(value) => `${(value / 1000).toLocaleString()}k`}
-                tick={{ fill: '#6D6D72', fontSize: 11 }}
-                width={60}
-              />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend 
-                wrapperStyle={{ paddingTop: '10px', fontSize: '12px' }}
-                iconSize={12}
-              />
-              <Line
-                type="monotone"
-                dataKey="tilbudt"
-                stroke="#1A4314"
-                strokeWidth={1.5}
-                strokeDasharray="5 5"
-                dot={{ r: 2, fill: '#1A4314' }}
-                activeDot={{ r: 4 }}
-                name="Tilbudt"
-              />
-              <Line
-                type="monotone"
-                dataKey="omsatt"
-                stroke="#26cd63b6"
-                strokeWidth={2}
-                dot={{ r: 3, fill: '#329d59ff' }}
-                activeDot={{ r: 5 }}
-                name="Omsatt"
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
+      <CardContent className="flex-1 px-1 pt-2 sm:px-3 sm:pt-3 overflow-hidden min-h-[180px]">
+        <ChartContainer
+          config={chartConfig}
+          className={`w-full ${compact ? 'h-[200px]' : 'h-full'}`}
+        >
+          <AreaChart data={chartData} margin={{ top: 20, right: 0, left: 0, bottom: 0 }}>
+            <defs>
+              <linearGradient id="fillOmsatt" x1="0" y1="0" x2="0" y2="1">
+                <stop
+                  offset="5%"
+                  stopColor="var(--color-omsatt)"
+                  stopOpacity={0.8}
+                />
+                <stop
+                  offset="95%"
+                  stopColor="var(--color-omsatt)"
+                  stopOpacity={0.1}
+                />
+              </linearGradient>
+              <linearGradient id="fillTilbudt" x1="0" y1="0" x2="0" y2="1">
+                <stop
+                  offset="5%"
+                  stopColor="var(--color-tilbudt)"
+                  stopOpacity={0.8}
+                />
+                <stop
+                  offset="95%"
+                  stopColor="var(--color-tilbudt)"
+                  stopOpacity={0.1}
+                />
+              </linearGradient>
+            </defs>
+            <CartesianGrid vertical={false} />
+            <XAxis
+              dataKey="date"
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+              minTickGap={32}
+            />
+            <YAxis domain={[0, yMax]} allowDecimals={false} hide />
+            <ChartTooltip
+              cursor={false}
+              content={
+                <ChartTooltipContent
+                  indicator="dot"
+                />
+              }
+            />
+            <Area
+              dataKey="tilbudt"
+              type="natural"
+              fill="url(#fillTilbudt)"
+              stroke="var(--color-tilbudt)"
+              stackId="a"
+            />
+            <Area
+              dataKey="omsatt"
+              type="natural"
+              fill="url(#fillOmsatt)"
+              stroke="var(--color-omsatt)"
+              stackId="a"
+            />
+            <ChartLegend content={<ChartLegendContent />} />
+          </AreaChart>
+        </ChartContainer>
       </CardContent>
     </Card>
-  );
-};
+  )
+}

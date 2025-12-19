@@ -38,6 +38,8 @@ interface DataTableProps<TData, TValue> {
   onRowClick?: (row: TData) => void
   rightContent?: React.ReactNode
   onHeightChange?: (height: number) => void
+  initialColumnFilters?: ColumnFiltersState
+  initialColumnVisibility?: VisibilityState
 }
 
 export function DataTable<TData, TValue>({
@@ -48,27 +50,45 @@ export function DataTable<TData, TValue>({
   onRowClick,
   rightContent,
   onHeightChange,
+  initialColumnFilters = [],
+  initialColumnVisibility = {},
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-    []
+    initialColumnFilters
   )
   const [columnVisibility, setColumnVisibility] =
-    React.useState<VisibilityState>({})
+    React.useState<VisibilityState>(initialColumnVisibility)
   const [rowSelection, setRowSelection] = React.useState({})
-  const [tableHeight, setTableHeight] = React.useState(0);
   const tableRef = React.useRef<HTMLDivElement>(null);
+  const previousHeightRef = React.useRef<number>(0);
+  const onHeightChangeRef = React.useRef(onHeightChange);
+  const initialFiltersStringRef = React.useRef<string>("");
+
+  // Keep the ref updated
+  React.useEffect(() => {
+    onHeightChangeRef.current = onHeightChange;
+  }, [onHeightChange]);
+
+  // Sync initialColumnFilters with internal state (only if actually changed)
+  React.useEffect(() => {
+    const filtersString = JSON.stringify(initialColumnFilters);
+    if (filtersString !== initialFiltersStringRef.current) {
+      initialFiltersStringRef.current = filtersString;
+      setColumnFilters(initialColumnFilters);
+    }
+  }, [initialColumnFilters])
 
   // Calculate table height and notify parent
   React.useEffect(() => {
-    if (tableRef.current && onHeightChange) {
+    if (tableRef.current && onHeightChangeRef.current) {
       const height = tableRef.current.scrollHeight;
-      if (height !== tableHeight) {
-        setTableHeight(height);
-        onHeightChange(height);
+      if (height !== previousHeightRef.current) {
+        previousHeightRef.current = height;
+        onHeightChangeRef.current(height);
       }
     }
-  }, [data, tableHeight, onHeightChange]);
+  }, [data]);
 
   const table = useReactTable({
     data,
@@ -99,7 +119,7 @@ export function DataTable<TData, TValue>({
             onChange={(event) =>
               table.getColumn(searchKey)?.setFilterValue(event.target.value)
             }
-            className="max-w-sm"
+            className="max-w-sm mr-2"
           />
         )}
         <div className="ml-auto flex items-center gap-2">
@@ -107,10 +127,10 @@ export function DataTable<TData, TValue>({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline">
-                Filter <ChevronDown className="ml-2 h-4 w-4" />
+                Visning <ChevronDown className="ml-2 h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" className="z-[1500]">
               {table
                 .getAllColumns()
                 .filter((column) => column.getCanHide())

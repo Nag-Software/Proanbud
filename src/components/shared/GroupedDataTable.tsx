@@ -563,8 +563,9 @@ export default function GroupedDataTable({
 
   return (
     <>
-      <Card>
-        <CardHeader>
+      <Card className={`${isPublicView ? '!border-none shadow-none' : ''}`}>
+        {!isPublicView && (
+        <CardHeader >
           <div className="flex items-center justify-between">
             <h1 className="px-2 text-lg">Prisgrunnlag</h1>
             {editable && (
@@ -627,9 +628,10 @@ export default function GroupedDataTable({
             </div>
           )}
         </CardHeader>
-        <CardContent>
+        )}
+        <CardContent className={`${isPublicView ? '!p-0' : ''}`}>
           {enableProjectGrouping && (
-            <div className="mb-4 rounded-lg border border-dashed border-primary/20 bg-muted/50 p-4">
+            <div className="mb-4 rounded-lg border border-dashed border-primary/30 bg-muted/50 p-4">
               <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                   <h4 className="text-sm font-semibold text-foreground">Prosjekter</h4>
@@ -894,7 +896,7 @@ export default function GroupedDataTable({
             {isPublicView ? (
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="text-md font-semibold text-foreground">Sum inkl. MVA</span>
+                  <span className="text-md font-semibold text-foreground">Sum inkl. MVA: </span>
                   <span className="font-medium">{formatCurrency(total)}</span>
                 </div>
                 <div className="flex items-center gap-2">

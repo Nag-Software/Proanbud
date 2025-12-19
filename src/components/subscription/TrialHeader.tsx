@@ -46,18 +46,18 @@ export const TrialHeader = () => {
           <Lock className="h-4 w-4" />
           <span className="text-sm font-medium">
             {isExpired ? 'Abonnementet er utløpt' : 'Ingen aktiv abonnement'}
-            {' - Begrenset tilgang'}
+            <span className="hidden sm:inline">{' - Begrenset tilgang'}</span>
           </span>
           <Link 
             href="/innstillinger" 
             className="ml-2 bg-white text-red-600 px-3 py-1 rounded text-sm font-medium hover:bg-gray-100 transition-colors"
           >
-            Oppgrader nå
+            Oppgrader her
           </Link>
         </div>
         <button
           onClick={() => setIsDismissed(true)}
-          className="absolute right-4 top-1/2 transform -translate-y-1/2 hover:bg-white/20 rounded p-1"
+          className="absolute right-2 top-1/2 transform -translate-y-1/2 hover:bg-white/20 rounded p-1"
           aria-label="Lukk varsel"
           disabled
         >

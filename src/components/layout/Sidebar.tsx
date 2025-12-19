@@ -111,7 +111,7 @@ export const Sidebar = () => {
       <div className="p-4 border-t border-border">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center font-bold text-primary">
+            <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-primary/20 via-primary/10 to-primary/5 flex items-center justify-center font-bold text-primary border-1 border-primary/10 shadow-sm">
               {getInitials()}
             </div>
             <div className="flex-1">

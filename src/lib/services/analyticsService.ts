@@ -479,7 +479,7 @@ export const getDashboardKPIs = async () => {
     }
     
     return {
-      totalRevenue: `${analytics.totalRevenue.toLocaleString('nb-NO')} kr`,
+      totalRevenue: `${analytics.totalRevenue.toLocaleString('nb-NO', { maximumFractionDigits: 0, minimumFractionDigits: 0 })} kr`,
       totalTilbud: analytics.totalTilbud.toString(),
       winRate: `${analytics.winRate}%`,
       totalCustomers: analytics.totalCustomers.toString()
@@ -1092,10 +1092,11 @@ export const getDashboardKPIsWithChange = async () => {
     return [
       {
         title: 'Total Omsetning',
-        value: `${(analytics.totalRevenue || 0).toLocaleString('nb-NO')} kr`,
+        value: `${(analytics.totalRevenue || 0).toLocaleString('nb-NO', { maximumFractionDigits: 0, minimumFractionDigits: 0 })} kr`,
         change: `${revenueChange >= 0 ? '+' : ''}${revenueChange.toFixed(1)}%`,
         icon: 'DollarSign'
       },
+
       {
         title: 'Aktive Tilbud',
         value: activeTilbud.toString(),
@@ -1116,7 +1117,7 @@ export const getDashboardKPIsWithChange = async () => {
       },
       {
         title: 'Total Profitt',
-        value: `${(analytics.totalProfit || 0).toLocaleString('nb-NO')} kr`,
+        value: `${(analytics.totalProfit || 0).toLocaleString('nb-NO', { maximumFractionDigits: 0, minimumFractionDigits: 0 })} kr`,
         change: `${profitChange >= 0 ? '+' : ''}${profitChange.toFixed(1)}%`,
         icon: 'TrendingUp'
       }
@@ -1287,7 +1288,7 @@ const getAllTimeChartData = (analytics: UserAnalytics) => {
 };
 
 // Get recent activity feed from actual data
-export const getDashboardActivityFeed = async () => {
+export const getDashboardActivityFeed = async (counter: number) => {
   try {
     const userId = getCurrentUserId();
     const tilbudRef = ref(db, getUserPath(userId, 'tilbud'));
@@ -1359,13 +1360,15 @@ export const getDashboardActivityFeed = async () => {
         
         if (tilbud.status === 'vunnet') {
           activities.push({
-            id: `tilbud_vunnet_${id}`,
-            type: 'tilbud_vunnet',
-            title: 'Tilbud vunnet',
+            id: `tilbud_godkjent_${id}`,
+            type: 'tilbud_godkjent',
+            title: 'Tilbud godkjent',
             description: `${tilbud.prosjekt} - ${tilbud.kundenavn}`,
             timestamp,
             amount: tilbud.belop,
-            date: date.getTime() // For sorting
+            date: date.getTime(),
+            quoteId: id,
+            fromMessage: false,
           });
         } else if (tilbud.status === 'tapt') {
           activities.push({
@@ -1375,7 +1378,9 @@ export const getDashboardActivityFeed = async () => {
             description: `${tilbud.prosjekt} - ${tilbud.kundenavn}`,
             timestamp,
             amount: tilbud.belop,
-            date: date.getTime()
+            date: date.getTime(),
+            quoteId: id,
+            fromMessage: false,
           });
         } else {
           activities.push({
@@ -1385,7 +1390,9 @@ export const getDashboardActivityFeed = async () => {
             description: `${tilbud.prosjekt} - ${tilbud.kundenavn}`,
             timestamp,
             amount: tilbud.belop,
-            date: date.getTime()
+            date: date.getTime(),
+            quoteId: id,
+            fromMessage: false,
           });
         }
       });
@@ -1429,31 +1436,114 @@ export const getDashboardActivityFeed = async () => {
         }
       });
     }
-    
-    // Sort by date (most recent first) and take top 5
-    const sortedActivities = activities
-      .filter(activity => activity.date && !isNaN(activity.date)) // Filter out invalid dates
-      .sort((a, b) => {
-        const dateA = a.date || 0;
-        const dateB = b.date || 0;
-        
-        // First sort by date (most recent first)
-        const dateDiff = dateB - dateA;
-        if (dateDiff !== 0) {
-          return dateDiff;
+
+    // Process inbox messages for activities (message-based approvals take precedence)
+      const inboxRef = ref(db, getUserPath(userId, 'inbox'));
+      const inboxSnapshot = await get(inboxRef);
+      if (inboxSnapshot.exists()) {
+        const inboxData = inboxSnapshot.val();
+        Object.entries(inboxData).forEach(([id, msg]: [string, any]) => {
+          // Skip archived messages
+          if (msg.folder && msg.folder === 'arkiv') return;
+
+          const lastModified = msg.lastMessageAt || msg.oppdatert || msg.timestamp || msg.opprettet;
+          const date = parseDate(lastModified);
+          const now = new Date();
+
+          const nowDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          const activityDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+          const diffTime = nowDate.getTime() - activityDate.getTime();
+          const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+          let timestamp = '';
+          if (diffDays === 0) {
+            timestamp = 'I dag';
+          } else if (diffDays === 1) {
+            timestamp = '1 dag siden';
+          } else if (diffDays < 7) {
+            timestamp = `${diffDays} dager siden`;
+          } else {
+            timestamp = date.toLocaleDateString('nb-NO');
+          }
+
+          const quoteId = msg.quoteId || msg.quote_id || null;
+
+          // If message indicates approval or rejection, create specific event
+          if (msg.type === 'quote_approved' || msg.type === 'quote_rejected') {
+            const activityType = msg.type === 'quote_approved' ? 'tilbud_godkjent' : 'tilbud_tapt';
+            const title = msg.type === 'quote_approved' ? 'Tilbud godkjent' : 'Tilbud tapt';
+            const idKey = quoteId ? `${activityType}_${quoteId}` : `melding_${id}`;
+
+            activities.push({
+              id: idKey,
+              type: activityType,
+              title,
+              description: `${msg.quoteTitle || msg.subject || 'Tilbud'} — ${msg.customerName || msg.from || ''}`,
+              timestamp,
+              date: date.getTime(),
+              quoteId: quoteId,
+              fromMessage: true,
+            });
+
+            return; // continue to next message
+          }
+
+          // Generic message activity
+          activities.push({
+            id: `melding_${id}`,
+            type: 'ny_melding',
+            title: `Ny melding fra ${msg.customerName || msg.from || 'kunde'}`,
+            description: `${msg.subject || ''}`,
+            timestamp,
+            date: date.getTime(),
+            quoteId: quoteId,
+            fromMessage: true,
+          });
+        });
+      }
+
+      // Deduplicate activities by quoteId, prefer message-sourced events, otherwise pick latest
+      const activityMap = new Map<string, any>();
+      activities.forEach((act) => {
+        const key = act.quoteId ? `quote:${act.quoteId}` : act.id;
+        if (!activityMap.has(key)) {
+          activityMap.set(key, act);
+        } else {
+          const existing = activityMap.get(key);
+          if (act.fromMessage && !existing.fromMessage) {
+            activityMap.set(key, act);
+          } else if ((act.date || 0) > (existing.date || 0)) {
+            activityMap.set(key, act);
+          }
         }
-        
-        // If dates are equal, prioritize tilbud activities over kunde activities
-        const aIsTilbud = a.type.startsWith('tilbud_');
-        const bIsTilbud = b.type.startsWith('tilbud_');
-        if (aIsTilbud && !bIsTilbud) return -1;
-        if (!aIsTilbud && bIsTilbud) return 1;
-        
-        return 0; // Keep original order if same type
-      })
-      .slice(0, 5);
-    
-    return sortedActivities.map(({ date, ...activity }) => activity); // Remove date field used for sorting
+      });
+
+      const dedupedActivities = Array.from(activityMap.values());
+
+      // Sort by date (most recent first) and take top N
+      const sortedActivities = dedupedActivities
+        .filter(activity => activity.date && !isNaN(activity.date)) // Filter out invalid dates
+        .sort((a, b) => {
+          const dateA = a.date || 0;
+          const dateB = b.date || 0;
+          
+          // First sort by date (most recent first)
+          const dateDiff = dateB - dateA;
+          if (dateDiff !== 0) {
+            return dateDiff;
+          }
+          
+          // If dates are equal, prioritize tilbud activities over kunde activities
+          const aIsTilbud = a.type && typeof a.type === 'string' && a.type.startsWith('tilbud_');
+          const bIsTilbud = b.type && typeof b.type === 'string' && b.type.startsWith('tilbud_');
+          if (aIsTilbud && !bIsTilbud) return -1;
+          if (!aIsTilbud && bIsTilbud) return 1;
+          
+          return 0; // Keep original order if same type
+        })
+        .slice(0, counter);
+
+      return sortedActivities.map(({ date, ...activity }) => activity); // Remove date field used for sorting
       
   } catch (error) {
     throw handleDatabaseError(error, 'hente aktivitets feed');

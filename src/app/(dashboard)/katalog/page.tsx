@@ -212,21 +212,26 @@ export default function KatalogPage() {
 
     return (
         <div className="w-full min-h-full px-3 lg:px-6 pt-4 pb-3 lg:pb-6">
-            <PageHeader title="Katalog">
-                <div className="flex gap-2">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 lg:gap-0">
+                <PageHeader title="Katalog"/>
+                <div className="flex flex-row gap-3 mb-6 sm:mb-0">
                     <Button
                         variant="outline"
                         onClick={() => setIsCategoryDrawerOpen(true)}
+                        className="flex-1 lg:flex-none"
                     >
                         <Plus className="w-4 h-4 mr-2" />
                         Ny kategori
                     </Button>
-                    <Button onClick={() => setIsProductDrawerOpen(true)}>
+                    <Button 
+                        onClick={() => setIsProductDrawerOpen(true)}
+                        className="flex-1 lg:flex-none"
+                    >
                         <Plus className="w-4 h-4 mr-2" />
                         Nytt produkt
                     </Button>
                 </div>
-            </PageHeader>
+            </div>
 
             <div className="">
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">

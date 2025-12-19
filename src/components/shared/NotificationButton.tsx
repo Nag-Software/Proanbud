@@ -7,6 +7,7 @@ import { getInboxMessages, markMessageAsRead } from '@/lib/services/inboxService
 import { ref, onValue, off } from 'firebase/database';
 import { db, auth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
+import { useToast } from '@/hooks/use-toast';
 
 const formatTimeAgo = (dateInput: number | string) => {
   const date = typeof dateInput === 'number' ? new Date(dateInput) : new Date(dateInput);
@@ -55,6 +56,9 @@ export const NotificationButton = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const { toast } = useToast();
+  const prevUnreadCountRef = useRef(0);
+  const initialLoadRef = useRef(true);
 
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
@@ -111,6 +115,37 @@ export const NotificationButton = () => {
               })
               .slice(0, 5); // Show only latest 5 unread messages
 
+            // Show toast only when new unread messages arrive (skip initial load)
+            if (initialLoadRef.current) {
+              initialLoadRef.current = false;
+            } else {
+              if (messagesArray.length > prevUnreadCountRef.current) {
+                const newest = messagesArray[0];
+
+                // Determine toast title based on message type
+                let toastTitle = `Ny melding fra ${newest.customerName ?? newest.from ?? 'kunde'}`;
+                if (newest.type === 'quote_approved') {
+                  toastTitle = `Tilbud godkjent av ${newest.customerName ?? newest.from ?? 'kunde'}`;
+                } else if (newest.type === 'quote_rejected') {
+                  toastTitle = `Tilbud tapt av ${newest.customerName ?? newest.from ?? 'kunde'}`;
+                }
+
+                toast({
+                  title: toastTitle,
+                  description: `${newest.subject ?? ''}`,
+                  action: {
+                    label: 'Åpne',
+                    onClick: () => {
+                      setIsOpen(false);
+                      // Navigate directly to message detail in inbox
+                      router.push(`/innboks?message=${newest.id}`);
+                    },
+                  },
+                });
+              }
+            }
+            prevUnreadCountRef.current = messagesArray.length;
+
             setUnreadMessages(messagesArray);
             setUnreadCount(messagesArray.length);
           },
@@ -155,10 +190,11 @@ export const NotificationButton = () => {
         await markMessageAsRead(message.id);
       }
       setIsOpen(false);
-      router.push('/innboks');
+      // Navigate directly to the message in the inbox using query param
+      router.push(`/innboks?message=${message.id}`);
     } catch (error) {
       console.error('Error marking message as read:', error);
-      router.push('/innboks');
+      router.push(`/innboks?message=${message.id}`);
     }
   };
 

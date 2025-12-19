@@ -414,12 +414,14 @@ export const updateCustomerQuoteStats = async (
       oppdatert: serverTimestamp(),
     };
 
-    // Update counters if provided
+    // Update counters if provided (ensure we never go below 0)
     if (increment.tilbud !== undefined) {
-      updateData.antallTilbud = (currentData.antallTilbud || 0) + increment.tilbud;
+      const newTilbud = (currentData.antallTilbud || 0) + increment.tilbud;
+      updateData.antallTilbud = Math.max(0, newTilbud);
     }
     if (increment.vunnet !== undefined) {
-      updateData.antallVunnet = (currentData.antallVunnet || 0) + increment.vunnet;
+      const newVunnet = (currentData.antallVunnet || 0) + increment.vunnet;
+      updateData.antallVunnet = Math.max(0, newVunnet);
     }
     
     await update(customerRef, updateData);

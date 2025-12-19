@@ -11,6 +11,7 @@ import { ChevronRight, Menu, X, LogOut } from 'lucide-react';
 import { NotificationButton } from '../shared/NotificationButton';
 import { ref, onValue, off } from 'firebase/database';
 import { db } from '@/lib/firebase';
+import Image from 'next/image';
 
 type IconName = keyof typeof Icons;
 
@@ -65,7 +66,7 @@ export const MobileBreadcrumb = () => {
 
   const getBreadcrumbItems = (): BreadcrumbItem[] => {
     const items: BreadcrumbItem[] = [
-      { label: 'Proanbud', href: '/dashboard', icon: 'ShieldCheck' }
+      { label: 'Dashbord', href: '/dashboard'},
     ];
 
     const currentPage = getCurrentPageInfo();
@@ -101,9 +102,10 @@ export const MobileBreadcrumb = () => {
   return (
     <>
       {/* Mobile Breadcrumb Header */}
-      <div className="lg:hidden bg-card border-b border-border px-4 py-3">
+      <div className="lg:hidden bg-card border-b border-border rounded-2xl px-4 py-3 shadow-sm mb-2">
         <div className="flex items-center justify-between">
           {/* Breadcrumb */}
+          <Image className="w-7 h-7 mr-1" src="./logo/light/icon-primary.svg" alt="Proanbud Logo" width={32} height={32} preload/>
           <div className="flex items-center space-x-2 flex-1 min-w-0">
             {breadcrumbItems.map((item, index) => {
               const ItemIcon = Icons[item.icon as IconName] as React.ElementType;
@@ -168,8 +170,7 @@ export const MobileBreadcrumb = () => {
           }`}
           style={{ transitionDelay: isMobileMenuOpen ? '100ms' : '0ms' }}>
             <div className="flex items-center gap-3">
-              <Icons.ShieldCheck className="h-6 w-6 text-primary" />
-              <span className="text-lg font-bold text-foreground">Proanbud</span>
+              <Image src="./logo/light/logo-primary.svg" alt="Proanbud Logo" width={120} height={32} priority/>
             </div>
             <button
               onClick={() => setIsMobileMenuOpen(false)}

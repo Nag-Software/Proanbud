@@ -4,7 +4,7 @@ import { KpiCard } from './KpiCard';
 interface KpiData {
   title: string;
   value: string;
-  change: string;
+  change?: string;
   icon: string;
 }
 
@@ -37,11 +37,11 @@ export const KpiGrid: React.FC<KpiGridProps> = ({ data, className = "", onHeight
 
   // Defensive check for empty data - show default cards if no data
   const displayData = (!data || data.length === 0) ? [
-    { title: 'Total Omsetning', value: '0 kr', change: '+0%', icon: 'DollarSign' },
-    { title: 'Aktive Tilbud', value: '0', change: '+0%', icon: 'FileText' },
-    { title: 'Vunnede Tilbud', value: '0', change: '+0%', icon: 'Award' },
-    { title: 'Treffprosent', value: '0%', change: '+0%', icon: 'Target' },
-    { title: 'Total Profitt', value: '0 kr', change: '+0%', icon: 'TrendingUp' }
+    { title: 'Total Omsetning', value: '?', change: '+0%', icon: 'DollarSign' },
+    { title: 'Aktive Tilbud', value: '?', change: '+0%', icon: 'FileText' },
+    { title: 'Vunnede Tilbud', value: '?', change: '+0%', icon: 'Award' },
+    { title: 'Treffprosent', value: '?', change: '+0%', icon: 'Target' },
+    { title: 'Total Profitt', value: '?', change: '+0%', icon: 'TrendingUp' }
   ] : data;
 
   return (
@@ -49,10 +49,10 @@ export const KpiGrid: React.FC<KpiGridProps> = ({ data, className = "", onHeight
       {/* CSS Grid KPI Grid with responsive columns */}
       <div
         ref={gridRef}
-        className="kpi-grid grid gap-4 w-full"
+        className="kpi-grid grid gap-2 w-full"
         style={{
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gridAutoRows: "minmax(0, 164px)"
+          gridTemplateColumns: 'repeat(auto-fit, calc(50% - 0.25rem))',
+          gridAutoRows: "120px"
         }}
       >
         {displayData.map((kpi, index) => {
@@ -64,6 +64,7 @@ export const KpiGrid: React.FC<KpiGridProps> = ({ data, className = "", onHeight
               change={kpi.change}
               icon={kpi.icon}
               className="h-full"
+              compact
             />
           );
         })}

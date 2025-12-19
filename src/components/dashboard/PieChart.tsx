@@ -51,8 +51,8 @@ export const DashboardPieChart = () => {
         <CardHeader className="flex-shrink-0">
           <CardTitle className="text-base sm:text-lg text-center">Tilbud Status</CardTitle>
         </CardHeader>
-        <CardContent className="flex-1 flex flex-col justify-center">
-          <div className="flex-1 bg-gray-200 animate-pulse rounded-lg min-h-[200px] flex items-center justify-center">
+        <CardContent className="flex-1 flex flex-col justify-center min-h-0">
+          <div className="flex-1 min-h-0 bg-gray-200 animate-pulse rounded-lg flex items-center justify-center">
             <span className="text-gray-500 text-sm">Laster data...</span>
           </div>
         </CardContent>
@@ -65,9 +65,9 @@ export const DashboardPieChart = () => {
       <CardHeader className="flex-shrink-0">
         <CardTitle className="text-base sm:text-lg text-left">Tilbud Status</CardTitle>
       </CardHeader>
-      <CardContent className="flex-1 flex flex-col justify-center">
+      <CardContent className="flex-1 flex flex-col justify-center min-h-0">
         {pieData.length > 0 ? (
-          <div className="flex-1 min-h-[200px] flex items-center justify-center pb-4">
+          <div className="flex-1 min-h-0 flex items-center justify-center pb-4">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie

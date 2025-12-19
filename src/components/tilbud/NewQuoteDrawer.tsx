@@ -114,6 +114,10 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
   const [openCustomerCombobox, setOpenCustomerCombobox] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [projectName, setProjectName] = useState('');
+  // Leave-confirmation dialog state: when trying to close with unsaved components and no customer
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const [leaveDialogCustomerId, setLeaveDialogCustomerId] = useState<string>('');
+  const [leaveOpenCustomerCombobox, setLeaveOpenCustomerCombobox] = useState(false);
   const [quoteMessage, setQuoteMessage] = useState('');
   const [customCategories, setCustomCategories] = useState<string[]>([]);
   const [showAddCategory, setShowAddCategory] = useState(false);
@@ -404,7 +408,8 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
   }, []);
 
   const handleClose = () => {
-    onOpenChange(false);
+    // Intercept close to ensure draft is saved and associated with a customer
+    void attemptClose();
   };
 
   const generateCatalogPayload = () => {
@@ -823,6 +828,77 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
     }
     previousOpenRef.current = open;
   }, [open, handleAutoSaveOnClose]);
+
+  // Attempt to close the drawer but require a selected customer when there are components
+  const attemptClose = async () => {
+    // If skipAutoSave is set, allow immediate close
+    if (skipAutoSaveRef.current) {
+      skipAutoSaveRef.current = false;
+      resetFormState();
+      onOpenChange(false);
+      return;
+    }
+
+    const hasComponents = quoteData.adjustedComponents.length > 0;
+    const editingNonDraft = editingQuote && editingQuote.status !== 'draft';
+
+    // Nothing to save or editing an existing non-draft quote — allow close
+    if (!hasComponents || editingNonDraft) {
+      resetFormState();
+      onOpenChange(false);
+      return;
+    }
+
+    // If a customer is already selected, save draft and close
+    if (selectedCustomerId) {
+      const saved = await saveDraft({ skipValidation: false, silent: true });
+      if (saved) {
+        onTilbudCreated?.();
+        skipAutoSaveRef.current = true;
+        onOpenChange(false);
+        resetFormState();
+      } else {
+        // Keep drawer open if save failed
+        console.warn('Kunne ikke lagre utkast ved lukking');
+      }
+      return;
+    }
+
+    // No customer selected — show dialog to force user to pick a customer
+    setLeaveDialogCustomerId('');
+    setShowLeaveConfirm(true);
+  };
+
+  const confirmLeaveSave = async () => {
+    // If the user selected a customer in the dialog, set it and save
+    if (!leaveDialogCustomerId) {
+      alert('Vennligst velg en kunde for å lagre utkastet.');
+      return;
+    }
+
+    // Apply the chosen customer to the main form state
+    setSelectedCustomerId(leaveDialogCustomerId);
+
+    const saved = await saveDraft({ skipValidation: false, silent: true });
+    if (saved) {
+      onTilbudCreated?.();
+      skipAutoSaveRef.current = true;
+      setShowLeaveConfirm(false);
+      onOpenChange(false);
+      resetFormState();
+    } else {
+      alert('Kunne ikke lagre utkast. Prøv igjen.');
+    }
+  };
+
+  const handleDrawerOpenChange = (nextOpen: boolean) => {
+    if (nextOpen) {
+      onOpenChange(true);
+      return;
+    }
+    // Intercept close requests
+    void attemptClose();
+  };
 
   // Helper to generate full quote HTML for emails using selected template
 
@@ -1269,19 +1345,35 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
             {/* Interactive Price Components Table */}
             <Card>
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>Rediger prisforslag</CardTitle>
-                  <div className="flex gap-2">
-                    <Button onClick={() => openProductCatalog('list')} size="sm" variant="outline">
-                      <Plus className="w-4 h-4 mr-2" />
-                      Legg til produkt
-                    </Button>
-                    <Button onClick={addComponent} size="sm" variant="outline">
-                      <Plus className="w-4 h-4 mr-2" />
-                      Lag produkt
-                    </Button>
+                {isMobile ? (
+                  <div className="flex flex-col gap-2">
+                    <CardTitle>Rediger prisforslag</CardTitle>
+                    <div className="flex flex-col gap-2">
+                      <Button onClick={() => openProductCatalog('list')} size="sm" variant="outline" className="w-full">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Legg til produkt
+                      </Button>
+                      <Button onClick={addComponent} size="sm" variant="outline" className="w-full">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Lag produkt
+                      </Button>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <CardTitle>Rediger prisforslag</CardTitle>
+                    <div className="flex gap-2">
+                      <Button onClick={() => openProductCatalog('list')} size="sm" variant="outline">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Legg til produkt
+                      </Button>
+                      <Button onClick={addComponent} size="sm" variant="outline">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Lag produkt
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </CardHeader>
               <CardContent>
                 {/* Project Management */}
@@ -1912,32 +2004,43 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
         </CardContent>
       </Card>
 
-      <div className="flex gap-3">
-        <Button 
-          variant="outline" 
-          className="flex-1 flex items-center justify-center gap-2"
-          onClick={handlePrevious}
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Tilbake
-        </Button>
-        <Button 
-          variant="outline"
-          className="flex-1 flex items-center justify-center gap-2"
-          onClick={handleSaveDraft}
-          disabled={isSubmitting || !selectedCustomerId || !projectName}
-        >
-          <Edit3 className="w-4 h-4" />
-          {isSubmitting ? 'Lagrer...' : 'Lagre som utkast'}
-        </Button>
-        <Button 
-          className="flex-1 flex items-center justify-center gap-2"
-          onClick={handleSubmit}
-          disabled={isSubmitting || !selectedCustomerId || !projectName}
-        >
-          <Send className="w-4 h-4" />
-          {isSubmitting ? 'Sender...' : 'Send Tilbud'}
-        </Button>
+      <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-row">
+        {/* Save (left on mobile), becomes middle on desktop */}
+        <div className="order-1 sm:order-2">
+          <Button
+            variant="outline"
+            className="w-full sm:flex-1 min-w-0 flex items-center justify-center gap-2"
+            onClick={handleSaveDraft}
+            disabled={isSubmitting || !selectedCustomerId || !projectName}
+          >
+            <Edit3 className="w-4 h-4" />
+            {isSubmitting ? 'Lagrer...' : 'Lagre som utkast'}
+          </Button>
+        </div>
+
+        {/* Send (right on mobile), stays right on desktop */}
+        <div className="order-2 sm:order-3">
+          <Button
+            className="w-full sm:flex-1 min-w-0 flex items-center justify-center gap-2"
+            onClick={handleSubmit}
+            disabled={isSubmitting || !selectedCustomerId || !projectName}
+          >
+            <Send className="w-4 h-4" />
+            {isSubmitting ? 'Sender...' : 'Send Tilbud'}
+          </Button>
+        </div>
+
+        {/* Back (under on mobile), left on desktop */}
+        <div className="col-span-2 order-3 sm:col-auto sm:order-1">
+          <Button
+            variant="outline"
+            className="w-full sm:flex-1 min-w-0 flex items-center justify-center gap-2"
+            onClick={handlePrevious}
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Tilbake
+          </Button>
+        </div>
       </div>
     </div>
   );
@@ -1948,7 +2051,7 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
     : true;
 
   return (
-    <Drawer open={open} onOpenChange={onOpenChange}>
+    <Drawer open={open} onOpenChange={handleDrawerOpenChange}>
       <DrawerContent className="max-h-[95vh] z-[400]">
         {/* AI Analysis Loading Overlay */}
         {isAnalyzing && (
@@ -1963,16 +2066,16 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
                 Analyserer med AI...
               </h3>
               <p className="text-sm text-gray-600">
-                Dette kan ta opptil 3 minutter avhengig av prosjektets størrelse
+                Dette kan ta opptil 5 minutter avhengig av prosjektets størrelse
               </p>
             </div>
           </div>
         )}
 
         <DrawerHeader className='max-h-[130px]'>
-          <div className="flex items-center justify-between">
-            <div>
-              <DrawerTitle className="text-xl font-bold">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex flex-col">
+              <DrawerTitle className="flex text-xl font-bold">
                 {currentStepData?.title}
               </DrawerTitle>
               <DrawerDescription>
@@ -2030,6 +2133,74 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
             <Button onClick={saveEditDialog}>
               Lagre
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Leave-confirm dialog: ensure draft is saved and associated with a customer */}
+      {showLeaveConfirm && (
+        <div aria-hidden className="fixed inset-0 bg-black/40 z-[550]" />
+      )}
+      <Dialog open={showLeaveConfirm} onOpenChange={setShowLeaveConfirm}>
+        <DialogContent className="z-[600] max-w-md">
+          <DialogHeader>
+            <DialogTitle>Lagre utkast</DialogTitle>
+            <DialogDescription>
+              Du har endringer som ikke er lagret. Velg en kunde for å lagre tilbudet som utkast knyttet til kunden.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4">
+            {customers.length === 0 ? (
+              <div className="text-sm text-gray-600">Ingen kunder funnet. Opprett en kunde først på <a className="text-blue-600 underline" href="/kunder" target="_blank">Kunder</a>.</div>
+            ) : (
+              <Popover open={leaveOpenCustomerCombobox} onOpenChange={setLeaveOpenCustomerCombobox} modal={true}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full text-left">
+                    {leaveDialogCustomerId
+                      ? customers.find(c => c.id === leaveDialogCustomerId)?.navn
+                      : 'Velg en kunde...'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start" style={{ zIndex: 9999 }}>
+                  <Command>
+                    <CommandInput placeholder="Søk etter kunde..." />
+                    <CommandList>
+                      <CommandEmpty>Ingen kunder funnet.</CommandEmpty>
+                      <CommandGroup>
+                        {customers.map((customer) => (
+                          <CommandItem
+                            key={customer.id}
+                            value={customer.navn}
+                            onSelect={() => {
+                              setLeaveDialogCustomerId(customer.id);
+                              setLeaveOpenCustomerCombobox(false);
+                            }}
+                          >
+                            {customer.navn}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                // User explicitly rejects saving — discard changes and allow close
+                skipAutoSaveRef.current = true;
+                setShowLeaveConfirm(false);
+                onOpenChange(false);
+              }}
+            >
+              Nei takk
+            </Button>
+            <Button onClick={confirmLeaveSave} disabled={!leaveDialogCustomerId}>Lagre utkast</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

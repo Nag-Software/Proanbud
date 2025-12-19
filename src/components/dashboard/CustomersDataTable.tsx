@@ -105,7 +105,7 @@ export const CustomersDataTable = ({
         <CardTitle className="text-base m-auto md:text-md text-left">Dine Kunder</CardTitle>
       </CardHeader>
         <CardContent className="flex-1 overflow-hidden flex items-center justify-center">
-          <div className="w-full h-full bg-gray-200 animate-pulse rounded-lg min-h-[200px] flex items-center justify-center">
+          <div className="w-full h-full bg-gray-200 animate-pulse rounded-lg min-h-0 flex items-center justify-center">
             <span className="text-gray-500 text-sm">Laster kunder...</span>
           </div>
         </CardContent>
