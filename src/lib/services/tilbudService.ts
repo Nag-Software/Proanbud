@@ -6,7 +6,8 @@ import {
   update,
   remove,
   DataSnapshot,
-  serverTimestamp
+  serverTimestamp,
+  runTransaction
 } from 'firebase/database';
 import { db, testFirebaseConnection } from '@/lib/firebase';
 import { auth } from '@/lib/firebase';
@@ -207,6 +208,39 @@ const generateViewToken = (): string => {
   return token;
 };
 
+// Atomically increment user's tilbudCount (used for AI loads and when creating quotes)
+const incrementTilbudCountAtomic = async (userId: string, by: number = 1, updateAnalytics: boolean = true): Promise<number> => {
+  const tilbudCountRef = ref(db, `users/${userId}/tilbudCount`);
+  try {
+    const result = await runTransaction(tilbudCountRef, (current) => {
+      if (current === null || typeof current !== 'number') {
+        return by;
+      }
+      return current + by;
+    });
+    const newCount = result.snapshot?.val() as number;
+    console.log(`✅ tilbudCount updated for user ${userId}: ${newCount}`);
+    if (updateAnalytics) {
+      try {
+        await updateUserAnalytics();
+      } catch (err) {
+        console.warn('Could not update analytics after incrementing tilbudCount:', err);
+      }
+    }
+    return newCount;
+  } catch (error) {
+    console.warn('Could not increment tilbudCount:', error);
+    throw handleDatabaseError(error, 'oppdatere tilbudsteller');
+  }
+};
+
+// Public function to be called when an AI suggestion is loaded
+export const incrementTilbudCount = async (by: number = 1): Promise<number> => {
+  await ensureConnection();
+  const userId = getCurrentUserId();
+  return await incrementTilbudCountAtomic(userId, by, true);
+};
+
 // Create a new tilbud
 export const createTilbud = async (tilbudData: TilbudFormData): Promise<string> => {
   try {
@@ -339,11 +373,10 @@ export const createTilbud = async (tilbudData: TilbudFormData): Promise<string> 
       console.warn('Could not create inbox message:', error);
     }
 
-    const tilbudCountRef = ref(db, `users/${userId}/tilbudCount`);
-    const tilbudSnapshot = await get(tilbudCountRef);
-    if(tilbudSnapshot.exists()) {
-      const currentCount = tilbudSnapshot.val() as number;
-      await set(tilbudCountRef, currentCount + 1);
+    try {
+      await incrementTilbudCount(1);
+    } catch (err) {
+      console.warn('Could not increment tilbudCount after creating tilbud:', err);
     }
 
     return newTilbudRef.key!;

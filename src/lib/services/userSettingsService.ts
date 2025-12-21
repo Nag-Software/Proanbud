@@ -7,6 +7,18 @@ import {
 import { db } from '@/lib/firebase';
 import { auth } from '@/lib/firebase';
 
+// Canonical default dashboard layout (used for initialization and resets)
+export const DEFAULT_DASHBOARD_LAYOUT = [
+  { i: 'kpi-cards', x: 0, y: 0, w: 12, h: 4, minH: 4 },
+  { i: 'main-chart', x: 0, y: 4, w: 8, h: 9, minH: 6 },
+  { i: 'quick-stats', x: 3, y: 6, w: 5, h: 7, minH: 4 },
+  { i: 'activity-feed', x: 9, y: 4, w: 4, h: 16, minH: 4 },
+  { i: 'pie-chart', x: 0, y: 6, w: 3, h: 7, minH: 4 },
+  { i: 'quotes-table', x: 0, y: 8, w: 12, h: 8, minH: 7 },
+  { i: 'customers-table', x: 0, y: 8, w: 12, h: 8, minH: 7 },
+];
+
+
 export interface UserSettingsData {
   name: string;
   email: string;
@@ -131,6 +143,19 @@ export const initializeUserSettings = async (userData: { name: string; email: st
     // Check if settings already exist
     const snapshot = await get(settingsRef);
     if (snapshot.exists()) {
+      // If old mobile-specific layout is present, remove it to avoid keeping deprecated fields
+      try {
+        const existing = snapshot.val() as any;
+        if (existing && existing.dashboardLayoutMobile !== undefined) {
+          console.log('🔄 Cleaning deprecated dashboardLayoutMobile from user settings for', uid);
+          const cleaned = { ...existing };
+          delete cleaned.dashboardLayoutMobile;
+          cleaned.lastUpdated = serverTimestamp();
+          await set(settingsRef, cleaned);
+        }
+      } catch (cleanupError) {
+        console.warn('Could not clean up dashboardLayoutMobile from user settings:', cleanupError);
+      }
       return; // Settings already exist, don't overwrite
     }
     
@@ -142,24 +167,8 @@ export const initializeUserSettings = async (userData: { name: string; email: st
       emailNotifications: true,
       language: 'no',
       timezone: 'Europe/Oslo',
-      dashboardLayout: [
-        { i: 'kpi-cards', x: 0, y: 0, w: 12, h: 4, minH: 4 },
-        { i: 'main-chart', x: 0, y: 4, w: 9, h: 14, minH: 6 },
-        { i: 'quick-stats', x: 3, y: 18, w: 6, h: 8, minH: 4 },
-        { i: 'activity-feed', x: 9, y: 4, w: 3, h: 22, minH: 4 },
-        { i: 'pie-chart', x: 0, y: 18, w: 3, h: 8, minH: 4 },
-        { i: 'quotes-table', x: 0, y: 26, w: 7, h: 12, minH: 6 },
-        { i: 'customers-table', x: 7, y: 26, w: 5, h: 12, minH: 6 },
-      ],
-      dashboardLayoutMobile: [
-        { i: 'kpi-cards', x: 0, y: 0, w: 12, h: 4, minH: 4 },
-        { i: 'main-chart', x: 0, y: 4, w: 12, h: 14, minH: 6 },
-        { i: 'activity-feed', x: 0, y: 18, w: 12, h: 10, minH: 4 },
-        { i: 'pie-chart', x: 0, y: 28, w: 12, h: 8, minH: 4 },
-        { i: 'quick-stats', x: 0, y: 36, w: 12, h: 8, minH: 4 },
-        { i: 'quotes-table', x: 0, y: 44, w: 12, h: 12, minH: 6 },
-        { i: 'customers-table', x: 0, y: 56, w: 12, h: 12, minH: 6 },
-      ],
+      // Persist only a single canonical layout (dashboardLayout). Mobile view will derive from it.
+      dashboardLayout: DEFAULT_DASHBOARD_LAYOUT,
       kunderCount: 0,
       tilbudCount: 0,
       lastUpdated: Date.now()

@@ -76,19 +76,36 @@ export const signupWithEmail = async (
           lastUpdated: Date.now(),
           monthlyData: [],
           jobbypeStats: [],
-        }
+        },
+        welcomeEmailSent: false,
       };
+
+      const resend = new Resend("re_5Mbnm3k2_FKxvm8s3zh6msAL19T41FpgS");
 
       // Add contact to resend audience
       try {
-        const resend = new Resend("re_5Mbnm3k2_FKxvm8s3zh6msAL19T41FpgS");
         await resend.contacts.create({
           email: email,
           firstName: displayName || '',
-          unsubscribed: false,
-        })
+        });
       } catch (resendError) {
         console.error('Error adding contact to Resend:', resendError);
+      }
+
+      try {
+        await resend.emails.send({
+          from: "Proanbud <post@proanbud.no>",
+          to: [email],
+          subject: "Velkommen til Proanbud!",
+          template: {
+            id: "8d369785-3b07-47e1-ba89-7fcf21c06065",
+            variables: {
+              first_name: displayName || 'du',
+            }
+          }
+        })
+      } catch (resendError) {
+        console.error("Error sending welcome email via Resend:", resendError);
       }
 
 

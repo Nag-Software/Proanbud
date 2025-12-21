@@ -10,7 +10,7 @@ import { CustomersDataTable } from '@/components/dashboard/CustomersDataTable';
 import { QuickStatsWidget } from '@/components/dashboard/QuickStatsWidget';
 import { CustomerDetailsDrawer } from '@/components/kunder';
 import { getDashboardKPIsWithChange } from '@/lib/services/analyticsService';
-import { getUserSettings, updateUserSettings, initializeUserSettings } from '@/lib/services/userSettingsService';
+import { getUserSettings, updateUserSettings, initializeUserSettings, DEFAULT_DASHBOARD_LAYOUT } from '@/lib/services/userSettingsService';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEffect, useState } from 'react';
 import { WidthProvider, Responsive } from 'react-grid-layout';
@@ -19,7 +19,7 @@ import { Settings, Plus, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { deleteCustomer } from '@/lib/services/customerService';
 import { deleteTilbud, updateTilbud } from '@/lib/services/tilbudService';
-import { ref, onValue } from 'firebase/database';
+import { ref, onValue, set } from 'firebase/database';
 import { db } from '@/lib/firebase';
 import { Kunde, Tilbud } from '@/lib/types';
 import { QuotesChart } from '@/components/dashboard/QuotesChart';
@@ -293,18 +293,14 @@ export default function DashboardPage() {
       console.log('📐 Layout changed (Edit Mode):', constrainedLayout, 'Breakpoint:', currentBreakpoint);
       setCurrentLayout(constrainedLayout);
       try {
-        // Save the updated layout for the current breakpoint
-        const layoutsToSave = {
-          dashboardLayout: (currentBreakpoint === 'lg' || currentBreakpoint === 'md') ? cleanLayoutData(constrainedLayout) : cleanLayoutData(desktopLayout),
-          dashboardLayoutMobile: (currentBreakpoint === 'lg' || currentBreakpoint === 'md') ? cleanLayoutData(mobileLayout) : cleanLayoutData(constrainedLayout)
-        };
-        await updateUserSettings(layoutsToSave);
-        console.log('💾 Dashboard layouts saved:', layoutsToSave);
+        // Persist only the canonical desktop layout (dashboardLayout)
+        const layoutToSave = cleanLayoutData((currentBreakpoint === 'lg' || currentBreakpoint === 'md') ? constrainedLayout : desktopLayout);
+        await updateUserSettings({ dashboardLayout: layoutToSave });
+        console.log('💾 Dashboard layout saved:', layoutToSave);
       } catch (error) {
         console.error('Failed to save dashboard layout:', error);
-        // Fallback: save current layouts to localStorage
+        // Fallback: save current desktop layout to localStorage
         localStorage.setItem('dashboard-layout-desktop', JSON.stringify(desktopLayout));
-        localStorage.setItem('dashboard-layout-mobile', JSON.stringify(mobileLayout));
       }
     } else {
       // Just update local state without saving
@@ -350,16 +346,11 @@ export default function DashboardPage() {
     setCurrentLayout(newLayout);
     try {
       const cleanedDesktop = cleanLayoutData(desktopLayout);
-      const cleanedMobile = cleanLayoutData(mobileLayout);
-      await updateUserSettings({ 
-        dashboardLayout: cleanedDesktop,
-        dashboardLayoutMobile: cleanedMobile
-      });
+      await updateUserSettings({ dashboardLayout: cleanedDesktop });
       console.log('💾 Component added and layout saved to database:', componentId);
     } catch (error) {
       console.error('Failed to save dashboard layout:', error);
       localStorage.setItem('dashboard-layout-desktop', JSON.stringify(desktopLayout));
-      localStorage.setItem('dashboard-layout-mobile', JSON.stringify(mobileLayout));
     }
   };
 
@@ -370,16 +361,11 @@ export default function DashboardPage() {
     setCurrentLayout(newLayout);
     try {
       const cleanedDesktop = cleanLayoutData(desktopLayout);
-      const cleanedMobile = cleanLayoutData(mobileLayout);
-      await updateUserSettings({ 
-        dashboardLayout: cleanedDesktop,
-        dashboardLayoutMobile: cleanedMobile
-      });
+      await updateUserSettings({ dashboardLayout: cleanedDesktop });
       console.log('💾 Component removed and layout saved to database:', componentId);
     } catch (error) {
       console.error('Failed to save dashboard layout:', error);
       localStorage.setItem('dashboard-layout-desktop', JSON.stringify(desktopLayout));
-      localStorage.setItem('dashboard-layout-mobile', JSON.stringify(mobileLayout));
     }
   };
 
@@ -389,29 +375,22 @@ export default function DashboardPage() {
   };
 
   const resetLayout = async () => {
-    const defaultDesktop = [
-      { i: 'kpi-cards', x: 0, y: 0, w: 12, h: 4, minH: 4 },
-      { i: 'main-chart', x: 0, y: 4, w: 8, h: 9, minH: 6 },
-      { i: 'quick-stats', x: 3, y: 6, w: 5, h: 7, minH: 4 },
-      { i: 'activity-feed', x: 9, y: 4, w: 4, h: 16, minH: 4 },
-      { i: 'pie-chart', x: 0, y: 6, w: 3, h: 7, minH: 4 },
-      { i: 'quotes-table', x: 0, y: 8, w: 12, h: 8, minH: 7 },
-      { i: 'customers-table', x: 0, y: 8, w: 12, h: 8, minH: 7 },
-    ];
-    console.log('🔄 Resetting layout to default:', defaultDesktop);
-    setDesktopLayout(defaultDesktop);
-    setMobileLayout(defaultDesktop); // Use same default for mobile initially
+    // Use canonical defaults defined in userSettingsService
+    console.log('🔄 Resetting layout to default:', DEFAULT_DASHBOARD_LAYOUT);
+    // Deep-clone defaults to avoid accidental mutation of shared constants
+    const desktopDefaultClone = JSON.parse(JSON.stringify(DEFAULT_DASHBOARD_LAYOUT));
+    // Mobile uses the same canonical desktop layout now
+    const mobileDefaultClone = JSON.parse(JSON.stringify(DEFAULT_DASHBOARD_LAYOUT));
+
+    setDesktopLayout(desktopDefaultClone);
+    setMobileLayout(mobileDefaultClone);
     try {
-      const cleanedLayout = cleanLayoutData(defaultDesktop);
-      await updateUserSettings({ 
-        dashboardLayout: cleanedLayout,
-        dashboardLayoutMobile: cleanedLayout
-      });
+      const cleanedDesktop = cleanLayoutData(desktopDefaultClone);
+      await updateUserSettings({ dashboardLayout: cleanedDesktop });
       console.log('💾 Layout reset and saved to database');
     } catch (error) {
       console.error('Failed to save dashboard layout:', error);
-      localStorage.setItem('dashboard-layout-desktop', JSON.stringify(defaultDesktop));
-      localStorage.setItem('dashboard-layout-mobile', JSON.stringify(defaultDesktop));
+      localStorage.setItem('dashboard-layout-desktop', JSON.stringify(desktopDefaultClone));
     }
   };
 
@@ -571,46 +550,49 @@ export default function DashboardPage() {
           // Reload settings after initialization
           const newUserSettings = await getUserSettings();
           desktop = newUserSettings?.dashboardLayout;
-          mobile = newUserSettings?.dashboardLayoutMobile;
+          // If legacy mobile layout exists use it, otherwise fall back to desktop
+          mobile = newUserSettings?.dashboardLayoutMobile || newUserSettings?.dashboardLayout;
         } else {
           desktop = userSettings.dashboardLayout;
-          mobile = userSettings.dashboardLayoutMobile;
+          // Respect legacy mobile setting if present, otherwise derive from desktop
+          mobile = userSettings.dashboardLayoutMobile || userSettings.dashboardLayout;
+
+          // If legacy mobile key exists, remove it from DB to migrate away from storing it
+          if (userSettings.dashboardLayoutMobile !== undefined) {
+            try {
+              console.log('🔄 Removing deprecated dashboardLayoutMobile for user');
+              // Remove the key directly in Realtime Database to ensure it's deleted
+              await set(ref(db, `users/${user?.uid}/userSettings/dashboardLayoutMobile`), null);
+              console.log('✅ Removed dashboardLayoutMobile from user settings');
+            } catch (cleanupErr) {
+              console.warn('Could not remove dashboardLayoutMobile from user settings:', cleanupErr);
+            }
+          }
         }
         
         // Check if user has no dashboard layout or invalid format
-        const needsMigration = !desktop || !Array.isArray(desktop) || desktop.length === 0 ||
-                               !mobile || !Array.isArray(mobile) || mobile.length === 0;
+        const needsMigration = !desktop || !Array.isArray(desktop) || desktop.length === 0;
         
         if (needsMigration) {
           console.log('🔄 Migrating user dashboard layout to default structure');
           
-          // Use default layouts
+          // Use default layout for desktop
           desktop = defaultDesktop;
-          mobile = [
-              { i: 'kpi-cards', x: 0, y: 0, w: 12, h: 4, minH: 4 },
-              { i: 'main-chart', x: 0, y: 4, w: 8, h: 9, minH: 6 },
-              { i: 'quick-stats', x: 3, y: 6, w: 5, h: 7, minH: 4 },
-              { i: 'activity-feed', x: 9, y: 4, w: 4, h: 16, minH: 4 },
-              { i: 'pie-chart', x: 0, y: 6, w: 3, h: 7, minH: 4 },
-              { i: 'quotes-table', x: 0, y: 8, w: 12, h: 8, minH: 7 },
-              { i: 'customers-table', x: 0, y: 8, w: 12, h: 8, minH: 7 },
-          ];
           
-          // Save the default layout to user settings
+          // Save only the desktop layout to user settings
           try {
-            await updateUserSettings({ 
-              dashboardLayout: desktop,
-              dashboardLayoutMobile: mobile
-            });
+            await updateUserSettings({ dashboardLayout: desktop });
             console.log('✅ Default dashboard layout saved for user');
           } catch (saveError) {
             console.warn('Could not save default dashboard layout:', saveError);
           }
         }
         
+        // For mobile view, derive layout from mobile field if present, otherwise fall back to desktop
+        const mobileFallback = mobile && Array.isArray(mobile) && mobile.length > 0 ? mobile : desktop;
         setDesktopLayout(desktop || defaultDesktop);
-        setMobileLayout(mobile || defaultDesktop);
-        console.log('📋 Layouts loaded - Desktop:', desktop || defaultDesktop, 'Mobile:', mobile || defaultDesktop);
+        setMobileLayout(mobileFallback || defaultDesktop);
+        console.log('📋 Layouts loaded - Desktop:', desktop || defaultDesktop, 'Mobile:', mobileFallback || defaultDesktop);
       } catch (error) {
         console.error('Failed to load dashboard layout:', error);
         // Fallback to localStorage if Firebase fails
