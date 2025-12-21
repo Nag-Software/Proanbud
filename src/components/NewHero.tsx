@@ -1,7 +1,7 @@
 'use client';
 
 import Link from "next/link";
-import dashboardImage from "../../public/assets/4.jpg";
+import dashboardImage from "../../public/assets/100.png";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Check } from "lucide-react";

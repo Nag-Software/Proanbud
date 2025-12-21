@@ -58,7 +58,7 @@ export const NAV_ITEMS: any[] = [
         href: "/docs/funksjoner/ai-prissetting",
         description:
           "La kunstig intelligens foreslå konkurransedyktige priser basert på materialpriser, historisk data og dine leverandørpriser.",
-        tag: "Beta",
+        tag: "Populær",
       },
       {
         title: "Lynrask tilbudssending",
@@ -67,10 +67,10 @@ export const NAV_ITEMS: any[] = [
           "Send profesjonelle tilbud på under 5 minutter med autogenererte mengdeberegninger og AI-prisestimat.",
       },
       {
-        title: "Nettbrettvennlig",
-        href: "/docs/funksjoner/nettbrettvennlig",
+        title: "Mobilvennlig",
+        href: "/docs/funksjoner/mobilvennlig",
         description:
-          "Full funksjonalitet på nettbrett og PC — send tilbud direkte fra befaring.",
+          "Full funksjonalitet på mobil og PC — send tilbud direkte fra befaring.",
       },
       {
         title: "Profesjonell kundehåndtering",
@@ -347,7 +347,7 @@ function ListItem({
                 {tag}
               </span>
             )}
-            {tag?.toLowerCase() == "beta" && (
+            {tag?.toLowerCase() == "populær" && (
 
               <span className="ml-2 inline-block bg-blue-100 text-blue-800 text-[10px] font-regular px-2 py-0.5 outline-1 outline-blue-200  rounded-full">
                 {tag}
