@@ -197,8 +197,9 @@ function HomeContent() {
       </section>
 
       {/* Before/After Section */}
-      <section className="py-16 xs:py-20 bg-gray-50/50">
-        <div className="max-w-6xl mx-auto px-6 sm:px-8 lg:px-12">
+      <section className="py-16 xs:py-20 bg-gradient-to-br from-gray-50 via-white to-gray-100 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-50/20 via-transparent to-purple-50/20"></div>
+        <div className="max-w-6xl mx-auto px-6 sm:px-8 lg:px-12 relative z-10">
           <div className="text-center mb-12">
             <h2 
               className="text-3xl md:text-4xl font-normal text-gray-900 tracking-tight mb-4"
@@ -213,14 +214,14 @@ function HomeContent() {
 
           <div className="grid md:grid-cols-2 gap-8 md:gap-12">
             {/* BEFORE */}
-            <div className="relative">
-              <div className="absolute -top-4 -left-4 bg-red-400 text-white px-4 py-2 rounded-lg font-semibold text-sm shadow-lg z-10">
-                ❌ Før Proanbud
+            <div className="relative group">
+              <div className="absolute -top-4 -left-4 bg-red-500/90 backdrop-blur-sm text-white px-4 py-2 rounded-xl font-semibold text-sm shadow-xl shadow-red-500/30 border border-white/20 z-10">
+                Før Proanbud
               </div>
-              <div className="bg-white border-2 border-red-200 rounded-2xl p-8 pt-12 shadow-sm">
+              <div className="bg-white/70 backdrop-blur-lg border border-red-200/60 rounded-2xl p-8 pt-12 shadow-xl shadow-red-100/40 transition-all duration-500 group-hover:shadow-red-200/50 group-hover:scale-[1.02]">
                 <div className="space-y-6">
                   <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0 mt-1">
+                    <div className="w-8 h-8 rounded-full bg-red-100/80 backdrop-blur-sm flex items-center justify-center flex-shrink-0 mt-1 shadow-lg shadow-red-100/50">
                       <Clock className="w-4 h-4 text-red-600" />
                     </div>
                     <div>
@@ -230,7 +231,7 @@ function HomeContent() {
                   </div>
                   
                   <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0 mt-1">
+                    <div className="w-8 h-8 rounded-full bg-red-100/80 backdrop-blur-sm flex items-center justify-center flex-shrink-0 mt-1 shadow-lg shadow-red-100/50">
                       <FileText className="w-4 h-4 text-red-600" />
                     </div>
                     <div>
@@ -240,7 +241,7 @@ function HomeContent() {
                   </div>
                   
                   <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0 mt-1">
+                    <div className="w-8 h-8 rounded-full bg-red-100/80 backdrop-blur-sm flex items-center justify-center flex-shrink-0 mt-1 shadow-lg shadow-red-100/50">
                       <TrendingUp className="w-4 h-4 text-red-600" />
                     </div>
                     <div>
@@ -250,7 +251,7 @@ function HomeContent() {
                   </div>
                   
                   <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0 mt-1">
+                    <div className="w-8 h-8 rounded-full bg-red-100/80 backdrop-blur-sm flex items-center justify-center flex-shrink-0 mt-1 shadow-lg shadow-red-100/50">
                       <Users className="w-4 h-4 text-red-600" />
                     </div>
                     <div>
@@ -263,14 +264,14 @@ function HomeContent() {
             </div>
 
             {/* AFTER */}
-            <div className="relative">
-              <div className="absolute -top-4 -left-4 text-primary bg-[#82ffb2] text-gray-900 px-4 py-2 rounded-lg font-semibold text-sm shadow-lg z-10">
-                ✅ Med Proanbud
+            <div className="relative group">
+              <div className="absolute -top-4 -left-4 bg-[#82ffb2]/90 backdrop-blur-sm text-gray-900 px-4 py-2 rounded-xl font-semibold text-sm shadow-2xl shadow-[#82ffb2]/40 border border-white/20 z-10">
+                Med Proanbud
               </div>
-              <div className="bg-white border-2 border-[#82ffb2] rounded-2xl p-8 pt-12 shadow-lg">
+              <div className="bg-white/70 backdrop-blur-lg border border-[#82ffb2]/60 rounded-2xl p-8 pt-12 shadow-xl shadow-[#82ffb2]/30 transition-all duration-500 group-hover:shadow-[#82ffb2]/50 group-hover:scale-[1.02]">
                 <div className="space-y-6">
                   <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-[#82ffb2] flex items-center justify-center flex-shrink-0 mt-1">
+                    <div className="w-8 h-8 rounded-full bg-[#82ffb2]/80 backdrop-blur-sm flex items-center justify-center flex-shrink-0 mt-1 shadow-lg shadow-[#82ffb2]/50">
                       <Zap className="w-4 h-4 text-gray-900" />
                     </div>
                     <div>
@@ -280,7 +281,7 @@ function HomeContent() {
                   </div>
                   
                   <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-[#82ffb2] flex items-center justify-center flex-shrink-0 mt-1">
+                    <div className="w-8 h-8 rounded-full bg-[#82ffb2]/80 backdrop-blur-sm flex items-center justify-center flex-shrink-0 mt-1 shadow-lg shadow-[#82ffb2]/50">
                       <Sparkles className="w-4 h-4 text-gray-900" />
                     </div>
                     <div>
@@ -290,7 +291,7 @@ function HomeContent() {
                   </div>
                   
                   <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-[#82ffb2] flex items-center justify-center flex-shrink-0 mt-1">
+                    <div className="w-8 h-8 rounded-full bg-[#82ffb2]/80 backdrop-blur-sm flex items-center justify-center flex-shrink-0 mt-1 shadow-lg shadow-[#82ffb2]/50">
                       <Brain className="w-4 h-4 text-gray-900" />
                     </div>
                     <div>
@@ -300,7 +301,7 @@ function HomeContent() {
                   </div>
                   
                   <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-[#82ffb2] flex items-center justify-center flex-shrink-0 mt-1">
+                    <div className="w-8 h-8 rounded-full bg-[#82ffb2]/80 backdrop-blur-sm flex items-center justify-center flex-shrink-0 mt-1 shadow-lg shadow-[#82ffb2]/50">
                       <BarChart3 className="w-4 h-4 text-gray-900" />
                     </div>
                     <div>
@@ -315,25 +316,25 @@ function HomeContent() {
 
           {/* Stats Below */}
           <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-6">
-            <div className="text-center">
+            <div className="bg-white/60 backdrop-blur-md border border-white/40 rounded-2xl p-6 shadow-xl shadow-gray-200/50 text-center transition-all duration-300 hover:scale-105 hover:shadow-2xl">
               <div className="text-3xl md:text-4xl font-bold text-gray-900 mb-2" style={{ fontFamily: 'var(--font-lora), serif' }}>
                 96%
               </div>
               <div className="text-sm text-gray-600">Mindre tid brukt</div>
             </div>
-            <div className="text-center">
+            <div className="bg-white/60 backdrop-blur-md border border-white/40 rounded-2xl p-6 shadow-xl shadow-gray-200/50 text-center transition-all duration-300 hover:scale-105 hover:shadow-2xl">
               <div className="text-3xl md:text-4xl font-bold text-gray-900 mb-2" style={{ fontFamily: 'var(--font-lora), serif' }}>
                 5 min
               </div>
               <div className="text-sm text-gray-600">Per tilbud</div>
             </div>
-            <div className="text-center">
+            <div className="bg-white/60 backdrop-blur-md border border-white/40 rounded-2xl p-6 shadow-xl shadow-gray-200/50 text-center transition-all duration-300 hover:scale-105 hover:shadow-2xl">
               <div className="text-3xl md:text-4xl font-bold text-gray-900 mb-2" style={{ fontFamily: 'var(--font-lora), serif' }}>
                 21x
               </div>
               <div className="text-sm text-gray-600">Flere tilbud sendt</div>
             </div>
-            <div className="text-center">
+            <div className="bg-white/60 backdrop-blur-md border border-white/40 rounded-2xl p-6 shadow-xl shadow-gray-200/50 text-center transition-all duration-300 hover:scale-105 hover:shadow-2xl">
               <div className="text-3xl md:text-4xl font-bold text-gray-900 mb-2" style={{ fontFamily: 'var(--font-lora), serif' }}>
                 100%
               </div>

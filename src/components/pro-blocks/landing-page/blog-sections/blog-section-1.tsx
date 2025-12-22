@@ -10,6 +10,7 @@ import { urlForImage, formatDate } from "@/lib/sanity";
 import * as Icons from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
+import { motion, useReducedMotion } from 'framer-motion';
 
 export function BlogSection1() {
   const { posts, loading, error } = useBlogPosts(4);
@@ -38,15 +39,19 @@ export function BlogSection1() {
     );
   }
 
+  const shouldReduceMotion = useReducedMotion();
+  const fadeUp = {
+    hidden: { opacity: 0, y: 12 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.5 } }
+  };
+
   return (
-    <section
-      className="transparent max-w-6xl mx-auto py-16 xs:py-20"
-      aria-labelledby="blog-section-heading"
-    >
+    <motion.section initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.15 }} variants={shouldReduceMotion ? undefined : { visible: { transition: { staggerChildren: 0.06 } } }} className="transparent max-w-6xl mx-auto py-16 xs:py-20" aria-labelledby="blog-section-heading">
+
       <div className="container-padding-x container mx-auto gap-10 md:gap-12">
         <div className="flex flex-col items-center gap-10 md:gap-12">
           {/* Section Title */}
-          <div className="section-title-gap-lg mx-auto flex max-w-xl flex-col items-center text-center">
+          <motion.div variants={fadeUp} className="section-title-gap-lg mx-auto flex max-w-xl flex-col items-center text-center">
             {/* Tagline */}
             <Tagline>Proanbud x Blogg</Tagline>
             {/* Main Heading */}
@@ -58,7 +63,7 @@ export function BlogSection1() {
               Les våre siste artikler om produktoppdateringer, bransjenyheter og
               tips for å få mest mulig ut av våre tjenester.
             </p>
-          </div>
+          </motion.div>
 
           {/* Blog Grid */}
           <div
@@ -84,61 +89,62 @@ export function BlogSection1() {
                 ))
               : // Real blog posts
                 posts.map((post) => (
-                  <Link
-                    href={`/blogg/${post.slug.current}`}
-                    key={post._id}
-                    className="group block basis-full md:basis-1/2 lg:basis-1/4"
-                  >
-                    {/* Blog Card */}
-                    <div className="flex flex-col gap-4 rounded-xl transition-all duration-200 ">
-                      {/* Image Wrapper */}
-                      <AspectRatio
-                        ratio={4 / 3}
-                        className="overflow-hidden rounded-xl bg-gradient-to-br from-secondary to-cyan-100"
-                      >
-                        {post.mainImage ? (
-                          <Image
-                            src={urlForImage(post.mainImage).width(400).height(300).url()}
-                            alt={post.mainImage.alt || post.title}
-                            fill
-                            className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <Icons.FileText className="h-16 w-16 text-white/80" />
-                          </div>
-                        )}
-                      </AspectRatio>
-
-                      {/* Post Content */}
-                      <div className="flex flex-col gap-3">
-                        {/* Post Meta */}
-                        <div className="flex items-center gap-2 text-left">
-                          <span className="text-muted-foreground text-sm">
-                            {formatDate(post.publishedAt)}
-                          </span>
-                          {post.categories && post.categories.length > 0 && (
-                            <>
-                              <span className="text-muted-foreground text-sm">·</span>
-                              <span className="text-muted-foreground text-sm">
-                                {post.categories[0].title}
-                              </span>
-                            </>
+                  <motion.div variants={fadeUp} key={post._id} className="group block basis-full md:basis-1/2 lg:basis-1/4">
+                    <Link
+                      href={`/blogg/${post.slug.current}`}
+                      className="block"
+                    >
+                      {/* Blog Card */}
+                      <div className="flex flex-col gap-4 rounded-xl transition-all duration-200 ">
+                        {/* Image Wrapper */}
+                        <AspectRatio
+                          ratio={4 / 3}
+                          className="overflow-hidden rounded-xl bg-gradient-to-br from-secondary to-cyan-100"
+                        >
+                          {post.mainImage ? (
+                            <Image
+                              src={urlForImage(post.mainImage).width(400).height(300).url()}
+                              alt={post.mainImage.alt || post.title}
+                              fill
+                              className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <Icons.FileText className="h-16 w-16 text-white/80" />
+                            </div>
                           )}
+                        </AspectRatio>
+
+                        {/* Post Content */}
+                        <div className="flex flex-col gap-3">
+                          {/* Post Meta */}
+                          <div className="flex items-center gap-2 text-left">
+                            <span className="text-muted-foreground text-sm">
+                              {formatDate(post.publishedAt)}
+                            </span>
+                            {post.categories && post.categories.length > 0 && (
+                              <>
+                                <span className="text-muted-foreground text-sm">·</span>
+                                <span className="text-muted-foreground text-sm">
+                                  {post.categories[0].title}
+                                </span>
+                              </>
+                            )}
+                          </div>
+
+                          {/* Post Title */}
+                          <h3 className="text-base leading-normal font-semibold group-hover:underline">
+                            {post.title}
+                          </h3>
+
+                          {/* Post Summary */}
+                          <p className="text-muted-foreground text-sm leading-normal line-clamp-3">
+                            {post.excerpt || "Les mer om dette innlegget..."}
+                          </p>
                         </div>
-
-                        {/* Post Title */}
-                        <h3 className="text-base leading-normal font-semibold group-hover:underline">
-                          {post.title}
-                        </h3>
-
-                        {/* Post Summary */}
-                        <p className="text-muted-foreground text-sm leading-normal line-clamp-3">
-                          {post.excerpt || "Les mer om dette innlegget..."}
-                        </p>
                       </div>
-                    </div>
-                  </Link>
+                    </Link>
+                  </motion.div>
             ))}
           </div>
           <div className="flex justify-center align-items-center">
@@ -151,6 +157,6 @@ export function BlogSection1() {
           </div>
         </div>
       </div>
-    </section>
+    </motion.section>
   );
 }

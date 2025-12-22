@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import { motion, useReducedMotion } from 'framer-motion';
 
 import {
   Accordion,
@@ -63,19 +64,25 @@ const Feature197 = ({
   const [activeTabId, setActiveTabId] = useState<number | null>(1);
   const [activeImage, setActiveImage] = useState<string>(features[0].image);
 
+  const shouldReduceMotion = useReducedMotion();
+  const fadeUp = {
+    hidden: { opacity: 0, y: 12 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.5 } }
+  };
+
   return (
-    <section className="py-16 xs:py-20 bg-gray-50/50" id="showcase">
+    <motion.section initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.15 }} variants={shouldReduceMotion ? undefined : { visible: { transition: { staggerChildren: 0.06 } } }} className="py-16 xs:py-20 bg-gray-50/50" id="showcase">
       <div className="container mx-auto max-w-6xl px-6">
-        <h1 
+        <motion.h1 variants={fadeUp}
           id="showcase-heading" 
           className="text-3xl md:text-4xl lg:text-5xl font-normal mx-auto text-center mb-4 text-gray-900 tracking-tight"
           style={{ fontFamily: 'var(--font-lora), serif' }}
         >
           Alt du trenger i én plattform
-        </h1>
-        <p className="text-gray-600 text-center text-base md:text-lg mb-12 font-light max-w-2xl mx-auto">
+        </motion.h1>
+        <motion.p variants={fadeUp} className="text-gray-600 text-center text-base md:text-lg mb-12 font-light max-w-2xl mx-auto">
           Effektiviser anbudsprosessen: intuitivt, kraftig og designet for å gjøre håndverkerens hverdag enklere med smarte verktøy.
-        </p>
+        </motion.p>
         <div className="mb-12 flex w-full items-start justify-between gap-12">
           <div className="w-full md:w-1/2">
             <Accordion type="single" className="w-full" defaultValue="item-1">
@@ -107,7 +114,7 @@ const Feature197 = ({
               ))}
             </Accordion>
           </div>
-          <div className="bg-muted relative m-auto hidden w-1/2 overflow-hidden rounded-xl md:block">
+          <motion.div variants={fadeUp} className="bg-muted relative m-auto hidden w-1/2 overflow-hidden rounded-xl md:block">
             <div className="relative">
               <div className="relative rounded-2xl overflow-hidden shadow-2xl border-4 border-white">
                 <Image
@@ -119,19 +126,19 @@ const Feature197 = ({
                   loading="lazy"
                 />
                 {/* Floating cards */}
-                <div className="absolute top-4 right-4 bg-white rounded-xl p-3 shadow-xl animate-float">
+                <motion.div whileHover={shouldReduceMotion ? undefined : { y: -4 }} className="absolute top-4 right-4 bg-white rounded-xl p-3 shadow-xl animate-float">
                   <div className="flex items-center justify-around gap-3">
                     <div className="w-3 h-3 bg-[#82ffb2] rounded-full animate-pulse"></div>
                     <span className="text-sm font-semibold">Jeg sparer 12 375 kr/mnd.</span>
                   </div>
                   <span className="ml-6 text-xs font-normal text-gray-500">Nag Snekkerservice</span>
-                </div>
+                </motion.div>
               </div>
             </div>
-          </div>
+          </motion.div>
         </div>
       </div>
-    </section>
+    </motion.section>
   );
 };  
 

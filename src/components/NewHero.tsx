@@ -6,6 +6,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Check } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
+import { motion, useReducedMotion } from 'framer-motion';
 import { getLaunchSpecialBanner, getDiscountTypeLabel, LaunchSpecialBanner } from "@/lib/sanity/launchBanner";
 import white from "../../public/logo/light/icon-muted.svg";
 import { storage } from "@/lib/firebase";
@@ -148,8 +149,27 @@ export function NewHero() {
   const handleShowVideo = () => {
     setShowVideo(true);
   };
+
+  const shouldReduceMotion = useReducedMotion();
+
+  const container = {
+    hidden: {},
+    visible: { transition: { staggerChildren: 0.06 } }
+  };
+
+  const fadeUp = {
+    hidden: { opacity: 0, y: 12 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.55 } }
+  };
+
   return (
-    <section className="w-full py-16 md:py-20 bg-white">
+    <motion.section
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, amount: 0.18 }}
+      variants={shouldReduceMotion ? undefined : container}
+      className="w-full py-16 md:py-20 bg-white"
+    >
       <div 
         ref={logoRef}
         className="absolute top-130 h-full left-1/10 overflow-hidden z-[0] pointer-events-none scale-130"
@@ -193,32 +213,37 @@ export function NewHero() {
         </div>
 
         <div className="text-center max-w-4xl mx-auto mb-10 space-y-6">
-          <h1 
+          <motion.h1 variants={fadeUp}
             className="text-3xl md:text-5xl lg:text-6xl font-normal text-gray-900 tracking-tight leading-[1.1]"
             style={{ fontFamily: 'var(--font-lora), serif' }}
           >
             Norges første AI-drevne tilbudsplattform
-          </h1>
+          </motion.h1>
           
-          <p className="text-gray-600 text-base md:text-lg leading-relaxed max-w-2xl mx-auto font-light">
+          <motion.p variants={fadeUp} className="text-gray-600 text-base md:text-lg leading-relaxed max-w-2xl mx-auto font-light">
             Din komplette tilbudsplattform for håndverkere. Bruk AI til å prissete riktig, send profesjonelle tilbud fra nettbrett eller PC, og vinn flere oppdrag.
-          </p>
+          </motion.p>
           
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
-            <Link
-              href="/signup"
-              className="group bg-primary text-primary-foreground px-8 py-2.5 rounded-xl hover:bg-primary/90 transition-all font-semibold text-md hover:shadow-md flex items-center justify-center gap-2"
-            >
-              Kom i gang gratis
-              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </Link>
-            <Link
-              href="/kalkulator"
-              className="bg-white text-gray-900 px-8 py-2.5 rounded-xl hover:bg-gray-50 transition-all font-semibold text-md border-2 border-gray-200 flex items-center justify-center gap-2"
-            >
-              Se din besparelse
-            </Link>
-          </div>
+          <motion.div variants={fadeUp} className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
+            <motion.div whileHover={shouldReduceMotion ? undefined : { scale: 1.03 }} whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }} transition={{ type: 'spring', stiffness: 320, damping: 24 }}>
+              <Link
+                href="/signup"
+                className="group bg-primary text-primary-foreground px-8 py-2.5 rounded-xl hover:bg-primary/90 transition-all font-semibold text-md hover:shadow-md flex items-center justify-center gap-2"
+              >
+                Kom i gang gratis
+                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </Link>
+            </motion.div>
+
+            <motion.div whileHover={shouldReduceMotion ? undefined : { scale: 1.02 }} whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }} transition={{ duration: 0.15 }}>
+              <Link
+                href="/kalkulator"
+                className="bg-white text-gray-900 px-8 py-2.5 rounded-xl hover:bg-gray-50 transition-all font-semibold text-md border-2 border-gray-200 flex items-center justify-center gap-2"
+              >
+                Se din besparelse
+              </Link>
+            </motion.div>
+          </motion.div>
           
           <div className="flex items-center justify-center gap-8 pt-1">
             <div className="flex items-center gap-2">
@@ -278,11 +303,11 @@ export function NewHero() {
                   <VideoPlayer videoPath={HERO_VIDEO_PATH} className="rounded-[12px]" />
                 </div>
               ) : (
-                <div className="group relative bg-gradient-to-br from-gray-50 to-white overflow-hidden">
+                <motion.div variants={fadeUp} whileHover={shouldReduceMotion ? undefined : { scale: 1.01 }} className="group relative bg-gradient-to-br from-gray-50 to-white overflow-hidden">
                   <Image
                     src={dashboardImage}
                     alt="Proanbud Dashboard"
-                    className="w-full h-auto"
+                    className="w-full h-auto transition-transform will-change-transform"
                     priority
                     style={{
                       marginTop: "-1px",
@@ -290,17 +315,19 @@ export function NewHero() {
                     }}
                   />
                   <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition-all duration-300 group-hover:bg-black/30 group-hover:opacity-100 group-focus-within:bg-black/30 group-focus-within:opacity-100">
-                    <Button
-                      type="button"
-                      size="lg"
-                      variant="outline"
-                      className="pointer-events-auto rounded-lg bg-white/90 text-gray-900 hover:bg-white"
-                      onClick={handleShowVideo}
-                    >
-                      Vis demo
-                    </Button>
+                    <motion.div whileHover={shouldReduceMotion ? undefined : { scale: 1.02 }} whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }} transition={{ type: 'spring', stiffness: 320, damping: 24 }}>
+                      <Button
+                        type="button"
+                        size="lg"
+                        variant="outline"
+                        className="pointer-events-auto rounded-lg bg-white/90 text-gray-900 hover:bg-white"
+                        onClick={handleShowVideo}
+                      >
+                        Vis demo
+                      </Button>
+                    </motion.div>
                   </div>
-                </div>
+                </motion.div>
               )}
               
               {/* Bottom status bar - adds realism */}
@@ -321,6 +348,6 @@ export function NewHero() {
           </div>
         </div>
       </div>
-    </section>
+    </motion.section>
   );
 }

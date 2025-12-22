@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
+import { motion, useReducedMotion } from 'framer-motion';
 import {
   Accordion,
   AccordionContent,
@@ -30,6 +31,11 @@ export const FaqSection: React.FC<FaqSectionProps> = ({
   faqs,
   className = ''
 }) => {
+  const shouldReduceMotion = useReducedMotion();
+  const fadeUp = {
+    hidden: { opacity: 0, y: 12 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.48 } }
+  };
 
   return (
     <section
@@ -38,7 +44,7 @@ export const FaqSection: React.FC<FaqSectionProps> = ({
     >
       <div className="container-padding-x mx-auto flex max-w-3xl flex-col gap-10 md:gap-12 px-6">
         {/* Section Header */}
-        <div className="section-title-gap-lg flex flex-col items-center text-center">
+        <motion.div variants={fadeUp} initial="hidden" whileInView={shouldReduceMotion ? undefined : 'visible'} viewport={{ once: true, amount: 0.2 }} className="section-title-gap-lg flex flex-col items-center text-center">
           {/* Category Tag */}
           <Tagline>FAQ seksjon</Tagline>
           {/* Main Title */}
@@ -56,24 +62,26 @@ export const FaqSection: React.FC<FaqSectionProps> = ({
               Kontakt oss.
             </Link>
           </p>
-        </div>
+        </motion.div>
 
         {/* FAQ Accordion */}
         <Accordion type="single" defaultValue="item-1" aria-label="FAQ items">
           {faqs.map((faq, index) => (
-            <AccordionItem key={index} value={`item-${index + 1}`} data-dashboard>
-              <AccordionTrigger className="text-left text-base font-medium">
-                {faq.question}
-              </AccordionTrigger>
-            <AccordionContent className="text-muted-foreground text-sm">
-              {faq.answer}
-            </AccordionContent>
-          </AccordionItem>
+            <motion.div key={index} variants={fadeUp} initial="hidden" whileInView={shouldReduceMotion ? undefined : 'visible'} viewport={{ once: true, amount: 0.12 }}>
+              <AccordionItem value={`item-${index + 1}`} data-dashboard>
+                <AccordionTrigger className="text-left text-base font-medium">
+                  {faq.question}
+                </AccordionTrigger>
+              <AccordionContent className="text-muted-foreground text-sm">
+                {faq.answer}
+              </AccordionContent>
+            </AccordionItem>
+            </motion.div>
           ))}
         </Accordion>
 
         {/* CTA Card */}
-        <div className="bg-white border border-gray-200 flex w-full flex-col items-center gap-6 rounded-2xl p-8 md:p-10 shadow-sm">
+        <motion.div variants={fadeUp} initial="hidden" whileInView={shouldReduceMotion ? undefined : 'visible'} viewport={{ once: true, amount: 0.12 }} className="bg-white border border-gray-200 flex w-full flex-col items-center gap-6 rounded-2xl p-8 md:p-10 shadow-sm">
           <div className="flex flex-col gap-3 text-center">
             <h2 
               className="text-gray-900 text-3xl md:text-4xl font-normal tracking-tight"
@@ -93,7 +101,7 @@ export const FaqSection: React.FC<FaqSectionProps> = ({
                 Kontakt oss
             </Button>
           </Link>
-        </div>
+        </motion.div>
       </div>
     </section>
   );

@@ -52,6 +52,7 @@
     "firebase": "^12.5.0",
     "firebase-admin": "^13.5.0",
     "firebase-tools": "^14.22.0",
+    "framer-motion": "^12.23.26",
     "fumadocs-core": "^15.8.5",
     "fumadocs-mdx": "^13.0.3",
     "fumadocs-ui": "^15.8.5",
