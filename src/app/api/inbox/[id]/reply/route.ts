@@ -65,11 +65,13 @@ export async function POST(
 
     // Get customer email
     let customerEmail: string | null = null;
+    let customerName: string | null = null;
     if (originalMessage.customerId) {
       const customerRef = db.ref(`users/${userId}/kunder/${originalMessage.customerId}`);
       const customerSnapshot = await customerRef.once('value');
       if (customerSnapshot.exists()) {
         customerEmail = customerSnapshot.val().epost;
+        customerName = customerSnapshot.val().navn;
       }
     }
 
@@ -78,6 +80,35 @@ export async function POST(
         { error: 'Kunne ikke finne kunde e-postadresse' },
         { status: 404 }
       );
+    }
+
+    // If this message is related to a quote, ensure that quote has a viewToken
+    let viewUrl = '';
+    const quoteId = originalMessage.quoteId;
+    if (quoteId) {
+      try {
+        const quoteRef = db.ref(`users/${userId}/tilbud/${quoteId}`);
+        const quoteSnapshot = await quoteRef.once('value');
+        if (quoteSnapshot.exists()) {
+          let viewToken = quoteSnapshot.val()?.viewToken;
+          if (!viewToken) {
+            // Generate a 32 char token (same algorithm used elsewhere)
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+            let token = '';
+            for (let i = 0; i < 32; i++) {
+              token += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            viewToken = token;
+            await quoteRef.update({ viewToken });
+            console.log('✅ ViewToken generated and saved for quote:', quoteId);
+          }
+
+          const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000').replace(/\/$/, '');
+          viewUrl = `${baseUrl}/tilbudsvisning/${quoteId}?token=${viewToken}`;
+        }
+      } catch (err) {
+        console.warn('⚠️ Could not ensure viewToken for quote:', err);
+      }
     }
 
     // Get business settings for sender info
@@ -92,61 +123,103 @@ export async function POST(
 
     // Generate email HTML
     const emailHtml = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff;">
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 20px; text-align: center;">
-          ${businessSettings?.logoUrl ? `<img src="${businessSettings.logoUrl}" alt="${companyName}" style="max-height: 60px; margin-bottom: 20px;">` : ''}
-          <h1 style="color: #ffffff; margin: 0; font-size: 28px;">Svar fra ${companyName}</h1>
-        </div>
+      <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background-color:#f5f5f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <tr>
+    <td align="center" style="padding:40px 16px;">
+      <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="max-width:480px;background:#ffffff;border-radius:12px;border:1px solid #e5e5e7;box-shadow:0 4px 12px rgba(0,0,0,0.04);padding:32px;">
         
-        <div style="padding: 40px 20px;">
-          <h2 style="color: #333333; margin-top: 0;">${replySubject}</h2>
-          
-          <p style="color: #666666; font-size: 16px; line-height: 1.6;">
-            Hei ${originalMessage.customerName || 'kunde'},
-          </p>
-          
-          <div style="background-color: #f8f9fa; border-left: 4px solid #667eea; padding: 20px; margin: 30px 0;">
-            <p style="color: #333333; font-size: 16px; line-height: 1.6; margin: 0;">
-              ${replyMessage.split('\n\n--- Original melding ---')[0].replace(/\n/g, '<br>')}
-            </p>
-          </div>
-          
-          ${originalMessage.quoteId && originalMessage.quoteTitle ? `
-          <div style="margin: 30px 0;">
-            <p style="color: #666666; font-size: 14px; margin: 5px 0;">
-              <strong>Angående tilbud:</strong> ${originalMessage.quoteTitle}
-            </p>
-          </div>
-          ` : ''}
-          
-          <div style="border-top: 1px solid #e0e0e0; margin-top: 40px; padding-top: 20px;">
-            <p style="color: #666666; font-size: 14px; margin: 5px 0;">
-              <strong>${companyName}</strong>
-            </p>
-            ${businessSettings?.organizationNumber ? `
-            <p style="color: #999999; font-size: 12px; margin: 5px 0;">
-              Org.nr: ${businessSettings.organizationNumber}
-            </p>
-            ` : ''}
-            ${businessSettings?.phone ? `
-            <p style="color: #666666; font-size: 14px; margin: 5px 0;">
-              📞 ${businessSettings.phone}
-            </p>
-            ` : ''}
-            ${businessSettings?.email ? `
-            <p style="color: #666666; font-size: 14px; margin: 5px 0;">
-              ✉️ ${businessSettings.email}
-            </p>
-            ` : ''}
-          </div>
-        </div>
+        <!-- Logo -->
+        <tr>
+          <td align="center" style="padding-bottom:24px;">
+            <img src="${businessSettings?.logoUrl || 'https://proanbud.no/logo/light/icon-primary.svg'}" alt="${companyName}" style="max-height:56px;display:block;border-radius:5px;border:none;" />
+          </td>
+        </tr>
+
+        <!-- Heading -->
+        <tr>
+          <td align="center" style="padding-bottom:24px;">
+            <h1 style="margin:0;font-size:22px;font-weight:500;color:#1d1d1f;">Svar fra ${companyName}</h1>
+          </td>
+        </tr>
+
+        <!-- Body -->
+        <tr>
+          <td style="font-size:14px;line-height:22px;color:#1d1d1f;">
+            <p style="margin:0 0 12px 0;">Du har mottat en melding angående: <strong>${replySubject}</strong></p>
+            <div style="padding: 8px 12px; background-color: whitesmoke; border-radius: 8px; margin: 0 0 18px 0;">
+                <p style="">
+                    ${replyMessage.split('\n\n--- Original melding ---')[0].replace(/\n/g, '<br>')}
+                </p>
+            </div>
+          </td>
+        </tr>
+
+        <!-- CTA -->
+        <tr>
+          <td align="center" style="padding-bottom:32px;">
+            <a href="${viewUrl}" style="background:#1d1d1f;color:#ffffff;text-decoration:none;font-size:14px;font-weight:500;padding:12px 28px;border-radius:999px;display:inline-block;">Se tilbud</a>
+          </td>
+        </tr>
+
+        <!-- Info -->
+        <tr>
+          <td style="font-size:13px;line-height:20px;color:#6e6e73;padding-bottom:24px;">
+            <p style="margin:0 0 8px 0;text-align:center;">På tilbudssiden kan du:</p>
+            <ul style="margin:8px auto 0 auto;padding:0;list-style:none;max-width:270px;">
+              <li style="margin-bottom:2px;">• Se full prissammendrag og beskrivelse</li>
+              <li style="margin-bottom:2px;">• Godkjenne eller avvise tilbudet</li>
+              <li>• Stille spørsmål eller komme med innspill</li>
+            </ul>
+          </td>
+        </tr>
         
-        <div style="background-color: #f8f9fa; padding: 20px; text-align: center;">
-          <p style="color: #999999; font-size: 12px; margin: 0;">
-            Powered by Proanbud AI
-          </p>
-        </div>
-      </div>
+        <!-- Firmainfo -->
+        
+        <tr>
+            <td style="">
+                <div style="margin-top:20px; font-size:12px;">
+                    <p style="color: #666666; font-size: 13px; margin: 5px 0;">
+                      <strong>${companyName}</strong>
+                    </p>
+                    ${businessSettings?.organizationNumber ? `
+                    <p style="color: #999999; font-size: 12px; margin: 5px 0;">
+                      Org.nr: ${businessSettings.organizationNumber}
+                    </p>
+                    ` : ''}
+                    ${businessSettings?.phone ? `
+                    <p style="color: #666666; font-size: 12px; margin: 5px 0;">
+                      📞 ${businessSettings.phone}
+                    </p>
+                    ` : ''}
+                    ${businessSettings?.email ? `
+                    <p style="color: #666666; font-size: 12px; margin: 5px 0;">
+                      ✉️ ${businessSettings.email}
+                    </p>
+                    ` : ''}
+                  </div>
+            </td>
+        </tr>
+        
+
+        <tr>
+          <td>
+            <hr style="border:none;border-top:1px solid #e5e5e7;margin:24px 0;" />
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td style="font-size:11px;line-height:18px;color:#86868b;text-align:center;">
+            Denne meldingen er ment for <strong>${customerName}</strong> og er sendt fra post@proanbud.no.<br />
+            Avsender-IP: 35.219.200.109 · Bergen, Norge.<br />
+            Hvis du ikke er riktig mottaker, kan du se bort fra denne e-posten.
+          </td>
+        </tr>
+
+      </table>
+    </td>
+  </tr>
+</table>
     `;
 
     // Send email
