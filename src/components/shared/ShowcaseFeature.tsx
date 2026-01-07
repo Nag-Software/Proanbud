@@ -118,9 +118,9 @@ const Feature197 = ({
             <div className="relative">
               <div className="relative rounded-2xl overflow-hidden shadow-2xl border-4 border-white">
                 <Image
-                  src="/assets/hero/smiler.png"
+                  src="/assets/222.jpg"
                   alt="Platform dashboard"
-                  className="w-full h-auto max-h-[400px] object-cover"
+                  className="w-full min-h-[350px] max-h-[400px] object-cover"
                   width={1280}
                   height={720}
                   loading="lazy"
@@ -129,7 +129,7 @@ const Feature197 = ({
                 <motion.div whileHover={shouldReduceMotion ? undefined : { y: -4 }} className="absolute top-4 right-4 bg-white rounded-xl p-3 shadow-xl animate-float">
                   <div className="flex items-center justify-around gap-3">
                     <div className="w-3 h-3 bg-[#82ffb2] rounded-full animate-pulse"></div>
-                    <span className="text-sm font-semibold">Jeg sparer 12 375 kr/mnd.</span>
+                    <span className="text-sm font-semibold">Jeg sparer 8 750 kr/mnd.</span>
                   </div>
                   <span className="ml-6 text-xs font-normal text-gray-500">Nag Snekkerservice</span>
                 </motion.div>

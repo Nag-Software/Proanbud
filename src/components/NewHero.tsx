@@ -11,6 +11,8 @@ import { getLaunchSpecialBanner, getDiscountTypeLabel, LaunchSpecialBanner } fro
 import white from "../../public/logo/light/icon-muted.svg";
 import { storage } from "@/lib/firebase";
 import { ref, getDownloadURL } from 'firebase/storage';
+import { useRouter } from 'next/navigation';
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const HERO_VIDEO_PATH = process.env.NEXT_PUBLIC_HERO_VIDEO_PATH ?? "videos/Proanbud 2025-11-28 22:27:42.mp4";
 
@@ -104,6 +106,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoPath, className }) => {
 
 
 export function NewHero() {
+  const router = useRouter();
   const [banner, setBanner] = useState<LaunchSpecialBanner | null>(null);
   const [loading, setLoading] = useState(true);
   const [isVisible, setIsVisible] = useState(false);
@@ -152,6 +155,8 @@ export function NewHero() {
 
   const shouldReduceMotion = useReducedMotion();
 
+  const isMobile = useIsMobile();
+
   const container = {
     hidden: {},
     visible: { transition: { staggerChildren: 0.06 } }
@@ -185,32 +190,57 @@ export function NewHero() {
         </Link>
       </div>
       <div className="max-w-6xl mx-auto px-6 sm:px-8 lg:px-12">
-        {/* Launch Special Banner */}
-        <div className="mb-6 mx-auto max-w-2xl">
-          {banner && banner.isActive && (
-            <div className="bg-gradient-to-r from-[#82ffb2] via-[#82ffb2] to-[#66ff9f] rounded-2xl p-[1px] shadow-lg">
-              <div className="bg-white rounded-xl px-6 py-3">
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-2 text-center sm:text-left">
-                  <span className="text-2xl">🎉</span>
-                  <div className="flex-1">
-                    <p className="text-gray-900 font-semibold text-md">
-                      Lanseringstilbud
-                    </p>
-                    <p className="text-gray-600 text-xs">
-                      De første {banner.totalPlaces} kundene får <span className="font-bold text-gray-900">{banner.discountPercentage}% rabatt {getDiscountTypeLabel(banner.discountType)}!</span>
-                    </p>
-                    <p className="text-gray-600 text-xs">
-                      Rabattkode: <span className="font-bold text-gray-900">LANS25</span>
-                    </p>
-                  </div>
-                  <div className="bg-[#82ffb2] text-primary px-4 py-2 rounded-lg font-semibold text-xs whitespace-nowrap">
-                    Kun {banner.availablePlaces} plasser igjen
+        {isMobile ? (
+          <div className="mb-10 mt-[-30px] mx-auto max-w-2xl">
+            {banner && banner.isActive && (
+              <div className="bg-gradient-to-r from-[#82ffb2] via-[#82ffb2] to-[#66ff9f] rounded-2xl p-[1px] shadow-lg">
+                <div className="bg-white rounded-xl px-4 py-3">
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-2 text-center sm:text-left">
+                    <div className="flex-1">
+                      <span className="text-2xl">🎉</span>
+                      <p className="text-gray-900 font-semibold text-sm">
+                        Nyttårskampanje
+                      </p>
+                      <p className="text-gray-600 text-xs">
+                        Vår jobb er å spare deg for penger. <br/>Start idag for kun <strong>5 kr</strong>! Kampanjekode: <span className="font-bold text-gray-900">JAN5</span>
+                      </p>
+                    </div>
+                    <Button onClick={() => router.push("/signup")} variant="outline" className="bg-[#82ffb2] h-9 text-primary px-4 rounded-lg font-semibold text-xs whitespace-nowrap">
+                      Se tilbud
+                    </Button>
                   </div>
                 </div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        ) : (
+          /* Launch Special Banner */
+          <div className="mb-6 mx-auto max-w-2xl">
+            {banner && banner.isActive && (
+              <div className="bg-gradient-to-r from-[#82ffb2] via-[#82ffb2] to-[#66ff9f] rounded-2xl p-[1px] shadow-lg">
+                <div className="bg-white rounded-xl px-6 py-3">
+                  <div className="flex flex-row sm:flex-row items-center justify-center gap-4 text-center sm:text-left">
+                    <span className="text-2xl">🎉</span>
+                    <div className="flex-1">
+                      <p className="text-gray-900 font-semibold text-md md:text-[18px]">
+                        Nyttårskampanje
+                      </p>
+                      <p className="text-gray-600 text-xs md:text-sm">
+                        Vår jobb er å spare deg for penger. Start idag for kun <strong>5 kr</strong>!
+                      </p>
+                      <p className="text-gray-600 text-xs md:text-sm">
+                        Kampanjekode: <span className="font-bold text-gray-900">JAN5</span>
+                      </p>
+                    </div>
+                    <Button onClick={() => router.push("/signup")} variant="outline" className="bg-[#82ffb2] text-primary px-4 rounded-lg font-semibold text-xs whitespace-nowrap">
+                      Aktiver tilbud
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="text-center max-w-4xl mx-auto mb-10 space-y-6">
           <motion.h1 variants={fadeUp}

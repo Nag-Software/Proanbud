@@ -13,13 +13,13 @@ import { ArrowRight } from "lucide-react";
 import { motion, useReducedMotion } from 'framer-motion';
 
 export function BlogSection1() {
-  const { posts, loading, error } = useBlogPosts(4);
+  const { posts, loading, error } = useBlogPosts(6);
 
   if (error) {
     return (
       <section className="transparent max-w-7xl mx-auto section-padding-y">
         <div className="container-padding-x container mx-auto">
-          <div className="flex flex-col items-center gap-10 md:gap-12">
+          <div className="flex flex-col items-center gap-8 md:gap-12">
             <div className="section-title-gap-lg mx-auto flex max-w-xl flex-col items-center text-center">
               <Tagline>Proanbud x Blogg</Tagline>
               <h1 id="blog-section-heading" className="heading-lg">
@@ -67,12 +67,12 @@ export function BlogSection1() {
 
           {/* Blog Grid */}
           <div
-            className="flex flex-wrap gap-8 md:gap-6 justify-center"
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10 md:gap-6 justify-center"
             role="list"
           >
             {loading
               ? // Loading skeletons
-                Array.from({ length: 4 }).map((_, index) => (
+                Array.from({ length: 6 }).map((_, index) => (
                   <div key={index} className="flex flex-col gap-4 rounded-xl">
                     <Skeleton className="aspect-[4/3] rounded-xl" />
                     <div className="flex flex-col gap-3">

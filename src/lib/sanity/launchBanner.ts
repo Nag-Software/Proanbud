@@ -3,10 +3,17 @@ import { client } from '@/lib/sanity'
 export interface LaunchSpecialBanner {
   _id: string
   isActive: boolean
+  emoji?: string
+  headline?: string
   totalPlaces: number
   availablePlaces: number
   discountPercentage: number
   discountType: 'lifetime' | 'firstYear' | 'threeMonths' | 'oneMonth'
+  discountLabel?: string
+  descriptionTemplate?: string
+  promoCodeLabel?: string
+  promoCodeValue?: string
+  availabilityTemplate?: string
 }
 
 export async function getLaunchSpecialBanner(): Promise<LaunchSpecialBanner | null> {
@@ -29,4 +36,15 @@ export function getDiscountTypeLabel(type: string): string {
     oneMonth: 'første måned'
   }
   return labels[type] || 'på livstid'
+}
+
+export function applyBannerTemplate(
+  template: string | undefined,
+  replacements: Record<string, string | number | undefined>
+): string | undefined {
+  if (!template) return undefined
+  return template.replace(/\{\{\s*(\w+)\s*\}\}/g, (_, key: string) => {
+    const value = replacements[key]
+    return value !== undefined && value !== null ? String(value) : ''
+  })
 }
