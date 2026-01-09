@@ -197,128 +197,78 @@ function HomeContent() {
       </section>
 
       {/* Before/After Section */}
-      <section className="py-16 xs:py-20 bg-gradient-to-br from-gray-50 via-white to-gray-100 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-50/20 via-transparent to-purple-50/20"></div>
+      <section className="py-18 xs:py-22 bg-whitesmoke relative overflow-hidden">
+        <div className="absolute inset-0" />
         <div className="max-w-6xl mx-auto px-6 sm:px-8 lg:px-12 relative z-10">
           <div className="text-center mb-12">
-            <h2 
-              className="text-3xl md:text-4xl font-normal text-gray-900 tracking-tight mb-4"
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/70 border border-white/60 shadow-sm text-xs font-medium text-gray-700">
+              <Sparkles className="w-4 h-4 text-[#82ffb2]" />
+              <span>Din digitale tilbudsansatte</span>
+            </div>
+            <h2
+              className="text-3xl md:text-4xl font-normal text-gray-900 tracking-tight mt-4 mb-3"
               style={{ fontFamily: 'var(--font-lora), serif' }}
             >
-              Fra kaos til kontroll
+              La Proanbud gjøre jobben for deg
             </h2>
             <p className="text-gray-600 text-base md:text-lg font-light max-w-2xl mx-auto">
-              Se forskjellen Proanbud gjør i din arbeidshverdag
+              Proanbud jobber for deg – som en ekstra kollega som gjør ferdig tilbud på minutter og gir deg ro rundt pris og oppfølging.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-8 md:gap-12">
-            {/* BEFORE */}
-            <div className="relative group">
-              <div className="absolute -top-4 -left-4 bg-red-500/90 backdrop-blur-sm text-white px-4 py-2 rounded-xl font-semibold text-sm shadow-xl shadow-red-500/30 border border-white/20 z-10">
-                Før Proanbud
+          <div className="grid md:grid-cols-2 gap-6 md:gap-8">
+            <div className="group rounded-2xl bg-white/70 backdrop-blur-lg border border-white/70 shadow-[0_20px_60px_-24px_rgba(0,0,0,0.25)] hover:shadow-[0_24px_70px_-28px_rgba(0,0,0,0.28)] transition-all duration-500 p-8">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="text-sm font-semibold text-gray-900 bg-red-200 rounded px-2 py-1">Uten Proanbud</div>
+                </div>
+                <span className="text-xs text-gray-500">Tungt, mange steg</span>
               </div>
-              <div className="bg-white/70 backdrop-blur-lg border border-red-200/60 rounded-2xl p-8 pt-12 shadow-xl shadow-red-100/40 transition-all duration-500 group-hover:shadow-red-200/50 group-hover:scale-[1.02]">
-                <div className="space-y-6">
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-red-100/80 backdrop-blur-sm flex items-center justify-center flex-shrink-0 mt-1 shadow-lg shadow-red-100/50">
-                      <Clock className="w-4 h-4 text-red-600" />
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-gray-900 mb-1">1-3 timer per tilbud</h4>
-                      <p className="text-gray-600 text-sm">Manuell kalkulering, Excel-ark og formattering tar lang tid</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-red-100/80 backdrop-blur-sm flex items-center justify-center flex-shrink-0 mt-1 shadow-lg shadow-red-100/50">
-                      <FileText className="w-4 h-4 text-red-600" />
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-gray-900 mb-1">Uprofesjonelle tilbud</h4>
-                      <p className="text-gray-600 text-sm">Word-dokumenter som ser hjemmelagde ut</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-red-100/80 backdrop-blur-sm flex items-center justify-center flex-shrink-0 mt-1 shadow-lg shadow-red-100/50">
-                      <TrendingUp className="w-4 h-4 text-red-600" />
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-gray-900 mb-1">Usikker prissetting</h4>
-                      <p className="text-gray-600 text-sm">Gjetting på priser - taper oppdrag eller tjener for lite</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-red-100/80 backdrop-blur-sm flex items-center justify-center flex-shrink-0 mt-1 shadow-lg shadow-red-100/50">
-                      <Users className="w-4 h-4 text-red-600" />
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-gray-900 mb-1">Kaotisk kundeoppfølging</h4>
-                      <p className="text-gray-600 text-sm">Mister oversikten over hvem du har sendt til og når</p>
-                    </div>
-                  </div>
+              <div className="space-y-4 text-gray-700 text-sm">
+                <div className="flex gap-3">
+                  <div className="w-1.5 rounded-full bg-red-200" />
+                  <p>Excel, Word og manuelle sjekker før du får ut noe som ser bra ut.</p>
+                </div>
+                <div className="flex gap-3">
+                  <div className="w-1.5 rounded-full bg-red-200" />
+                  <p>Priser fra flere kilder, liten trygghet på marginene.</p>
+                </div>
+                <div className="flex gap-3">
+                  <div className="w-1.5 rounded-full bg-red-200" />
+                  <p>Oppfølging via notater og e-posttråder som lett forsvinner.</p>
                 </div>
               </div>
             </div>
 
-            {/* AFTER */}
-            <div className="relative group">
-              <div className="absolute -top-4 -left-4 bg-[#82ffb2]/90 backdrop-blur-sm text-gray-900 px-4 py-2 rounded-xl font-semibold text-sm shadow-2xl shadow-[#82ffb2]/40 border border-white/20 z-10">
-                Med Proanbud
+            <div className="group rounded-2xl bg-white/80 backdrop-blur-lg border border-[#82ffb2]/50 shadow-[0_20px_60px_-24px_rgba(0,0,0,0.2)] hover:shadow-[0_26px_80px_-30px_rgba(0,0,0,0.25)] transition-all duration-500 p-8 relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-[#82ffb2]/10 via-white/30 to-blue-50/20 pointer-events-none" />
+              <div className="flex items-center justify-between mb-6 relative z-10">
+                <div className="flex items-center gap-3">
+                  <div className="text-sm font-semibold text-gray-900 bg-[#82ffb2]/80 rounded px-2 py-1">Med Proanbud</div>
+                </div>
+                <span className="text-xs text-gray-600">Lett, sammenhengende</span>
               </div>
-              <div className="bg-white/70 backdrop-blur-lg border border-[#82ffb2]/60 rounded-2xl p-8 pt-12 shadow-xl shadow-[#82ffb2]/30 transition-all duration-500 group-hover:shadow-[#82ffb2]/50 group-hover:scale-[1.02]">
-                <div className="space-y-6">
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-[#82ffb2]/80 backdrop-blur-sm flex items-center justify-center flex-shrink-0 mt-1 shadow-lg shadow-[#82ffb2]/50">
-                      <Zap className="w-4 h-4 text-gray-900" />
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-gray-900 mb-1">5 minutter per tilbud</h4>
-                      <p className="text-gray-600 text-sm">AI kalkulerer automatisk - du godkjenner og sender</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-[#82ffb2]/80 backdrop-blur-sm flex items-center justify-center flex-shrink-0 mt-1 shadow-lg shadow-[#82ffb2]/50">
-                      <Sparkles className="w-4 h-4 text-gray-900" />
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-gray-900 mb-1">Interaktive tilbud</h4>
-                      <p className="text-gray-600 text-sm">Polerte, oversiktlige tilbud som imponerer kunder</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-[#82ffb2]/80 backdrop-blur-sm flex items-center justify-center flex-shrink-0 mt-1 shadow-lg shadow-[#82ffb2]/50">
-                      <Brain className="w-4 h-4 text-gray-900" />
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-gray-900 mb-1">AI-drevet prissetting</h4>
-                      <p className="text-gray-600 text-sm">Konkurransedyktige priser basert på markedsdata og dine leverandører</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-[#82ffb2]/80 backdrop-blur-sm flex items-center justify-center flex-shrink-0 mt-1 shadow-lg shadow-[#82ffb2]/50">
-                      <BarChart3 className="w-4 h-4 text-gray-900" />
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-gray-900 mb-1">Full kontroll & oversikt</h4>
-                      <p className="text-gray-600 text-sm">Se alle tilbud, kunder og konverteringsrate på ett sted</p>
-                    </div>
-                  </div>
+              <div className="space-y-4 text-gray-800 text-sm relative z-10">
+                <div className="flex gap-3">
+                  <div className="w-1.5 rounded-full bg-[#82ffb2]" />
+                  <p>AI-forslag gir et ferdig utkast på minutter, du kan finjustere før sending.</p>
+                </div>
+                <div className="flex gap-3">
+                  <div className="w-1.5 rounded-full bg-[#82ffb2]" />
+                  <p>Interaktive, profesjonelle tilbud med logo, kontaktinfo, materialer og priser, kommunikasjon og enkel signering som imponerer kunder.</p>
+                </div>
+                <div className="flex gap-3">
+                  <div className="w-1.5 rounded-full bg-[#82ffb2]" />
+                  <p>Varsler, statistikk og full historikk i ett dashbord.</p>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Stats Below */}
           <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-6">
             <div className="bg-white/60 backdrop-blur-md border border-white/40 rounded-2xl p-6 shadow-xl shadow-gray-200/50 text-center transition-all duration-300 hover:scale-105 hover:shadow-2xl">
               <div className="text-3xl md:text-4xl font-bold text-gray-900 mb-2" style={{ fontFamily: 'var(--font-lora), serif' }}>
-                96%
+                89%
               </div>
               <div className="text-sm text-gray-600">Mindre tid brukt</div>
             </div>
@@ -330,7 +280,7 @@ function HomeContent() {
             </div>
             <div className="bg-white/60 backdrop-blur-md border border-white/40 rounded-2xl p-6 shadow-xl shadow-gray-200/50 text-center transition-all duration-300 hover:scale-105 hover:shadow-2xl">
               <div className="text-3xl md:text-4xl font-bold text-gray-900 mb-2" style={{ fontFamily: 'var(--font-lora), serif' }}>
-                21x
+                9x
               </div>
               <div className="text-sm text-gray-600">Flere tilbud sendt</div>
             </div>
@@ -338,7 +288,7 @@ function HomeContent() {
               <div className="text-3xl md:text-4xl font-bold text-gray-900 mb-2" style={{ fontFamily: 'var(--font-lora), serif' }}>
                 100%
               </div>
-              <div className="text-sm text-gray-600">Mer profesjonelt</div>
+              <div className="text-sm text-gray-600">Profesjonalitet</div>
             </div>
           </div>
         </div>

@@ -173,14 +173,14 @@ export function NewHero() {
       whileInView="visible"
       viewport={{ once: true, amount: 0.18 }}
       variants={shouldReduceMotion ? undefined : container}
-      className="w-full py-16 md:py-20 bg-white"
+      className="w-full py-14 bg-white"
     >
       <div 
         ref={logoRef}
         className="absolute top-130 h-full left-1/10 overflow-hidden z-[0] pointer-events-none scale-130"
       >
         <Link href="/">
-          <Image 
+          <Image
             src={white}
             alt="Proanbud Logo"
             className={`w-0 md:w-100 lg:w-130 rotate-[-35deg] transition-all duration-1000 ease-in ${
@@ -215,7 +215,7 @@ export function NewHero() {
           </div>
         ) : (
           /* Launch Special Banner */
-          <div className="mb-6 mx-auto max-w-2xl">
+          <div className="mb-10 mx-auto max-w-2xl">
             {banner && banner.isActive && (
               <div className="bg-gradient-to-r from-[#82ffb2] via-[#82ffb2] to-[#66ff9f] rounded-2xl p-[1px] shadow-lg">
                 <div className="bg-white rounded-xl px-6 py-3">
@@ -243,15 +243,20 @@ export function NewHero() {
         )}
 
         <div className="text-center max-w-4xl mx-auto mb-10 space-y-6">
+          <motion.p variants={fadeUp}
+            className="bg-[#82ffb2]/20 border-1 border-[#82ffb2] text-black/75 inline-block px-3 py-1 rounded-full text-sm font-medium">
+              Lag profesjonelle tilbud på <strong>kun 5 minutter</strong>
+          </motion.p>
           <motion.h1 variants={fadeUp}
-            className="text-3xl md:text-5xl lg:text-6xl font-normal text-gray-900 tracking-tight leading-[1.1]"
+            className="text-4xl md:text-5xl lg:text-6xl font-normal text-gray-900 tracking-tight leading-[1.1]"
             style={{ fontFamily: 'var(--font-lora), serif' }}
           >
-            Norges første AI-drevne tilbudsplattform
+            {/*Norges første AI-drevne tilbudsplattform*/}
+            Komplett KI-tilbudssystem for håndverkere
           </motion.h1>
           
           <motion.p variants={fadeUp} className="text-gray-600 text-base md:text-lg leading-relaxed max-w-2xl mx-auto font-light">
-            Din komplette tilbudsplattform for håndverkere. Bruk AI til å prissete riktig, send profesjonelle tilbud fra nettbrett eller PC, og vinn flere oppdrag.
+            Proanbud er Norges første tilbudssystem som bruker KI-teknologi til å beregne prosjekter med korrekte priser, og sender profesjonelle tilbud fra mobilen eller PC. Vinn flere oppdrag og spar tid på administrasjon.
           </motion.p>
           
           <motion.div variants={fadeUp} className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
