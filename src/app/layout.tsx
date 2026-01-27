@@ -23,7 +23,7 @@ const lora = Lora({
 
 export const metadata: Metadata = {
   title: "Proanbud",
-  description: "AI-drevet tilbudssystem for håndverkere",
+  description: "Norges første KI-drevne tilbudssystem for byggebransjen",
 };
 
 export default function RootLayout({
@@ -38,7 +38,7 @@ export default function RootLayout({
       <head>
         <link rel="icon" href="/favicon.png" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="description" content="AI-drevet tilbudssystem for håndverkere" />
+        <meta name="description" content="Norges første KI-drevne tilbudssystem for byggebransjen" />
         <Script id="facebook-pixel" strategy="afterInteractive" dangerouslySetInnerHTML={{ __html: `
           !function(f,b,e,v,n,t,s)
           {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
