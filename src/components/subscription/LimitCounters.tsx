@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useSubscription } from '@/contexts/SubscriptionContextNew';
+import { useAuth } from '@/contexts/AuthContext';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '../ui/button';
 import { Alert } from '../ui/alert';
@@ -12,6 +13,7 @@ import { Input } from '../ui/input';
 
 export const LimitCounters = () => {
   const { usage, loading } = useSubscription();
+  const { user } = useAuth();
   const [reporting, setReporting] = React.useState(false);
   const [reportingSent, setReportingSent] = React.useState(false);
 
@@ -25,7 +27,7 @@ export const LimitCounters = () => {
 
   async function sendReport() {
     const emailInput = document.getElementById('reporter-email') as HTMLInputElement;
-    const email = emailInput ? emailInput.value : '';
+    const email = emailInput && emailInput.value ? emailInput.value : (user?.email || '');
 
     const message = (document.querySelector('textarea') as HTMLTextAreaElement).value;
 
