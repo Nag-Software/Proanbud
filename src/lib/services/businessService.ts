@@ -105,6 +105,31 @@ export const uploadBusinessLogo = async (file: File): Promise<string> => {
   }
 };
 
+// Upload a generic file (attachments for quotes) and return metadata
+export const uploadAttachment = async (file: File): Promise<{ name: string; url: string; type?: string; size?: number; storagePath?: string }> => {
+  try {
+    const userId = getCurrentUserId();
+    const timestamp = Date.now();
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const path = `users/${userId}/attachments/${timestamp}_${safeName}`;
+    const fileRef = storageRef(storage, path);
+
+    const snapshot = await uploadBytes(fileRef, file);
+    const downloadURL = await getDownloadURL(snapshot.ref);
+
+    return {
+      name: file.name,
+      url: downloadURL,
+      type: file.type,
+      size: file.size,
+      storagePath: path,
+    };
+  } catch (error) {
+    console.error('Failed to upload attachment:', error);
+    throw new Error('Kunne ikke laste opp vedlegg');
+  }
+};
+
 // Delete existing logo
 export const deleteBusinessLogo = async (): Promise<void> => {
   try {

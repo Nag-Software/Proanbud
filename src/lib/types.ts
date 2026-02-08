@@ -84,6 +84,15 @@ export interface Tilbud {
   template?: string;
   viewToken?: string; // Unique token for customer to view quote without auth
   userId?: string; // Owner of the quote
+  attachments?: Attachment[];
+}
+
+export interface Attachment {
+  name: string;
+  url: string;
+  type?: string;
+  size?: number;
+  storagePath?: string;
 }
 
 export interface Kunde {

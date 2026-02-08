@@ -39,7 +39,7 @@ import {
 } from 'lucide-react';
 import { createTilbud, updateTilbud, getTilbudById, TilbudFormData, getUniqueCategoriesFromQuotes } from '@/lib/services/tilbudService';
 import { getCustomers } from '@/lib/services/customerService';
-import { getBusinessContextForAI, getBusinessSettings } from '@/lib/services/businessService';
+import { getBusinessContextForAI, getBusinessSettings, uploadAttachment } from '@/lib/services/businessService';
 import { Kunde, PriceComponent, AIPriceSuggestion, BusinessSettings, Tilbud } from '@/lib/types';
 import { useBreakpoint } from '@/hooks/useResponsive';
 import { generateQuoteEmailHtml } from '@/lib/email/generateQuoteEmailHtml';
@@ -79,7 +79,8 @@ interface NewQuoteDrawerProps {
 
 interface QuoteData {
   jobDescription: string;
-  images: File[];
+  // attachments may be File objects (new uploads) or existing attachment metadata from server
+  attachments: (File | { name: string; url: string; type?: string; size?: number; storagePath?: string })[];
   aiSuggestion: AIPriceSuggestion | null;
   adjustedComponents: PriceComponent[];
   finalPrice: number;
@@ -100,7 +101,8 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
   const [currentStep, setCurrentStep] = useState(1);
   const [quoteData, setQuoteData] = useState<QuoteData>({
     jobDescription: '',
-    images: [],
+    // attachments can be File objects (new uploads) or existing attachment metadata from saved quotes
+    attachments: [],
     aiSuggestion: null,
     adjustedComponents: [],
     finalPrice: 0,
@@ -217,7 +219,7 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
       // Set quote data
       setQuoteData({
         jobDescription: editingQuote.beskrivelse || '',
-        images: [],
+        attachments: editingQuote.attachments || [],
         aiSuggestion: null,
         adjustedComponents: editingQuote.prisgrunnlag || [],
         finalPrice: editingQuote.belop,
@@ -334,6 +336,27 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
     }
   };
 
+  // Upload any new File attachments and return normalized attachment metadata
+  const uploadAllAttachments = async () => {
+    if (!quoteData.attachments || quoteData.attachments.length === 0) return [];
+
+    const results: any[] = [];
+    for (const item of quoteData.attachments) {
+      try {
+        if (item instanceof File) {
+          const uploaded = await uploadAttachment(item);
+          results.push(uploaded);
+        } else if ((item as any).url) {
+          // Already uploaded attachment
+          results.push(item);
+        }
+      } catch (err) {
+        console.warn('Failed to upload attachment:', err);
+      }
+    }
+    return results;
+  };
+
   const applyCatalogSelections = (selections: ProductCatalogSelectionItem[]) => {
     if (selections.length === 0) {
       return;
@@ -387,7 +410,7 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
     setCurrentStep(1);
     setQuoteData({
       jobDescription: '',
-      images: [],
+      attachments: [],
       aiSuggestion: null,
       adjustedComponents: [],
       finalPrice: 0,
@@ -633,6 +656,16 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
       prisgrunnlag: quoteData.adjustedComponents,
     };
 
+    // Upload attachments (new files) and include metadata
+    try {
+      const uploadedAttachments = await uploadAllAttachments();
+      if (uploadedAttachments && uploadedAttachments.length > 0) {
+        (tilbudData as any).attachments = uploadedAttachments;
+      }
+    } catch (err) {
+      console.warn('Failed to upload attachments for draft:', err);
+    }
+
     if (!skipValidation) {
       setIsSubmitting(true);
     }
@@ -690,6 +723,16 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
         notater: ``,
         prisgrunnlag: quoteData.adjustedComponents,
       };
+
+      // Upload attachments (new files) and include metadata
+      try {
+        const uploadedAttachments = await uploadAllAttachments();
+        if (uploadedAttachments && uploadedAttachments.length > 0) {
+          (tilbudData as any).attachments = uploadedAttachments;
+        }
+      } catch (err) {
+        console.warn('Failed to upload attachments before submit:', err);
+      }
 
       // Create or update the quote
       let quoteId: string;
@@ -926,18 +969,19 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
     setDragActive(false);
 
     const files = Array.from(e.dataTransfer.files);
-    const imageFiles = files.filter(file => file.type.startsWith('image/'));
-    
+    // Accept images, pdf and word docs by default; allow any file but cap count and size client-side
+    const allowed = files.filter(file => file.size > 0);
+
     setQuoteData(prev => ({
       ...prev,
-      images: [...prev.images, ...imageFiles].slice(0, 5) // Max 5 images
+      attachments: [...prev.attachments, ...allowed].slice(0, 10) // Max 10 attachments
     }));
   }, []);
 
-  const removeImage = (index: number) => {
+  const removeAttachment = (index: number) => {
     setQuoteData(prev => ({
       ...prev,
-      images: prev.images.filter((_, i) => i !== index)
+      attachments: prev.attachments.filter((_, i) => i !== index)
     }));
   };
 
@@ -994,7 +1038,7 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Bilder (Ikke tilgjengelig for øyeblikket)
+          Vedlegg (bilder, PDF, DOCX etc.)
         </label>
         <div
           className={`
@@ -1009,38 +1053,50 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
         >
           <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
           <p className="text-sm text-gray-600 mb-1">
-            Dra og slipp bilder her, eller klikk for å velge
+            Dra og slipp filer her, eller klikk for å velge
           </p>
           <p className="text-xs text-gray-500">
-            Maks 5 bilder, PNG, JPG eller WEBP
+            Maks 10 vedlegg. Tillatte formater: bilder, PDF, DOCX
           </p>
           <input
             id="file-input"
             type="file"
             multiple
-            accept="image/*"
+            accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
             className="hidden"
             onChange={(e) => {
               const files = Array.from(e.target.files || []);
               setQuoteData(prev => ({
                 ...prev,
-                images: [...prev.images, ...files].slice(0, 5)
+                attachments: [...prev.attachments, ...files].slice(0, 10)
               }));
             }}
           />
         </div>
 
-        {quoteData.images.length > 0 && (
+        {quoteData.attachments.length > 0 && (
           <div className="mt-4 grid grid-cols-3 gap-2">
-            {quoteData.images.map((file, index) => (
+            {quoteData.attachments.map((fileOrMeta, index) => (
               <div key={index} className="relative">
-                <img
-                  src={URL.createObjectURL(file)}
-                  alt={`Upload ${index + 1}`}
-                  className="w-full h-20 object-cover rounded-lg border"
-                />
+                {fileOrMeta instanceof File && fileOrMeta.type.startsWith('image/') ? (
+                  <img
+                    src={URL.createObjectURL(fileOrMeta)}
+                    alt={`Upload ${index + 1}`}
+                    className="w-full h-20 object-cover rounded-lg border"
+                  />
+                ) : fileOrMeta && (fileOrMeta as any).url ? (
+                  <div className="w-full h-20 flex items-center justify-center rounded-lg border bg-gray-50">
+                    <a href={(fileOrMeta as any).url} target="_blank" rel="noreferrer" className="text-sm text-gray-700 truncate px-2">
+                      {(fileOrMeta as any).name}
+                    </a>
+                  </div>
+                ) : (
+                  <div className="w-full h-20 flex items-center justify-center rounded-lg border bg-gray-50">
+                    <span className="text-sm text-gray-700">{(fileOrMeta as any).name || 'Vedlegg'}</span>
+                  </div>
+                )}
                 <button
-                  onClick={() => removeImage(index)}
+                  onClick={() => removeAttachment(index)}
                   className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600"
                 >
                   <X className="w-3 h-3" />

@@ -84,6 +84,13 @@ export interface TilbudFormData {
   notater?: string;
   prisgrunnlag?: PriceComponent[];
   template?: string;
+  attachments?: {
+    name: string;
+    url: string;
+    type?: string;
+    size?: number;
+    storagePath?: string;
+  }[];
 }
 
 export interface RealtimeTilbud extends Omit<Tilbud, 'id'> {
@@ -316,6 +323,15 @@ export const createTilbud = async (tilbudData: TilbudFormData): Promise<string> 
     }
     if (tilbudData.template) {
       (newTilbud as any).template = tilbudData.template;
+    }
+    if (tilbudData.attachments && Array.isArray(tilbudData.attachments)) {
+      (newTilbud as any).attachments = tilbudData.attachments.map(att => ({
+        name: att.name,
+        url: att.url,
+        type: att.type || '',
+        size: att.size || 0,
+        storagePath: att.storagePath || ''
+      }));
     }
 
     // Add to user's Realtime Database path
@@ -560,6 +576,13 @@ export const updateTilbud = async (tilbudId: string, updates: Partial<TilbudForm
     if (updates.notater !== undefined) updateData.notater = updates.notater?.trim() || null;
     if (updates.prisgrunnlag !== undefined) updateData.prisgrunnlag = sanitizePriceComponents(updates.prisgrunnlag);
     if (updates.template !== undefined) updateData.template = updates.template;
+    if (updates.attachments !== undefined) updateData.attachments = Array.isArray(updates.attachments) ? updates.attachments.map(att => ({
+      name: att.name,
+      url: att.url,
+      type: att.type || '',
+      size: att.size || 0,
+      storagePath: att.storagePath || ''
+    })) : updates.attachments;
 
     // Get current data to check status change and update stats accordingly
     let shouldUpdateStats = false;
