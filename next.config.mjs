@@ -7,6 +7,11 @@ const nextConfig = {
   turbopack: {
     root: new URL('.', import.meta.url).pathname,
   },
+  // Allow app.localhost for local subdomain development
+  // Add this to /etc/hosts: 127.0.0.1 app.localhost
+  async headers() {
+    return [];
+  },
   typescript: {
     ignoreBuildErrors: true,
   },

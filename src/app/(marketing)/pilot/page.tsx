@@ -6,10 +6,10 @@ import { ArrowRight, Check, Clock, BarChart3, Shield } from 'lucide-react';
 import Logo from '@/components/shared/Logo';
 import Footer from '@/components/shared/Footer';
 import Header from '@/components/shared/Header';
-import PilotHero from '../../components/PilotHeroSanity';
-import SignupForm from '../../components/SignupForm';
-import PilotAgreementPreview from '../../components/PilotAgreementPreview';
-import { FaqSection } from '../../components/shared/FaqSection';
+import PilotHero from '@/components/PilotHeroSanity';
+import SignupForm from '@/components/SignupForm';
+import PilotAgreementPreview from '@/components/PilotAgreementPreview';
+import { FaqSection } from '@/components/shared/FaqSection';
 import { usePilotData } from '@/hooks/usePilotData';
 
 const SUGGESTED_METRICS = {

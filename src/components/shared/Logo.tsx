@@ -12,7 +12,7 @@ export default function Logo({ size = "md", mode="light"}: LogoProps) {
   const router = useRouter();
 
   return (
-    <div className="flex items-center gap-2 cursor-pointer" onClick={() => router.push("/")}>
+    <div className="flex items-center gap-2 cursor-pointer" onClick={() => router.push("https://proanbud.no")}>
       <Image 
       src={`/logo/${mode}/logo-primary.svg`}
       alt="Proanbud Logo"
