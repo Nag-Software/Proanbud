@@ -8,6 +8,8 @@ import { SubscriptionProvider } from '@/contexts/SubscriptionContextNew';
 import GoogleAnalytics from "@/components/GoogleAnalytics";
 import Script from "next/script";
 
+import { Analytics } from "@vercel/analytics/next"
+
 
 const geist = Geist({
   subsets: ["latin"],
@@ -32,6 +34,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   const gaId = process.env.NEXT_PUBLIC_GA_ID;
+  <Analytics/>
 
   return (
     <html lang="no">
