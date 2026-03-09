@@ -34,7 +34,6 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   const gaId = process.env.NEXT_PUBLIC_GA_ID;
-  <Analytics/>
 
   return (
     <html lang="no">
@@ -70,6 +69,7 @@ export default function RootLayout({
       </head>
       <body className={`${geist.variable} ${lora.variable} font-serif bg-background text-foreground overflow-x-hidden`} suppressHydrationWarning>
         {gaId && <GoogleAnalytics gaId={gaId} />}
+        <Analytics/>
         <AuthProvider>
           <SubscriptionProvider>
             {children}
