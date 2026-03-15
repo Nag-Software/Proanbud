@@ -10,7 +10,24 @@ import { client, aiConfigQuery } from '@/lib/sanity';
 const webSearchPreview = webSearchTool({
   filters: {
     allowedDomains: [
-      "obsbygg.nobyggmakker.nomaxbo.nomonter.noxl-bygg.nobyggtorget.nojula.nobauhaus.nobyggern.nomegaflis.no"
+      "obsbygg.no",
+      "byggmakker.no",
+      "monter.no",
+      "xl-bygg.no",
+      "byggtorget.no",
+      "jula.no",
+      "bauhaus.no",
+      "byggern.no",
+      "omegaflis.no",
+      "elektroimportoren.no",
+      "vvsgruppen.no",
+      "rørkjøp.no",
+      "comfort.no",
+      "vvsbutikken.no",
+      "vvs1.no",
+      "proffpartner.no",
+      "verktøy24.no",
+      "tools.no"
     ]
   },
   searchContextSize: "medium",
