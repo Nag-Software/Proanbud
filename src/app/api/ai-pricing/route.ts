@@ -102,7 +102,7 @@ Du skal løse oppgaven ved først å lese og tolke all input, deretter følge ar
 - Arbeid: Timer rundes OPP (minimum 0,5).
 - Utstyr: Oppgi type og utleieperiode i dager.
 - Transport: Minimum kr 500, og 10–30 kr/km (20 kr/km hvis usikkert).
-- Priser ALLTID uten mva.
+- Priser ALLTID uten mva. 
 
 # Confidence-system (skala)
 - Bruk nøyaktig nivå iht. tabell, sett lavere confidence ved fuzzy/markedspris.
@@ -210,7 +210,7 @@ async function getAIConfig() {
   try {
     const config = await client.fetch(aiConfigQuery);
     return {
-      model: config?.model || "gpt-5-nano",
+      model: config?.model || "gpt-5",
       reasoningeffort: config?.reasoningeffort || "low",
       komponentSKs: config?.komponentSKs || [],
       allowWebsearch: config?.allowWebsearch ?? true
@@ -219,8 +219,8 @@ async function getAIConfig() {
     console.error('Failed to fetch AI config:', error);
     // Fallback to defaults
     return {
-      model: "gpt-5-nano",
-      reasoningeffort: "minimal",
+      model: "gpt-5",
+      reasoningeffort: "low",
       komponentSKs: [],
       allowWebsearch: false
     };
