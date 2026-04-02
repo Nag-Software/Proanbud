@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 ## Proanbud
 #### A Nag Software product
 
@@ -234,3 +235,5 @@ For issues or questions:
 - Internal: Contact Nag Software development team
 - Firebase Issues: Check [Firebase Console](https://console.firebase.google.com/project/proanbudas)
 
+=======
+>>>>>>> Stashed changes
