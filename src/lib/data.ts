@@ -33,8 +33,8 @@ export const navLinks: NavLink[] = [
     icon: 'Inbox'
   },
   {
-    href: "/katalog",
-    label: "Katalog",
+    href: "/prislister",
+    label: "Prislister",
     icon: "BookOpen"
   },
   {

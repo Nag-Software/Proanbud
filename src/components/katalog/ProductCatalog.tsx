@@ -543,8 +543,8 @@ const ProductCatalogComponent = (_: unknown, ref: React.Ref<ProductCatalogHandle
             <DrawerHeader className="border-b">
               <div className="flex items-center justify-between">
                 <div>
-                  <DrawerTitle>Produktkatalog</DrawerTitle>
-                  <DrawerDescription>Velg produkter fra katalogen</DrawerDescription>
+                  <DrawerTitle>Prislister</DrawerTitle>
+                  <DrawerDescription>Velg produkter fra prislistene</DrawerDescription>
                 </div>
                 {selectionCount > 0 && (
                   <div className="bg-primary/10 px-3 py-1.5 rounded-lg">
@@ -654,8 +654,8 @@ const ProductCatalogComponent = (_: unknown, ref: React.Ref<ProductCatalogHandle
             <DialogHeader className="px-6 pt-6 pb-4 border-b">
               <div className="flex items-center justify-between">
                 <div>
-                  <DialogTitle className="text-2xl">Produktkatalog</DialogTitle>
-                  <DialogDescription>Velg produkter fra katalogen og legg til i tilbudet</DialogDescription>
+                  <DialogTitle className="text-2xl">Prislister</DialogTitle>
+                  <DialogDescription>Velg produkter fra prislistene og legg til i tilbudet</DialogDescription>
                 </div>
                 {selectionCount > 0 && (
                   <div className="bg-primary/10 px-4 py-2 rounded-lg">

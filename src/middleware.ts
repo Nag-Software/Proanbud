@@ -19,6 +19,7 @@ const APP_ROUTES = [
   '/innboks',
   '/innstillinger',
   '/katalog',
+  '/prislister',
   '/kunder',
   '/tilbud',
   '/bedrift',

@@ -196,7 +196,7 @@ export const NewProductDrawer: React.FC<NewProductDrawerProps> = ({
               <div>
                 <DrawerTitle>Nytt produkt</DrawerTitle>
                 <p className="text-sm text-gray-500 mt-1">
-                  Legg til et nytt produkt i katalogen
+                  Legg til et nytt produkt i prislistene
                 </p>
               </div>
             </div>

@@ -51,7 +51,7 @@ Du skal løse oppgaven ved først å lese og tolke all input, deretter følge ar
 # Input
 - \`jobbBeskrivelse\`: ${inputJobbbeskrivelse}
 - \`bedriftsprofil\`: ${inputBedrift}
-- \`produktkatalog\`: ${inputCatalog}
+- \`prislister\`: ${inputCatalog}
 
 # Arbeidsflyt (Stegvis prosess, MÅ utføres sekvensielt – Tenk høyt og grundig før output)
 
@@ -61,18 +61,21 @@ Du skal løse oppgaven ved først å lese og tolke all input, deretter følge ar
    - Kategoriser komponenter: materialer, arbeid, utstyr, transport, annet.
    - Beregn mengder iht. oppgave og standard byggepraksis.
 
-2. **Katalogmatching (alltid FØRST – prioritet)**
-   - Søk eksakt navn mot produktkatalog (case-insensitive, trim whitespace).
-     - Finnes eksakt: bruk katalogpris/info, ignorer AI-pris.
+2. **Prislistematching (alltid FØRST – prioritet)**
+  - Hvis \`prislister.priceListProducts\` inneholder produkter, MÅ du bruke disse som primær kilde for alle materialkomponenter som matcher prosjektet.
+   - Søk eksakt navn mot prislistene (case-insensitive, trim whitespace).
+    - Finnes eksakt: bruk \`enhetspris\`, \`enhet\`, \`påslag\`, produsent og prislisteinfo fra brukerens prisliste. Ikke erstatt med AI-/markedspris.
      - Hvis ikke: fortsett til neste steg.
    - Søk eksakt navn + dimensjon (case-insensitive).
    - Normaliserte søk: Fjern mellomrom, standardiser enhetsformat, små bokstaver, erstatt ×/X med x (se eksempler).
    - Fuzzy match:
      - Dimensjonstoleranse: ±2 mm pr. dimensjon.
      - Materiallikeverdighet og konstruerte dimensjoner (jf. regler).
+    - Ved fuzzy treff i brukerens prisliste: bruk fortsatt prislisteprisen, men dokumenter avviket i \"description\".
      - DOKUMENTER alltid avvik i \"description\".
-   - Hvis INGEN match: Estimér realistisk norsk markedspris for 2025.
+   - Hvis INGEN relevant prisliste-match finnes for materialet: Estimér realistisk norsk markedspris for 2025.
      - Marker \`\"catalogMatch\": \"markedspris\"\` og angi kilde i 'description'.
+   - For materialer er det ikke lov å bruke markedspris hvis en relevant brukerprisliste-linje finnes.
 
 3. **Beregning av komponenter, mengder og priser**
    - Mengder rundes alltid OPP til nærmeste hele enhet.
@@ -90,9 +93,9 @@ Du skal løse oppgaven ved først å lese og tolke all input, deretter følge ar
 
 5. **Validering og output**
    - Sjekk at \`totalPrice\` er summen av alle \`componentTotal\`.
-   - Kontroller mengdeavrundinger, katalogpriser, og evt. svinn mot regler.
+  - Kontroller mengdeavrundinger, prislistepriser, og evt. svinn mot regler.
    - Angi og begrunn \`confidence\` basert på datakvalitet og kilde, både globalt og per komponent.
-   - Dokumenter katalogkilde eksplisitt i både 'description' og 'catalogSource'.
+  - Dokumenter prislistekilde eksplisitt i både 'description' og 'catalogSource'.
 
 # Spesifikke regler for materialer og komponenter  
 - Trevirke: Skal inkludere dimensjon og kvalitet, enhet \"m\".
@@ -122,7 +125,7 @@ Du skal løse oppgaven ved først å lese og tolke all input, deretter følge ar
       \"materialMarkup\": [verdi, %],
       \"componentTotal\": [kr],
       \"catalogMatch\": \"[eksakt|fuzzy|markedspris]\",
-      \"catalogSource\": \"[katalognavn/leverandør/markedspris]\",
+      \"catalogSource\": \"[prislistenavn/leverandør/markedspris]\",
       \"confidence\": [desimaltall 0.7–1.0],
       \"description\": \"[Produktbeskrivelse, kilde, prisnivå, ev. avvik/antakelser.]\"
     }
@@ -135,20 +138,21 @@ Du skal løse oppgaven ved først å lese og tolke all input, deretter følge ar
 }
 
 # Description-format (stringmal, tilpass for hver komponent)
-- \"Konstruksjonsvirke 48x98 C24 impregnert. Kilde: Bedriftens katalog (eksakt match). Normalt prisnivå.\"
-- \"Konstruksjonsvirke 48x98 C24. Kilde: Bedriftens katalog (brukt 48x99, tolerance ±2mm). Normalt prisnivå.\"
-- \"Glassull isolasjon 15cm. Kilde: Markedspris (ikke i katalog). Normalt prisnivå 2025.\"
+- \"Konstruksjonsvirke 48x98 C24 impregnert. Kilde: Bedriftens prisliste (eksakt match). Normalt prisnivå.\"
+- \"Konstruksjonsvirke 48x98 C24. Kilde: Bedriftens prisliste (brukt 48x99, tolerance ±2mm). Normalt prisnivå.\"
+- \"Glassull isolasjon 15cm. Kilde: Markedspris (ikke i prisliste). Normalt prisnivå 2025.\"
 
 # Kritiske påminnelser (MÅ følges, aldri ignoreres!)
-1. Søk ALLTID katalogen før annen prissetting.
-2. Fuzzy-match grundig før estimat.
-3. Rund OPP alle mengder.
-4. unitPrice beregnes FØR påslag.
-5. totalPrice må matche sum componentTotal.
-6. Returner KUN gyldig JSON; ingen tekst eller kommentarer.
-7. Priser oppgis uten mva.
-8. Kildedokumentasjon kreves i description og catalogSource.
-9. Sorter etter components etter kategorier: materialer, utstyr, arbeid, transport, annet.
+1. Søk ALLTID prislistene før annen prissetting.
+2. Hvis en relevant brukerprisliste-linje finnes for et materiale, MÅ unitPrice komme fra prislisten.
+3. Fuzzy-match grundig før estimat.
+4. Rund OPP alle mengder.
+5. unitPrice beregnes FØR påslag.
+6. totalPrice må matche sum componentTotal.
+7. Returner KUN gyldig JSON; ingen tekst eller kommentarer.
+8. Priser oppgis uten mva.
+9. Kildedokumentasjon kreves i description og catalogSource.
+10. Sorter etter components etter kategorier: materialer, utstyr, arbeid, transport, annet.
 
 ## Forventet output (KUN JSON – ingen ekstra tekst):
 {
@@ -163,9 +167,9 @@ Du skal løse oppgaven ved først å lese og tolke all input, deretter følge ar
       \"materialMarkup\": 7,
       \"componentTotal\": 1450.35,
       \"catalogMatch\": \"eksakt\",
-      \"catalogSource\": \"Bedriftens katalog\",
+      \"catalogSource\": \"Bedriftens prisliste\",
       \"confidence\": 1.0,
-      \"description\": \"Trykkimpregnert konstruksjonsvirke 48x98 C24. Kilde: Bedriftens katalog (eksakt match). Normalt prisnivå.\"
+      \"description\": \"Trykkimpregnert konstruksjonsvirke 48x98 C24. Kilde: Bedriftens prisliste (eksakt match). Normalt prisnivå.\"
     },
     {
       \"category\": \"arbeid\",
@@ -189,7 +193,7 @@ Du skal løse oppgaven ved først å lese og tolke all input, deretter følge ar
   \"totalPrice\": 21300.35,
   \"confidence\": 0.98
 }
-*(En reell leveranse skal inkludere ALLE relevante komponenter, med riktige avrundinger, mengder og detaljer iht. oppdrag og katalog!)*
+*(En reell leveranse skal inkludere ALLE relevante komponenter, med riktige avrundinger, mengder og detaljer iht. oppdrag og prislister!)*
 
 # Output Format
 
@@ -202,7 +206,7 @@ Returner kun én valid JSON i spesifisert format, ALDRI tekst eller kommentarer,
 - Returner UTELUKKENDE valid JSON etter spesifisert mal, uten tilleggstekst.  
 - Dokumenter ALLTID kilde og confidence.  
 
-*(Påminnelse: Grundig, sekvensiell behandling før output, presis katalogmatch og full kildedokumentasjon.)*`
+*(Påminnelse: Grundig, sekvensiell behandling før output, presis prislistematch og full kildedokumentasjon.)*`
 }
 
 // Function to fetch AI config from Sanity
@@ -255,6 +259,92 @@ async function createKomponentSKAgent(allowWebsearchOverride?: boolean) {
 }
 
 type WorkflowInput = { prompt: string, businessInfo: string, catalog: any };
+
+const normalizeProductText = (value: unknown) => String(value || '')
+  .toLowerCase()
+  .replace(/[×x]/g, 'x')
+  .replace(/[^a-zæøå0-9]+/gi, ' ')
+  .trim();
+
+const getPriceListProducts = (catalog: any): any[] => {
+  if (Array.isArray(catalog?.priceListProducts)) {
+    return catalog.priceListProducts;
+  }
+
+  if (!catalog || typeof catalog !== 'object') return [];
+
+  return Object.values(catalog).flatMap((category: any) => {
+    if (!category || !Array.isArray(category.subcategories)) return [];
+    return category.subcategories.flatMap((subcategory: any) => {
+      if (!Array.isArray(subcategory.products)) return [];
+      return subcategory.products.filter((product: any) => product?.prisliste || product?.prislisteId);
+    });
+  });
+};
+
+const findMatchingPriceListProduct = (component: any, priceListProducts: any[]) => {
+  const componentName = normalizeProductText(component?.name);
+  if (!componentName) return null;
+
+  const exact = priceListProducts.find(product => normalizeProductText(product?.produktnavn) === componentName);
+  if (exact) return { product: exact, match: 'eksakt' };
+
+  const contained = priceListProducts.find(product => {
+    const productName = normalizeProductText(product?.produktnavn);
+    return productName && (componentName.includes(productName) || productName.includes(componentName));
+  });
+  if (contained) return { product: contained, match: 'fuzzy' };
+
+  const componentTokens = new Set(componentName.split(' ').filter(token => token.length > 2));
+  if (componentTokens.size === 0) return null;
+
+  const scored = priceListProducts
+    .map(product => {
+      const productName = normalizeProductText(product?.produktnavn);
+      const productTokens = productName.split(' ').filter(token => token.length > 2);
+      const overlap = productTokens.filter(token => componentTokens.has(token)).length;
+      return { product, score: overlap / Math.max(productTokens.length, componentTokens.size) };
+    })
+    .filter(item => item.score >= 0.6)
+    .sort((a, b) => b.score - a.score)[0];
+
+  return scored ? { product: scored.product, match: 'fuzzy' } : null;
+};
+
+const applyUserPriceListPrices = (components: any[], catalog: any) => {
+  const priceListProducts = getPriceListProducts(catalog);
+  if (priceListProducts.length === 0) return components;
+
+  return components.map(component => {
+    if (component?.category !== 'materialer') return component;
+
+    const match = findMatchingPriceListProduct(component, priceListProducts);
+    if (!match) return component;
+
+    const { product, match: matchType } = match;
+    const quantity = Number(component.amount) || 0;
+    const unitPrice = Number(product.enhetspris) || Number(component.unitPrice) || 0;
+    const priceMarkup = Number(product.påslag) || Number(component.priceMarkup) || 0;
+    const materialMarkup = Number(component.materialMarkup) || 0;
+    const componentTotal = Math.round(quantity * unitPrice * (1 + priceMarkup / 100) * (1 + materialMarkup / 100));
+    const sourceName = product.prisliste || product.sourcePriceListName || 'Bedriftens prisliste';
+    const identifiers = [product.nobb ? `NOBB ${product.nobb}` : '', product.ean ? `EAN ${product.ean}` : '']
+      .filter(Boolean)
+      .join(', ');
+
+    return {
+      ...component,
+      name: component.name || product.produktnavn,
+      unit: product.enhet || component.unit,
+      unitPrice,
+      priceMarkup,
+      componentTotal,
+      catalogMatch: matchType,
+      catalogSource: sourceName,
+      description: `${component.description || product.beskrivelse || product.produktnavn} Kilde: ${sourceName}${identifiers ? ` (${identifiers})` : ''}.`,
+    };
+  });
+};
 
 
 // Main code entrypoint
@@ -330,10 +420,12 @@ export const runWorkflow = async (workflow: WorkflowInput) => {
 
     // Convert to expected schema
     const raw = JSON.parse(komponentSKResultTemp.finalOutput);
+    const componentsWithPriceLists = applyUserPriceListPrices(raw.components || [], workflow.catalog);
+    const totalPrice = componentsWithPriceLists.reduce((sum: number, comp: any) => sum + (Number(comp.componentTotal) || 0), 0);
     const converted = {
-      totalPrice: raw.totalPrice,
+      totalPrice: totalPrice || raw.totalPrice,
       confidence: raw.confidence,
-      components: raw.components.map((comp: any, index: number) => ({
+      components: componentsWithPriceLists.map((comp: any, index: number) => ({
         id: `comp_${index}`,
         category: comp.category,
         name: comp.name,
@@ -343,13 +435,16 @@ export const runWorkflow = async (workflow: WorkflowInput) => {
         unitPrice: comp.unitPrice,
         priceMarkup: comp.priceMarkup,
         materialMarkup: comp.materialMarkup,
+        componentTotal: comp.componentTotal,
+        catalogMatch: comp.catalogMatch,
+        catalogSource: comp.catalogSource,
         isEditable: true,
         confidence: comp.confidence
       })),
       reasoning: "",
       alternatives: {
-        conservative: raw.totalPrice * 0.9,
-        aggressive: raw.totalPrice * 1.1
+        conservative: (totalPrice || raw.totalPrice) * 0.9,
+        aggressive: (totalPrice || raw.totalPrice) * 1.1
       }
     };
 

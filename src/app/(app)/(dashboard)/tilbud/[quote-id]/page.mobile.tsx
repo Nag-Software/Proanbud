@@ -616,7 +616,7 @@ export default function QuoteDetailsPageMobile() {
       }
     } catch (error) {
       console.error('Error opening product catalog:', error);
-      alert('Kunne ikke åpne produktkatalogen');
+      alert('Kunne ikke åpne prislisten');
     }
   };
 

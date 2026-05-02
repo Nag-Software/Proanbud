@@ -35,7 +35,8 @@ import {
   Check,
   ChevronsUpDown,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  HelpCircle
 } from 'lucide-react';
 import { createTilbud, updateTilbud, getTilbudById, TilbudFormData, getUniqueCategoriesFromQuotes } from '@/lib/services/tilbudService';
 import { getCustomers } from '@/lib/services/customerService';
@@ -86,12 +87,24 @@ interface QuoteData {
   finalPrice: number;
 }
 
+interface ClarificationTurn {
+  question: string;
+  answer: string;
+  suggestions: string[];
+}
+
+interface ActiveClarificationQuestion {
+  question: string;
+  suggestions: string[];
+}
+
 const STEPS = [
   { id: 1, title: 'AI-Analyse', description: 'Beskriv jobben og last opp bilder', icon: Sparkles },
   { id: 2, title: 'Rediger prisforslag', description: 'Juster pris basert på AI-analyse', icon: Zap },
   { id: 3, title: 'Prissammendrag', description: 'Gjennomgå og bekreft prising', icon: Calculator },
 ];
 
+const MAX_CLARIFICATION_QUESTIONS = 5;
 const DEFAULT_PROJECT_CATEGORY = 'Generelt prosjekt';
 const FALLBACK_PROJECT_CATEGORY = 'Ingen prosjekt';
 
@@ -139,6 +152,17 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
   const [manualProjects, setManualProjects] = useState<string[]>([]);
   const [showAddProject, setShowAddProject] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
+  const [clarificationDialogOpen, setClarificationDialogOpen] = useState(false);
+  const [clarificationsReviewed, setClarificationsReviewed] = useState(false);
+  const [clarificationHistory, setClarificationHistory] = useState<ClarificationTurn[]>([]);
+  const [activeClarification, setActiveClarification] = useState<ActiveClarificationQuestion | null>(null);
+  const [clarificationAnswerInput, setClarificationAnswerInput] = useState('');
+  const [isGeneratingClarification, setIsGeneratingClarification] = useState(false);
+  const [clarificationError, setClarificationError] = useState<string | null>(null);
+  const clarificationBypassRef = useRef(false);
+  const clarificationHistoryRef = useRef<ClarificationTurn[]>([]);
+  const clarificationScrollRef = useRef<HTMLDivElement>(null);
+  const clarificationBottomRef = useRef<HTMLDivElement>(null);
 
   // When the edit dialog is open, hide lower z-index overlays to avoid stacking glitches.
   useEffect(() => {
@@ -313,6 +337,18 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
     });
   }, [projectCategorySummary.order]);
 
+  useEffect(() => {
+    clarificationHistoryRef.current = clarificationHistory;
+  }, [clarificationHistory]);
+
+  useEffect(() => {
+    if (!clarificationDialogOpen) return;
+
+    requestAnimationFrame(() => {
+      clarificationBottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    });
+  }, [activeClarification, clarificationDialogOpen, clarificationError, clarificationHistory, isGeneratingClarification]);
+
   const resolveDefaultProjectCategory = useCallback(() => {
     const firstWithCategory = quoteData.adjustedComponents.find(comp => comp.projectCategory?.trim());
     if (firstWithCategory?.projectCategory) {
@@ -321,6 +357,59 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
     const firstRegistered = projectCategorySummary.order.find(category => category !== FALLBACK_PROJECT_CATEGORY);
     return firstRegistered || DEFAULT_PROJECT_CATEGORY;
   }, [quoteData.adjustedComponents, projectCategorySummary.order]);
+
+  const buildAnalysisPrompt = useCallback(() => {
+    const answeredClarifications = clarificationHistoryRef.current
+      .map(item => `- ${item.question}\n  Svar: ${item.answer}`)
+      .join('\n');
+
+    if (!answeredClarifications) {
+      return quoteData.jobDescription;
+    }
+
+    return `${quoteData.jobDescription}\n\nAvklaringer fra uklarhetsdialog:\n${answeredClarifications}`;
+  }, [quoteData.jobDescription]);
+
+  const requestNextClarification = useCallback(async (history: ClarificationTurn[]) => {
+    setIsGeneratingClarification(true);
+    setClarificationError(null);
+
+    try {
+      const response = await fetch('/api/quote-clarifications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectDescription: quoteData.jobDescription,
+          history: history.map(item => ({ question: item.question, answer: item.answer })),
+          maxQuestions: MAX_CLARIFICATION_QUESTIONS,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Kunne ikke hente avklaringsspørsmål');
+      }
+
+      const data = await response.json();
+      if (!data?.shouldContinue || !data?.question) {
+        setActiveClarification(null);
+        return null;
+      }
+
+      const nextQuestion = {
+        question: String(data.question),
+        suggestions: Array.isArray(data.suggestions)
+          ? data.suggestions.filter((item: unknown) => typeof item === 'string').slice(0, 4)
+          : [],
+      };
+      setActiveClarification(nextQuestion);
+      return nextQuestion;
+    } catch (error) {
+      setClarificationError(error instanceof Error ? error.message : 'Kunne ikke hente avklaringsspørsmål');
+      return 'error' as const;
+    } finally {
+      setIsGeneratingClarification(false);
+    }
+  }, [quoteData.jobDescription]);
 
   const loadCustomers = async () => {
     try {
@@ -427,6 +516,15 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
     setManualProjects([]);
     setShowAddProject(false);
     setNewProjectName('');
+    setClarificationDialogOpen(false);
+    setClarificationsReviewed(false);
+    setClarificationHistory([]);
+    clarificationHistoryRef.current = [];
+    setActiveClarification(null);
+    setClarificationAnswerInput('');
+    setIsGeneratingClarification(false);
+    setClarificationError(null);
+    clarificationBypassRef.current = false;
     productCatalogRef.current?.close();
   }, []);
 
@@ -435,12 +533,14 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
     void attemptClose();
   };
 
-  const generateCatalogPayload = () => {
-    const snapshot = productCatalogRef.current?.getCatalogData();
+  const generateCatalogPayload = async () => {
+    const snapshot = productCatalogRef.current?.getCatalogData() || await productCatalogRef.current?.refresh();
     if (!snapshot) return null;
 
     const { categories, subcategories, products } = snapshot;
-    const newCatalog: Record<string, any> = {};
+    const newCatalog: Record<string, any> = {
+      priceListProducts: [],
+    };
     const subcategoryLookup = new Map<string, { categoryId: string; entry: any }>();
 
     categories.forEach(cat => {
@@ -464,138 +564,158 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
     });
 
     products.forEach(product => {
-      const subRef = subcategoryLookup.get(product.underkategoriId);
-      if (!subRef) return;
-      subRef.entry.products.push({
+      const productPayload = {
         produktnavn: product.produktnavn,
         produsent: product.produsent,
         enhet: product.enhet,
         enhetspris: product.enhetspris,
         påslag: product.påslag,
         beskrivelse: product.beskrivelse || '',
-      });
+        prisliste: product.sourcePriceListName || '',
+        prislisteId: product.sourcePriceListId || '',
+        varekategori: product.varekategori || '',
+        ean: product.ean || '',
+        nobb: product.nobb || '',
+        veilPris: product.veilPris || 0,
+        rabatt: product.rabatt || 0,
+        minPris: product.minPris || 0,
+      };
+
+      if (product.sourcePriceListId || product.sourcePriceListName) {
+        newCatalog.priceListProducts.push(productPayload);
+      }
+
+      const subRef = subcategoryLookup.get(product.underkategoriId);
+      if (!subRef) return;
+      subRef.entry.products.push(productPayload);
     });
 
     return newCatalog;
   };
 
+  const runAiAnalysis = async () => {
+    clarificationBypassRef.current = false;
+    setCurrentStep(1);
+    setIsAnalyzing(true);
+    setAiError(null);
+
+    try {
+      const businessInfo = await getBusinessContextForAI();
+      const catalogPayload = await generateCatalogPayload();
+      const requestBody: Record<string, unknown> = {
+        prompt: buildAnalysisPrompt(),
+        businessInfo,
+      };
+      if (catalogPayload) {
+        requestBody.catalog = catalogPayload;
+      }
+
+      const response = await fetch('/api/ai-pricing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) throw new Error('AI-tjeneste feilet: ' + response.statusText);
+
+      const responseText = await response.json();
+      console.log("RAW API RESPONSE:", responseText);
+      console.log("RESPONSE components:", responseText.components);
+      if (responseText.components && responseText.components.length > 0) {
+        console.log("First component:", responseText.components[0]);
+      }
+
+      const aiSuggestion: AIPriceSuggestion = responseText;
+
+      if (!aiSuggestion?.components) {
+        throw new Error('Uventet respons fra AI-tjeneste');
+      }
+
+      const convertConfidence = (conf: number) => {
+        if (conf > 1) return conf;
+        return Math.round(conf * 100);
+      };
+
+      const convertedSuggestion = {
+        ...aiSuggestion,
+        confidence: convertConfidence(aiSuggestion.confidence),
+        components: aiSuggestion.components.map(comp => ({
+          ...comp,
+          confidence: convertConfidence(comp.confidence)
+        }))
+      };
+
+      const adjustedComponents = convertedSuggestion.components.map((comp: any) => {
+        const numericComp = {
+          ...comp,
+          amount: Number(comp.amount) || 0,
+          unitPrice: Number(comp.unitPrice) || 0,
+          priceMarkup: Number(comp.priceMarkup) || 0,
+          materialMarkup: Number(comp.materialMarkup) || 0,
+          componentTotal: Number(comp.componentTotal ?? comp.total ?? comp.component_total) || 0,
+        };
+
+        console.log('Processing component:', numericComp);
+
+        const componentWithCorrectMapping = {
+          ...numericComp,
+          quantity: numericComp.amount,
+          priceMarkup: numericComp.priceMarkup,
+          materialMarkup: numericComp.materialMarkup,
+          projectCategory: comp.projectCategory || comp.project_category || resolveDefaultProjectCategory(),
+          projectCategoryDescription: comp.projectCategoryDescription || comp.project_category_description || "",
+          catalogMatch: comp.catalogMatch || comp.catalog_match || "",
+          catalogSource: comp.catalogSource || comp.catalog_source || "",
+          isEditable: true,
+        };
+
+        console.log('Component with mapping:', componentWithCorrectMapping);
+        const calculatedAmount = calculateAmountWithMarkup(componentWithCorrectMapping);
+        console.log('Calculated amount:', calculatedAmount);
+
+        return {
+          ...componentWithCorrectMapping,
+          amount: calculatedAmount,
+        };
+      });
+
+      console.log("ADJUSTED COMPONENTS:", adjustedComponents);
+      setQuoteData(prev => ({
+        ...prev,
+        aiSuggestion: convertedSuggestion,
+        adjustedComponents,
+        finalPrice: adjustedComponents.reduce((sum: number, comp: any) => sum + comp.amount, 0),
+      }));
+      setCurrentStep(2);
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : 'Ukjent feil ved AI-analyse.');
+      setCurrentStep(1);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
   const handleNext = async () => {
     if (currentStep === 1) {
-      setIsAnalyzing(true);
-      setAiError(null);
-      try {
-        const businessInfo = await getBusinessContextForAI();
-        const catalogPayload = generateCatalogPayload();
-        const requestBody: Record<string, unknown> = {
-          prompt: quoteData.jobDescription,
-          businessInfo,
-        };
-        if (catalogPayload) {
-          requestBody.catalog = catalogPayload;
+      if (!clarificationsReviewed && !clarificationBypassRef.current) {
+        setClarificationDialogOpen(true);
+        if (!activeClarification && clarificationHistory.length === 0) {
+          const nextQuestion = await requestNextClarification([]);
+          if (nextQuestion === null) {
+            setClarificationsReviewed(true);
+            setClarificationDialogOpen(false);
+            void runAiAnalysis();
+          }
         }
-
-        const response = await fetch('/api/ai-pricing', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(requestBody),
-        });
-
-        if (!response.ok) throw new Error('AI-tjeneste feilet: ' + response.statusText);
-
-        // Håndter respons som streng med ''' eller ``` rundt, også med linjeskift og ekstra tekst
-        const responseText = await response.json()
-        // Clean response: remove code block markers and trim whitespace
-        console.log("RAW API RESPONSE:", responseText)
-        console.log("RESPONSE components:", responseText.components)
-        if (responseText.components && responseText.components.length > 0) {
-          console.log("First component:", responseText.components[0])
-        }
-
-        const aiSuggestion: AIPriceSuggestion = responseText;
-
-        if (aiSuggestion) {
-          // Convert confidence from 0-1 to 0-100 scale for display, but only if needed
-          const convertConfidence = (conf: number) => {
-            if (conf > 1) return conf; // Already in 0-100 range
-            return Math.round(conf * 100); // Convert from 0-1 to 0-100
-          };
-
-          const convertedSuggestion = {
-            ...aiSuggestion,
-            confidence: convertConfidence(aiSuggestion.confidence),
-            components: aiSuggestion.components.map(comp => ({
-              ...comp,
-              confidence: convertConfidence(comp.confidence)
-            }))
-          };
-
-          const adjustedComponents = convertedSuggestion.components.map((comp: any) => {
-            // Ensure numeric fields are numbers
-            const numericComp = {
-              ...comp,
-              amount: Number(comp.amount) || 0,
-              unitPrice: Number(comp.unitPrice) || 0,
-              priceMarkup: Number(comp.priceMarkup) || 0,
-              materialMarkup: Number(comp.materialMarkup) || 0,
-              componentTotal: Number(comp.componentTotal ?? comp.total ?? comp.component_total) || 0,
-            };
-
-            console.log('Processing component:', numericComp);
-
-            // Map API fields correctly: API amount -> quantity
-            const componentWithCorrectMapping = {
-              ...numericComp,
-              quantity: numericComp.amount, // API amount is actually the quantity
-              priceMarkup: numericComp.priceMarkup, // Override with user settings
-              materialMarkup: numericComp.materialMarkup, // Override with user settings
-              projectCategory: comp.projectCategory || comp.project_category || resolveDefaultProjectCategory(),
-              projectCategoryDescription: comp.projectCategoryDescription || comp.project_category_description || "",
-              catalogMatch: comp.catalogMatch || comp.catalog_match || "",
-              catalogSource: comp.catalogSource || comp.catalog_source || "",
-              isEditable: true, // Ensure all components are always editable
-            };
-
-            console.log('Component with mapping:', componentWithCorrectMapping);
-
-            // Calculate the correct amount based on quantity, unitPrice, and markups
-            const calculatedAmount = calculateAmountWithMarkup(componentWithCorrectMapping);
-
-            console.log('Calculated amount:', calculatedAmount);
-
-            return {
-              ...componentWithCorrectMapping,
-              amount: calculatedAmount,
-            };
-          });
-          console.log("ADJUSTED COMPONENTS:", adjustedComponents)
-          setQuoteData(prev => ({
-            ...prev,
-            aiSuggestion: convertedSuggestion,
-            adjustedComponents,
-            finalPrice: adjustedComponents.reduce((sum: number, comp: any) => sum + comp.amount, 0),
-          }));
-          setIsAnalyzing(false);
-          // We've already advanced to the next logical step for analysis results.
-          // Return early to avoid the generic increment at the end of the function
-          // which was causing a double increment (skipping step 2).
-          setCurrentStep(prev => prev + 1);
-          return;
-        } else {
-          throw new Error('Uventet respons fra AI-tjeneste');
-        }
-      } catch (err) {
-        setAiError(err instanceof Error ? err.message : 'Ukjent feil ved AI-analyse.');
-        setIsAnalyzing(false);
-        return; // Don't proceed to next step
+        return;
       }
-      // Don't set isAnalyzing to false here - it will be done when polling completes
+
+      await runAiAnalysis();
+      return;
     }
-    
-    if (currentStep === 4) {
-      // Handle submission
-      await handleSubmit();
-    } else if (currentStep < 4) {
-      setCurrentStep(prev => prev + 1);
+
+    if (currentStep < STEPS.length) {
+      setCurrentStep(prev => Math.min(prev + 1, STEPS.length));
     }
   };
 
@@ -1030,7 +1150,15 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
         </label>
         <textarea
           value={quoteData.jobDescription}
-          onChange={(e) => setQuoteData(prev => ({ ...prev, jobDescription: e.target.value }))}
+          onChange={(e) => {
+            setQuoteData(prev => ({ ...prev, jobDescription: e.target.value }));
+            setClarificationsReviewed(false);
+            setClarificationHistory([]);
+            clarificationHistoryRef.current = [];
+            setActiveClarification(null);
+            setClarificationAnswerInput('');
+            setClarificationError(null);
+          }}
           placeholder="Beskriv spesifikt jobben som skal utføres..."
           className="w-full h-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
         />
@@ -1138,7 +1266,7 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
         </Button>
         {canProceed && (
           <Button onClick={handleNext} className="flex-1" disabled={isAnalyzing}>
-            {isAnalyzing ? 'Analyserer...' : 'Neste'}
+            {isAnalyzing ? 'Analyserer...' : clarificationsReviewed ? 'Analyser med AI' : 'Finn uklarheter'}
           </Button>
         )}
       </div>
@@ -2106,6 +2234,45 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
     ? quoteData.jobDescription.trim().length > 0 
     : true;
 
+  const finishClarifications = () => {
+    setClarificationsReviewed(true);
+    setClarificationDialogOpen(false);
+    setClarificationAnswerInput('');
+    clarificationBypassRef.current = false;
+    void runAiAnalysis();
+  };
+
+  const submitClarificationAnswer = async (answerOverride?: string) => {
+    const answer = (answerOverride ?? clarificationAnswerInput).trim();
+    if (!activeClarification || !answer || isGeneratingClarification) {
+      return;
+    }
+
+    const nextHistory = [
+      ...clarificationHistory,
+      {
+        question: activeClarification.question,
+        answer,
+        suggestions: activeClarification.suggestions,
+      },
+    ];
+
+    clarificationHistoryRef.current = nextHistory;
+    setClarificationHistory(nextHistory);
+    setClarificationAnswerInput('');
+    setActiveClarification(null);
+
+    if (nextHistory.length >= MAX_CLARIFICATION_QUESTIONS) {
+      finishClarifications();
+      return;
+    }
+
+    const nextQuestion = await requestNextClarification(nextHistory);
+    if (!nextQuestion) {
+      finishClarifications();
+    }
+  };
+
   return (
     <Drawer open={open} onOpenChange={handleDrawerOpenChange}>
       <DrawerContent className="max-h-[95vh] z-[400]">
@@ -2188,6 +2355,132 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
             </Button>
             <Button onClick={saveEditDialog}>
               Lagre
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {clarificationDialogOpen && (
+        <div aria-hidden className="fixed inset-0 bg-black/40 z-[550]" />
+      )}
+      <Dialog open={clarificationDialogOpen} onOpenChange={setClarificationDialogOpen}>
+        <DialogContent className="z-[650] max-w-2xl max-h-[90vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <HelpCircle className="w-5 h-5 text-primary" />
+              Finn uklarheter
+            </DialogTitle>
+            <DialogDescription>
+              AI stiller ett relevant spørsmål om gangen basert på prosjektet og svarene dine.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div ref={clarificationScrollRef} className="overflow-y-auto pr-1 space-y-4 max-h-[58vh]">
+            <div className="rounded-lg border bg-gray-50 p-3 text-sm text-gray-700">
+              <div className="text-xs font-semibold uppercase text-gray-500 mb-1">Prosjektkontekst</div>
+              <p className="line-clamp-4 whitespace-pre-wrap">{quoteData.jobDescription}</p>
+            </div>
+
+            {clarificationHistory.map((turn, index) => (
+              <div key={`${turn.question}-${index}`} className="space-y-2">
+                <div className="flex justify-start">
+                  <div className="max-w-[85%] rounded-2xl rounded-bl-sm bg-white border px-4 py-3 shadow-sm">
+                    <div className="text-xs font-medium text-primary mb-1">AI-spørsmål {index + 1}</div>
+                    <p className="text-sm text-gray-800">{turn.question}</p>
+                  </div>
+                </div>
+                <div className="flex justify-end">
+                  <div className="max-w-[85%] rounded-2xl rounded-br-sm bg-primary text-primary-foreground px-4 py-3">
+                    <p className="text-sm">{turn.answer}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            {isGeneratingClarification && (
+              <div className="flex justify-start">
+                <div className="rounded-2xl rounded-bl-sm bg-white border px-4 py-3 shadow-sm">
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Sparkles className="w-4 h-4 text-primary animate-pulse" />
+                    Lager neste relevante spørsmål...
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {clarificationError && (
+              <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 space-y-2">
+                <p>{clarificationError}</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void requestNextClarification(clarificationHistoryRef.current)}
+                  disabled={isGeneratingClarification}
+                >
+                  Prøv igjen
+                </Button>
+              </div>
+            )}
+
+            {activeClarification && !isGeneratingClarification && (
+              <div className="space-y-3">
+                <div className="flex justify-start">
+                  <div className="max-w-[85%] rounded-2xl rounded-bl-sm bg-white border px-4 py-3 shadow-sm">
+                    <div className="text-xs font-medium text-primary mb-1">
+                      AI-spørsmål {clarificationHistory.length + 1} av {MAX_CLARIFICATION_QUESTIONS}
+                    </div>
+                    <p className="text-sm text-gray-800">{activeClarification.question}</p>
+                  </div>
+                </div>
+
+                {activeClarification.suggestions.length > 0 && (
+                  <div className="flex flex-wrap gap-2 pl-1">
+                    {activeClarification.suggestions.map(suggestion => (
+                      <button
+                        key={suggestion}
+                        type="button"
+                        onClick={() => void submitClarificationAnswer(suggestion)}
+                        className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs font-medium text-gray-700 hover:border-primary/30 hover:bg-primary/10 hover:text-primary transition-colors"
+                      >
+                        {suggestion}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <textarea
+                    value={clarificationAnswerInput}
+                    onChange={(event) => setClarificationAnswerInput(event.target.value)}
+                    placeholder="Skriv svar eller trykk på et forslag..."
+                    rows={2}
+                    className="flex-1 resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-transparent focus:ring-2 focus:ring-primary"
+                    onKeyDown={(event) => {
+                      if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+                        void submitClarificationAnswer();
+                      }
+                    }}
+                  />
+                  <Button
+                    onClick={() => void submitClarificationAnswer()}
+                    disabled={!clarificationAnswerInput.trim() || isGeneratingClarification}
+                    className="self-end"
+                  >
+                    Svar
+                  </Button>
+                </div>
+              </div>
+            )}
+            <div ref={clarificationBottomRef} aria-hidden className="h-1" />
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setClarificationDialogOpen(false)}>
+              Tilbake
+            </Button>
+            <Button onClick={finishClarifications} className="gap-2" disabled={isGeneratingClarification}>
+              <Sparkles className="w-4 h-4" />
+              Analyser nå
             </Button>
           </DialogFooter>
         </DialogContent>

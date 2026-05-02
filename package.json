@@ -11,6 +11,7 @@
     "test:watch": "jest --watch"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.2.2",
     "@invertase/firestore-stripe-payments": "^0.0.8",
     "@openai/agents": "^0.1.11",
     "@portabletext/react": "^4.0.3",
@@ -69,6 +70,7 @@
     "react-dom": "19.2.1",
     "react-facebook-pixel": "^1.0.4",
     "react-grid-layout": "^1.5.2",
+    "react-hook-form": "^7.72.0",
     "react-resizable": "^3.0.5",
     "recharts": "2.15.4",
     "resend": "^6.6.0",

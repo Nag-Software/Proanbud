@@ -583,7 +583,7 @@ export default function GroupedDataTable({
                         <DropdownMenuSubTrigger>Legg til</DropdownMenuSubTrigger>
                         <DropdownMenuPortal>
                           <DropdownMenuSubContent>
-                            <DropdownMenuItem onClick={handleOpenCatalog}>fra katalog</DropdownMenuItem>
+                            <DropdownMenuItem onClick={handleOpenCatalog}>fra prisliste</DropdownMenuItem>
                               <DropdownMenuItem
                                 onSelect={() => {
                                   setIsAddManualComponentOpen(true);

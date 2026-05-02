@@ -9,7 +9,17 @@ import {
   serverTimestamp
 } from 'firebase/database';
 import { db, auth } from '@/lib/firebase';
-import { Product, Category, Subcategory, ProductFormData, CategoryFormData, SubcategoryFormData } from '@/lib/types';
+import {
+  Product,
+  Category,
+  Subcategory,
+  ProductFormData,
+  CategoryFormData,
+  SubcategoryFormData,
+  PriceList,
+  PriceListColumnMapping,
+  PriceListImportRow,
+} from '@/lib/types';
 
 // Helper function to ensure user is authenticated
 const getCurrentUserId = (): string => {
@@ -37,6 +47,102 @@ const handleDatabaseError = (error: any, operation: string): Error => {
   }
 
   return new Error(`Feil under ${operation}: ${error.message}`);
+};
+
+const toNumber = (value: unknown): number => {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+  if (typeof value !== 'string') return 0;
+
+  const normalized = value
+    .replace(/\s/g, '')
+    .replace(/kr/gi, '')
+    .replace(/%/g, '')
+    .replace(/,/g, '.');
+
+  const parsed = Number.parseFloat(normalized);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const mapProductData = (id: string, data: any, fallbackCategoryId: string): Product => ({
+  id,
+  produktnavn: data.produktnavn,
+  produsent: data.produsent || '',
+  enhet: data.enhet || 'stk',
+  enhetspris: data.enhetspris || 0,
+  påslag: data.påslag || 0,
+  kategoriId: data.kategoriId || fallbackCategoryId,
+  underkategoriId: data.underkategoriId || '',
+  beskrivelse: data.beskrivelse || '',
+  sourcePriceListId: data.sourcePriceListId || '',
+  sourcePriceListName: data.sourcePriceListName || '',
+  varekategori: data.varekategori || '',
+  ean: data.ean || '',
+  nobb: data.nobb || '',
+  veilPris: data.veilPris || 0,
+  rabatt: data.rabatt || 0,
+  minPris: data.minPris || 0,
+  rawColumns: data.rawColumns || {},
+  opprettet: data.opprettet || Date.now(),
+  oppdatert: data.oppdatert || Date.now(),
+});
+
+const getOrCreateCategoryByName = async (userId: string, categoryName: string): Promise<string> => {
+  const resolvedName = categoryName.trim() || 'Materialer';
+  const catalogRef = ref(db, `users/${userId}/katalog`);
+  const snapshot = await get(catalogRef);
+
+  if (snapshot.exists()) {
+    let existingId = '';
+    snapshot.forEach((categorySnapshot) => {
+      const data = categorySnapshot.val();
+      if (!data?.kategoriId && typeof data?.navn === 'string' && data.navn.trim().toLowerCase() === resolvedName.toLowerCase()) {
+        existingId = categorySnapshot.key || '';
+      }
+    });
+    if (existingId) return existingId;
+  }
+
+  const newCategoryRef = push(catalogRef);
+  await set(newCategoryRef, {
+    navn: resolvedName,
+    beskrivelse: 'Importert fra prisliste',
+    opprettet: Date.now(),
+    oppdatert: Date.now(),
+  });
+  return newCategoryRef.key!;
+};
+
+const getOrCreateSubcategoryByName = async (userId: string, categoryId: string, subcategoryName: string): Promise<string> => {
+  const resolvedName = subcategoryName.trim() || 'Importert prisliste';
+  const categoryRef = ref(db, `users/${userId}/katalog/${categoryId}`);
+  const snapshot = await get(categoryRef);
+
+  if (snapshot.exists()) {
+    let existingId = '';
+    snapshot.forEach((itemSnapshot) => {
+      const data = itemSnapshot.val();
+      if (data?.kategoriId && !data?.produktnavn && typeof data?.navn === 'string' && data.navn.trim().toLowerCase() === resolvedName.toLowerCase()) {
+        existingId = itemSnapshot.key || '';
+      }
+    });
+    if (existingId) return existingId;
+  }
+
+  const newSubcategoryRef = push(categoryRef);
+  await set(newSubcategoryRef, {
+    navn: resolvedName,
+    kategoriId: categoryId,
+    beskrivelse: 'Produkter importert fra CSV-prisliste',
+    opprettet: Date.now(),
+    oppdatert: Date.now(),
+  });
+  return newSubcategoryRef.key!;
+};
+
+const valueForRole = (row: PriceListImportRow, columns: PriceListColumnMapping[], role: PriceListColumnMapping['role']): string => {
+  const column = columns.find(item => item.role === role);
+  if (!column) return '';
+  return row.values[column.index]?.trim() || '';
 };
 
 // ============================================================================
@@ -402,19 +508,7 @@ export const getProducts = async (): Promise<Product[]> => {
         
         // Check if this is a product (has produktnavn)
         if (data.produktnavn) {
-          products.push({
-            id: itemSnapshot.key!,
-            produktnavn: data.produktnavn,
-            produsent: data.produsent || '',
-            enhet: data.enhet || 'stk',
-            enhetspris: data.enhetspris || 0,
-            påslag: data.påslag || 0,
-            kategoriId: data.kategoriId || categoryId,
-            underkategoriId: data.underkategoriId || '',
-            beskrivelse: data.beskrivelse || '',
-            opprettet: data.opprettet || Date.now(),
-            oppdatert: data.oppdatert || Date.now(),
-          });
+          products.push(mapProductData(itemSnapshot.key!, data, categoryId));
         }
       });
     });
@@ -445,19 +539,7 @@ export const getProductsByCategory = async (categoryId: string): Promise<Product
       
       // Check if this is a product (has produktnavn)
       if (data.produktnavn) {
-        products.push({
-          id: itemSnapshot.key!,
-          produktnavn: data.produktnavn,
-          produsent: data.produsent || '',
-          enhet: data.enhet || 'stk',
-          enhetspris: data.enhetspris || 0,
-          påslag: data.påslag || 0,
-          kategoriId: data.kategoriId || categoryId,
-          underkategoriId: data.underkategoriId || '',
-          beskrivelse: data.beskrivelse || '',
-          opprettet: data.opprettet || Date.now(),
-          oppdatert: data.oppdatert || Date.now(),
-        });
+        products.push(mapProductData(itemSnapshot.key!, data, categoryId));
       }
     });
 
@@ -487,19 +569,7 @@ export const getProductsBySubcategory = async (categoryId: string, subcategoryId
       
       // Check if this is a product with matching subcategory
       if (data.produktnavn && data.underkategoriId === subcategoryId) {
-        products.push({
-          id: itemSnapshot.key!,
-          produktnavn: data.produktnavn,
-          produsent: data.produsent || '',
-          enhet: data.enhet || 'stk',
-          enhetspris: data.enhetspris || 0,
-          påslag: data.påslag || 0,
-          kategoriId: data.kategoriId || categoryId,
-          underkategoriId: data.underkategoriId || '',
-          beskrivelse: data.beskrivelse || '',
-          opprettet: data.opprettet || Date.now(),
-          oppdatert: data.oppdatert || Date.now(),
-        });
+        products.push(mapProductData(itemSnapshot.key!, data, categoryId));
       }
     });
 
@@ -524,19 +594,7 @@ export const getProduct = async (categoryId: string, productId: string): Promise
 
     const data = snapshot.val();
     
-    return {
-      id: snapshot.key!,
-      produktnavn: data.produktnavn,
-      produsent: data.produsent || '',
-      enhet: data.enhet || 'stk',
-      enhetspris: data.enhetspris || 0,
-      påslag: data.påslag || 0,
-      kategoriId: data.kategoriId || categoryId,
-      underkategoriId: data.underkategoriId || '',
-      beskrivelse: data.beskrivelse || '',
-      opprettet: data.opprettet || Date.now(),
-      oppdatert: data.oppdatert || Date.now(),
-    };
+    return mapProductData(snapshot.key!, data, categoryId);
   } catch (error: any) {
     throw handleDatabaseError(error, 'henting av produkt');
   }
@@ -669,5 +727,113 @@ export const searchProducts = async (searchTerm: string): Promise<Product[]> => 
     );
   } catch (error: any) {
     throw handleDatabaseError(error, 'søk i produkter');
+  }
+};
+
+export const getPriceLists = async (): Promise<PriceList[]> => {
+  try {
+    const userId = getCurrentUserId();
+    const priceListsRef = ref(db, `users/${userId}/prislister`);
+    const snapshot = await get(priceListsRef);
+
+    if (!snapshot.exists()) return [];
+
+    const priceLists: PriceList[] = [];
+    snapshot.forEach((priceListSnapshot) => {
+      const data = priceListSnapshot.val();
+      priceLists.push({
+        id: priceListSnapshot.key!,
+        navn: data.navn || 'Prisliste',
+        rowCount: data.rowCount || 0,
+        columns: data.columns || [],
+        opprettet: data.opprettet || Date.now(),
+        oppdatert: data.oppdatert || Date.now(),
+      });
+    });
+
+    return priceLists.sort((a, b) => b.oppdatert - a.oppdatert);
+  } catch (error: any) {
+    throw handleDatabaseError(error, 'henting av prislister');
+  }
+};
+
+export const importPriceListProducts = async (
+  priceListName: string,
+  columns: PriceListColumnMapping[],
+  rows: PriceListImportRow[]
+): Promise<{ priceListId: string; importedCount: number }> => {
+  try {
+    const userId = getCurrentUserId();
+    const priceListsRef = ref(db, `users/${userId}/prislister`);
+    const newPriceListRef = push(priceListsRef);
+    const priceListId = newPriceListRef.key!;
+    const resolvedPriceListName = priceListName.trim() || `Prisliste ${new Date().toLocaleDateString('nb-NO')}`;
+    let importedCount = 0;
+
+    const rowsWithProduct = rows.filter(row => valueForRole(row, columns, 'produkt'));
+    const categoryCache = new Map<string, string>();
+    const subcategoryCache = new Map<string, string>();
+
+    for (const row of rowsWithProduct) {
+      const varekategori = valueForRole(row, columns, 'varekategori') || 'Materialer';
+      let categoryId = categoryCache.get(varekategori);
+      if (!categoryId) {
+        categoryId = await getOrCreateCategoryByName(userId, varekategori);
+        categoryCache.set(varekategori, categoryId);
+      }
+
+      const subcategoryCacheKey = `${categoryId}:${resolvedPriceListName}`;
+      let subcategoryId = subcategoryCache.get(subcategoryCacheKey);
+      if (!subcategoryId) {
+        subcategoryId = await getOrCreateSubcategoryByName(userId, categoryId, resolvedPriceListName);
+        subcategoryCache.set(subcategoryCacheKey, subcategoryId);
+      }
+
+      const produktnavn = valueForRole(row, columns, 'produkt');
+      const veilPris = toNumber(valueForRole(row, columns, 'veilPris'));
+      const minPris = toNumber(valueForRole(row, columns, 'minPris'));
+      const rabatt = toNumber(valueForRole(row, columns, 'rabatt'));
+      const enhetspris = minPris || (veilPris && rabatt ? Math.round(veilPris * (1 - rabatt / 100)) : veilPris);
+      const rawColumns = columns.reduce<Record<string, string>>((acc, column) => {
+        acc[column.displayName || column.originalName || `Kolonne ${column.index + 1}`] = row.values[column.index] || '';
+        return acc;
+      }, {});
+
+      const productRef = push(ref(db, `users/${userId}/katalog/${categoryId}`));
+      await set(productRef, {
+        produktnavn,
+        produsent: valueForRole(row, columns, 'produsent'),
+        enhet: valueForRole(row, columns, 'enhet') || 'stk',
+        enhetspris,
+        påslag: 0,
+        kategoriId: categoryId,
+        underkategoriId: subcategoryId,
+        beskrivelse: valueForRole(row, columns, 'beskrivelse'),
+        sourcePriceListId: priceListId,
+        sourcePriceListName: resolvedPriceListName,
+        varekategori,
+        ean: valueForRole(row, columns, 'ean'),
+        nobb: valueForRole(row, columns, 'nobb'),
+        veilPris,
+        rabatt,
+        minPris,
+        rawColumns,
+        opprettet: Date.now(),
+        oppdatert: Date.now(),
+      });
+      importedCount += 1;
+    }
+
+    await set(newPriceListRef, {
+      navn: resolvedPriceListName,
+      rowCount: importedCount,
+      columns,
+      opprettet: Date.now(),
+      oppdatert: Date.now(),
+    });
+
+    return { priceListId, importedCount };
+  } catch (error: any) {
+    throw handleDatabaseError(error, 'import av prisliste');
   }
 };

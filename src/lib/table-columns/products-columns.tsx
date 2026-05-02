@@ -23,6 +23,41 @@ export const getProductColumns = (
     ),
   },
   {
+    accessorKey: "sourcePriceListName",
+    header: "Prisliste",
+    cell: ({ row }) => {
+      const value = row.getValue("sourcePriceListName") as string | undefined
+      return value ? (
+        <span className="inline-flex rounded-full bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700 border border-emerald-100">
+          {value}
+        </span>
+      ) : (
+        <span className="text-gray-400 text-sm">Manuell</span>
+      )
+    },
+  },
+  {
+    accessorKey: "varekategori",
+    header: "Varekategori",
+    cell: ({ row }) => (
+      <div className="text-gray-600">{row.getValue("varekategori") || ""}</div>
+    ),
+  },
+  {
+    accessorKey: "nobb",
+    header: "NOBB",
+    cell: ({ row }) => (
+      <div className="text-gray-600 whitespace-nowrap">{row.getValue("nobb") || ""}</div>
+    ),
+  },
+  {
+    accessorKey: "ean",
+    header: "EAN",
+    cell: ({ row }) => (
+      <div className="text-gray-600 whitespace-nowrap">{row.getValue("ean") || ""}</div>
+    ),
+  },
+  {
     accessorKey: "enhet",
     header: "Enhet",
     cell: ({ row }) => (

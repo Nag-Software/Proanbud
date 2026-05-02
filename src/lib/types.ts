@@ -235,6 +235,48 @@ export interface Product {
   kategoriId: string;
   underkategoriId: string;
   beskrivelse?: string;
+  sourcePriceListId?: string;
+  sourcePriceListName?: string;
+  varekategori?: string;
+  ean?: string;
+  nobb?: string;
+  veilPris?: number;
+  rabatt?: number;
+  minPris?: number;
+  rawColumns?: Record<string, string>;
+  opprettet: number;
+  oppdatert: number;
+}
+
+export type PriceListColumnRole =
+  | 'ignore'
+  | 'produkt'
+  | 'varekategori'
+  | 'veilPris'
+  | 'rabatt'
+  | 'minPris'
+  | 'ean'
+  | 'nobb'
+  | 'produsent'
+  | 'enhet'
+  | 'beskrivelse';
+
+export interface PriceListColumnMapping {
+  index: number;
+  originalName: string;
+  displayName: string;
+  role: PriceListColumnRole;
+}
+
+export interface PriceListImportRow {
+  values: string[];
+}
+
+export interface PriceList {
+  id: string;
+  navn: string;
+  rowCount: number;
+  columns: PriceListColumnMapping[];
   opprettet: number;
   oppdatert: number;
 }

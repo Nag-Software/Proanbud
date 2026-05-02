@@ -1,15 +1,16 @@
 'use client';
 
 import { PageHeader } from "@/components/shared/PageHeader";
-import { useState, useEffect } from "react";
-import { Plus, Search, ChevronRight, ChevronDown, Edit, Trash2, Package } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { Plus, Search, ChevronRight, ChevronDown, Trash2, Package, FileSpreadsheet, Upload } from "lucide-react";
 import { Card } from "@/components/shared/Card";
 import { Button } from "@/components/ui/button";
-import { Product, Category, Subcategory } from "@/lib/types";
+import { Product, Category, Subcategory, PriceList } from "@/lib/types";
 import {
     getCategories,
     getSubcategories,
     getProducts,
+    getPriceLists,
     deleteProduct,
     deleteCategory,
     deleteSubcategory,
@@ -17,6 +18,7 @@ import {
 import { NewProductDrawer } from "@/components/katalog/NewProductDrawer";
 import { NewCategoryDrawer } from "@/components/katalog/NewCategoryDrawer";
 import { ProductDetailsDrawer } from "@/components/katalog/ProductDetailsDrawer";
+import { PriceListImportDialog } from "@/components/katalog/PriceListImportDialog";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { ErrorDialog } from "@/components/shared/ErrorDialog";
@@ -30,14 +32,17 @@ interface CategoryWithSubcategories extends Category {
 export default function KatalogPage() {
     const [categories, setCategories] = useState<CategoryWithSubcategories[]>([]);
     const [products, setProducts] = useState<Product[]>([]);
+    const [priceLists, setPriceLists] = useState<PriceList[]>([]);
     const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [selectedPriceList, setSelectedPriceList] = useState('all');
     const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
     const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
     const [isProductDrawerOpen, setIsProductDrawerOpen] = useState(false);
     const [isCategoryDrawerOpen, setIsCategoryDrawerOpen] = useState(false);
+    const [isPriceListImportOpen, setIsPriceListImportOpen] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
     const [isProductDetailsOpen, setIsProductDetailsOpen] = useState(false);
     const [errorDialog, setErrorDialog] = useState<{ isOpen: boolean; message: string }>({
@@ -53,15 +58,27 @@ export default function KatalogPage() {
 
     useEffect(() => {
         filterProducts();
-    }, [products, selectedCategory, selectedSubcategory]);
+    }, [products, selectedCategory, selectedSubcategory, selectedPriceList, searchTerm]);
+
+    const priceListOptions = useMemo(() => {
+        const importedFromProducts = products
+            .filter(product => product.sourcePriceListId && product.sourcePriceListName)
+            .map(product => ({ id: product.sourcePriceListId!, navn: product.sourcePriceListName! }));
+        const allOptions = [...priceLists.map(list => ({ id: list.id, navn: list.navn })), ...importedFromProducts];
+        return Array.from(new Map(allOptions.map(item => [item.id, item])).values())
+            .sort((a, b) => a.navn.localeCompare(b.navn, 'nb'));
+    }, [priceLists, products]);
+
+    const importedProductCount = useMemo(() => products.filter(product => product.sourcePriceListId).length, [products]);
 
     const loadData = async () => {
         try {
             setLoading(true);
-            const [categoriesData, subcategoriesData, productsData] = await Promise.all([
+            const [categoriesData, subcategoriesData, productsData, priceListsData] = await Promise.all([
                 getCategories(),
                 getSubcategories(),
                 getProducts(),
+                getPriceLists(),
             ]);
 
             // Organize categories with their subcategories
@@ -72,6 +89,7 @@ export default function KatalogPage() {
 
             setCategories(categoriesWithSubs);
             setProducts(productsData);
+            setPriceLists(priceListsData);
         } catch (error) {
             console.error('Error loading catalog data:', error);
         } finally {
@@ -90,6 +108,26 @@ export default function KatalogPage() {
         // Filter by subcategory
         if (selectedSubcategory) {
             filtered = filtered.filter(p => p.underkategoriId === selectedSubcategory);
+        }
+
+        if (selectedPriceList !== 'all') {
+            filtered = filtered.filter(p => p.sourcePriceListId === selectedPriceList);
+        }
+
+        const normalizedSearchTerm = searchTerm.trim().toLowerCase();
+        if (normalizedSearchTerm) {
+            filtered = filtered.filter(product => {
+                const searchable = [
+                    product.produktnavn,
+                    product.produsent,
+                    product.beskrivelse,
+                    product.varekategori,
+                    product.ean,
+                    product.nobb,
+                    product.sourcePriceListName,
+                ].filter(Boolean).join(' ').toLowerCase();
+                return searchable.includes(normalizedSearchTerm);
+            });
         }
 
         setFilteredProducts(filtered);
@@ -202,7 +240,7 @@ export default function KatalogPage() {
     if (loading) {
         return (
             <>
-                <PageHeader title="Katalog" />
+                <PageHeader title="Prislister" />
                 <div className="p-6">
                     <p>Laster...</p>
                 </div>
@@ -213,8 +251,15 @@ export default function KatalogPage() {
     return (
         <div className="w-full min-h-full px-3 lg:px-6 pt-4 pb-3 lg:pb-6">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 lg:gap-0">
-                <PageHeader title="Katalog"/>
-                <div className="flex flex-row gap-3 mb-6 sm:mb-0">
+                <PageHeader title="Prislister"/>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6 sm:mb-0">
+                    <Button
+                        onClick={() => setIsPriceListImportOpen(true)}
+                        className="flex-1 lg:flex-none"
+                    >
+                        <Upload className="w-4 h-4 mr-2" />
+                        Legg til CSV
+                    </Button>
                     <Button
                         variant="outline"
                         onClick={() => setIsCategoryDrawerOpen(true)}
@@ -224,6 +269,7 @@ export default function KatalogPage() {
                         Ny kategori
                     </Button>
                     <Button 
+                        variant="outline"
                         onClick={() => setIsProductDrawerOpen(true)}
                         className="flex-1 lg:flex-none"
                     >
@@ -231,6 +277,36 @@ export default function KatalogPage() {
                         Nytt produkt
                     </Button>
                 </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+                <Card className="p-4 border-l-4 border-l-primary">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-xs uppercase text-gray-500 font-medium">Produkter</p>
+                            <p className="text-2xl font-semibold text-gray-900">{products.length}</p>
+                        </div>
+                        <Package className="w-8 h-8 text-primary/70" />
+                    </div>
+                </Card>
+                <Card className="p-4 border-l-4 border-l-emerald-500">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-xs uppercase text-gray-500 font-medium">CSV-importert</p>
+                            <p className="text-2xl font-semibold text-gray-900">{importedProductCount}</p>
+                        </div>
+                        <FileSpreadsheet className="w-8 h-8 text-emerald-600/80" />
+                    </div>
+                </Card>
+                <Card className="p-4 border-l-4 border-l-blue-500">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-xs uppercase text-gray-500 font-medium">Prislister</p>
+                            <p className="text-2xl font-semibold text-gray-900">{priceListOptions.length}</p>
+                        </div>
+                        <Search className="w-8 h-8 text-blue-600/80" />
+                    </div>
+                </Card>
             </div>
 
             <div className="">
@@ -328,22 +404,44 @@ export default function KatalogPage() {
                     {/* Right content - Products */}
                     <div className="lg:col-span-3">
                         <Card className="p-6">
+                            <div className="grid grid-cols-1 lg:grid-cols-[1fr_240px] gap-3 mb-4">
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                    <input
+                                        value={searchTerm}
+                                        onChange={(event) => setSearchTerm(event.target.value)}
+                                        placeholder="Søk på produkt, EAN, NOBB, leverandør eller prisliste..."
+                                        className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                    />
+                                </div>
+                                <select
+                                    value={selectedPriceList}
+                                    onChange={(event) => setSelectedPriceList(event.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-primary focus:border-transparent"
+                                >
+                                    <option value="all">Alle prislister</option>
+                                    {priceListOptions.map(priceList => (
+                                        <option key={priceList.id} value={priceList.id}>{priceList.navn}</option>
+                                    ))}
+                                </select>
+                            </div>
+
                             {/* Products table */}
                             {filteredProducts.length === 0 ? (
                                 <div className="text-center py-12">
                                     <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                                     <h3 className="text-lg font-medium text-gray-900 mb-2">
-                                        Ingen produkter funnet
+                                        Ingen prislinjer funnet
                                     </h3>
                                     <p className="text-gray-500 mb-4">
                                         {searchTerm
-                                            ? 'Prøv et annet søk'
-                                            : 'Kom i gang ved å legge til ditt første produkt'}
+                                            ? 'Prøv et annet søk eller filter'
+                                            : 'Kom i gang ved å legge til din første CSV-prisliste'}
                                     </p>
                                     {!searchTerm && (
-                                        <Button onClick={() => setIsProductDrawerOpen(true)}>
-                                            <Plus className="w-4 h-4 mr-2" />
-                                            Legg til produkt
+                                        <Button onClick={() => setIsPriceListImportOpen(true)}>
+                                            <Upload className="w-4 h-4 mr-2" />
+                                            Legg til CSV
                                         </Button>
                                     )}
                                 </div>
@@ -355,8 +453,6 @@ export default function KatalogPage() {
                                         calculateFinalPrice
                                     )}
                                     data={filteredProducts}
-                                    searchKey="produktnavn"
-                                    searchPlaceholder="Søk etter produkter..."
                                     onRowClick={handleProductClick}
                                 />
                             )}
@@ -376,6 +472,12 @@ export default function KatalogPage() {
                 open={isCategoryDrawerOpen}
                 onClose={() => setIsCategoryDrawerOpen(false)}
                 onSuccess={loadData}
+            />
+
+            <PriceListImportDialog
+                open={isPriceListImportOpen}
+                onOpenChange={setIsPriceListImportOpen}
+                onImported={loadData}
             />
 
             {selectedProduct && (

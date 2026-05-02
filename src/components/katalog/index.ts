@@ -9,3 +9,4 @@ export type {
 	ProductCatalogSnapshot,
 	ProductCatalogOpenOptions,
 } from './ProductCatalog';
+export { PriceListImportDialog } from './PriceListImportDialog';
