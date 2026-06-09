@@ -237,13 +237,20 @@ export interface Product {
   beskrivelse?: string;
   sourcePriceListId?: string;
   sourcePriceListName?: string;
+  varegruppe?: string;
+  varegruppeKode?: string;
   varekategori?: string;
   ean?: string;
   nobb?: string;
   veilPris?: number;
   rabatt?: number;
   minPris?: number;
-  rawColumns?: Record<string, string>;
+  rawColumns?: Record<string, {
+    originalName: string;
+    displayName: string;
+    role: PriceListColumnRole;
+    value: string;
+  }>;
   opprettet: number;
   oppdatert: number;
 }
@@ -251,6 +258,9 @@ export interface Product {
 export type PriceListColumnRole =
   | 'ignore'
   | 'produkt'
+  | 'varegruppe'
+  | 'varegruppeNavn'
+  | 'varegruppeKode'
   | 'varekategori'
   | 'veilPris'
   | 'rabatt'

@@ -1,0 +1,8 @@
+allowBuilds:
+  '@firebase/util': false
+  esbuild: false
+  msw: false
+  protobufjs: false
+  re2: false
+  sharp: false
+  unrs-resolver: false

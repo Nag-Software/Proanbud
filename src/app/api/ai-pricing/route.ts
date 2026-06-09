@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { webSearchTool, RunContext, Agent, AgentInputItem, Runner, withTrace } from "@openai/agents";
 import { z } from "zod";
+import { adminAuth, database } from '@/lib/firebaseAdmin';
 import { client, aiConfigQuery } from '@/lib/sanity';
 
 
@@ -215,7 +216,7 @@ async function getAIConfig() {
     const config = await client.fetch(aiConfigQuery);
     return {
       model: config?.model || "gpt-5",
-      reasoningeffort: config?.reasoningeffort || "low",
+      reasoningeffort: config?.reasoningEffort || config?.reasoningeffort || "low",
       komponentSKs: config?.komponentSKs || [],
       allowWebsearch: config?.allowWebsearch ?? true
     };
@@ -311,6 +312,50 @@ const findMatchingPriceListProduct = (component: any, priceListProducts: any[]) 
   return scored ? { product: scored.product, match: 'fuzzy' } : null;
 };
 
+async function loadCatalogForUser(userId: string) {
+  if (!database) {
+    return { priceListProducts: [] };
+  }
+
+  const snapshot = await database.ref(`users/${userId}/katalog`).once('value');
+  if (!snapshot.exists()) {
+    return { priceListProducts: [] };
+  }
+
+  const priceListProducts: any[] = [];
+
+  snapshot.forEach((categorySnapshot) => {
+    categorySnapshot.forEach((itemSnapshot) => {
+      const data = itemSnapshot.val();
+      if (!data || !data.produktnavn) {
+        return;
+      }
+
+      if (!data.sourcePriceListId && !data.sourcePriceListName && !data.prisliste && !data.prislisteId) {
+        return;
+      }
+
+      priceListProducts.push({
+        produktnavn: data.produktnavn,
+        produsent: data.produsent || '',
+        enhet: data.enhet || '',
+        enhetspris: data.enhetspris || 0,
+        påslag: data.påslag || 0,
+        beskrivelse: data.beskrivelse || '',
+        prisliste: data.sourcePriceListName || data.prisliste || '',
+        prislisteId: data.sourcePriceListId || data.prislisteId || '',
+        varegruppe: data.varegruppe || data.varekategori || '',
+        varegruppeKode: data.varegruppeKode || '',
+        varekategori: data.varegruppe || data.varekategori || '',
+        ean: data.ean || '',
+        nobb: data.nobb || '',
+      });
+    });
+  });
+
+  return { priceListProducts };
+}
+
 const applyUserPriceListPrices = (components: any[], catalog: any) => {
   const priceListProducts = getPriceListProducts(catalog);
   if (priceListProducts.length === 0) return components;
@@ -367,7 +412,9 @@ export const runWorkflow = async (workflow: WorkflowInput) => {
         workflow_id: "wf_68fa61e4b8448190bebb0b325af7fe8f0ec21e94103549ef"
       }
     });
-    const transformResult = {catalog: JSON.stringify(workflow.catalog), jobbbeskrivelse: workflow.prompt, bedrift: workflow.businessInfo};
+    // Catalog is NOT passed to the agent prompt (too large for instructions limit).
+    // Server-side applyUserPriceListPrices handles catalog matching after the agent responds.
+    const transformResult = {catalog: '{}', jobbbeskrivelse: workflow.prompt, bedrift: workflow.businessInfo};
     
     // Create agent with dynamic config from Sanity
     // Try to create the agent with websearch enabled (if allowed).
@@ -418,8 +465,22 @@ export const runWorkflow = async (workflow: WorkflowInput) => {
         throw new Error("Agent result is undefined");
     }
 
+    const extractJsonText = (output: unknown) => {
+      if (typeof output !== 'string') {
+        return typeof output === 'object' && output !== null ? JSON.stringify(output) : '';
+      }
+
+      const trimmed = output.trim();
+      const fencedMatch = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+      if (fencedMatch?.[1]) {
+        return fencedMatch[1].trim();
+      }
+
+      return trimmed;
+    };
+
     // Convert to expected schema
-    const raw = JSON.parse(komponentSKResultTemp.finalOutput);
+    const raw = JSON.parse(extractJsonText(komponentSKResultTemp.finalOutput));
     const componentsWithPriceLists = applyUserPriceListPrices(raw.components || [], workflow.catalog);
     const totalPrice = componentsWithPriceLists.reduce((sum: number, comp: any) => sum + (Number(comp.componentTotal) || 0), 0);
     const converted = {
@@ -463,17 +524,33 @@ export async function POST(request: NextRequest) {
 
     // Expecting { prompt, businessInfo, catalog }
     const prompt = body?.prompt ?? body?.jobbbeskrivelse ?? body?.jobbBeskrivelse;
-  const businessInfo = body?.businessInfo || body?.bedriftsprofil || body?.business || "";
+    const businessInfo = body?.businessInfo || body?.bedriftsprofil || body?.business || "";
     const catalog = body?.catalog ?? body?.produktkatalog ?? body?.catalogue ?? {};
+    const authHeader = request.headers.get('authorization');
 
     if (!prompt) {
       return NextResponse.json({ error: 'Missing prompt in request body' }, { status: 400 });
     }
 
+    let resolvedCatalog = catalog;
+    if (!Array.isArray(catalog?.priceListProducts) || catalog.priceListProducts.length === 0) {
+      if (!authHeader?.startsWith('Bearer ')) {
+        return NextResponse.json({ error: 'Missing authorization token for catalog lookup' }, { status: 401 });
+      }
+
+      if (!adminAuth) {
+        return NextResponse.json({ error: 'Firebase Admin not initialized' }, { status: 500 });
+      }
+
+      const token = authHeader.substring(7);
+      const decodedToken = await adminAuth.verifyIdToken(token);
+      resolvedCatalog = await loadCatalogForUser(decodedToken.uid);
+    }
+
     const workflowInput = {
       prompt,
       businessInfo,
-      catalog,
+      catalog: resolvedCatalog,
     } as WorkflowInput;
 
     const result = await runWorkflow(workflowInput);

@@ -34,7 +34,7 @@ export const navLinks: NavLink[] = [
   },
   {
     href: "/prislister",
-    label: "Prislister",
+    label: "Prisfiler",
     icon: "BookOpen"
   },
   {

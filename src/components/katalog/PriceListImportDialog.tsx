@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { FileSpreadsheet, Upload, Check, AlertCircle } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import {
   Dialog,
   DialogContent,
@@ -19,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { importPriceListProducts } from '@/lib/services/catalogService';
+import { importPriceListProducts, checkDuplicatePriceList } from '@/lib/services/catalogService';
 import { PriceListColumnMapping, PriceListColumnRole, PriceListImportRow } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -32,7 +33,9 @@ interface PriceListImportDialogProps {
 const COLUMN_ROLES: { value: PriceListColumnRole; label: string }[] = [
   { value: 'ignore', label: 'Ignorer' },
   { value: 'produkt', label: 'Produkt' },
-  { value: 'varekategori', label: 'Varekategori' },
+  { value: 'varegruppe', label: 'Varegruppe' },
+  { value: 'varegruppeNavn', label: 'Varegruppenavn' },
+  { value: 'varegruppeKode', label: 'Varegruppekode' },
   { value: 'veilPris', label: 'Veil.pris' },
   { value: 'rabatt', label: 'Rabatt' },
   { value: 'minPris', label: 'Min pris' },
@@ -46,7 +49,9 @@ const COLUMN_ROLES: { value: PriceListColumnRole; label: string }[] = [
 const inferRole = (header: string): PriceListColumnRole => {
   const normalized = header.toLowerCase().replace(/[\s._-]/g, '');
   if (['produkt', 'produktnavn', 'varenavn', 'navn', 'vare'].includes(normalized)) return 'produkt';
-  if (['varekategori', 'kategori', 'gruppe', 'produktkategori'].includes(normalized)) return 'varekategori';
+  if (['varegruppenavn', 'varegruppenavnno', 'varegruppetekst', 'gruppenavn', 'kategorinavn', 'produktgruppenavn'].includes(normalized)) return 'varegruppeNavn';
+  if (['varegruppekode', 'varegruppenr', 'varegruppenummer', 'gruppenr', 'gruppenummer', 'efo', 'efovaregruppe'].includes(normalized)) return 'varegruppeKode';
+  if (['varegruppe', 'varegrupper', 'varekategori', 'kategori', 'gruppe', 'produktgruppe', 'produktkategori'].includes(normalized)) return 'varegruppe';
   if (['veilpris', 'veiledendepris', 'listepris', 'pris'].includes(normalized)) return 'veilPris';
   if (['rabatt', 'rabattprosent', 'discount'].includes(normalized)) return 'rabatt';
   if (['minpris', 'nettopris', 'innpris', 'kostpris'].includes(normalized)) return 'minPris';
@@ -100,19 +105,51 @@ const detectDelimiter = (text: string) => {
   return semicolonCount >= commaCount ? ';' : ',';
 };
 
+const buildParsedPriceList = (dataRows: unknown[][]): { columns: PriceListColumnMapping[]; rows: PriceListImportRow[] } => {
+  const normalizedRows = dataRows
+    .map(row => row.map(value => String(value ?? '').trim()))
+    .filter(row => row.some(value => value.length > 0));
+  const headers = normalizedRows[0] || [];
+  const data = normalizedRows.slice(1);
+  const columnCount = Math.max(headers.length, ...data.map(row => row.length), 0);
+  const columns = Array.from({ length: columnCount }, (_, index) => {
+    const header = headers[index] || `Kolonne ${index + 1}`;
+    return {
+      index,
+      originalName: header,
+      displayName: header,
+      role: inferRole(header),
+    };
+  });
+  const rows = data.map(row => ({
+    values: Array.from({ length: columnCount }, (_, index) => row[index] || ''),
+  }));
+
+  return { columns, rows };
+};
+
 const parseCsv = (text: string): { columns: PriceListColumnMapping[]; rows: PriceListImportRow[] } => {
   const delimiter = detectDelimiter(text);
   const lines = text.split(/\r?\n/).filter(line => line.trim());
-  const headers = parseCsvLine(lines[0] || '', delimiter);
-  const columns = headers.map((header, index) => ({
-    index,
-    originalName: header || `Kolonne ${index + 1}`,
-    displayName: header || `Kolonne ${index + 1}`,
-    role: inferRole(header),
-  }));
-  const rows = lines.slice(1).map(line => ({ values: parseCsvLine(line, delimiter) }));
+  return buildParsedPriceList(lines.map(line => parseCsvLine(line, delimiter)));
+};
 
-  return { columns, rows };
+const parseXlsx = async (file: File): Promise<{ columns: PriceListColumnMapping[]; rows: PriceListImportRow[] }> => {
+  const buffer = await file.arrayBuffer();
+  const workbook = XLSX.read(buffer, { type: 'array' });
+  const firstSheetName = workbook.SheetNames[0];
+  if (!firstSheetName) {
+    throw new Error('Excel-filen mangler ark.');
+  }
+
+  const worksheet = workbook.Sheets[firstSheetName];
+  const sheetRows = XLSX.utils.sheet_to_json<unknown[]>(worksheet, {
+    header: 1,
+    defval: '',
+    raw: false,
+  });
+
+  return buildParsedPriceList(sheetRows);
 };
 
 export const PriceListImportDialog: React.FC<PriceListImportDialogProps> = ({ open, onOpenChange, onImported }) => {
@@ -122,6 +159,12 @@ export const PriceListImportDialog: React.FC<PriceListImportDialogProps> = ({ op
   const [fileName, setFileName] = useState('');
   const [error, setError] = useState('');
   const [isImporting, setIsImporting] = useState(false);
+  const [duplicateWarning, setDuplicateWarning] = useState<{
+    overlappingListName: string;
+    overlapCount: number;
+    newFileCount: number;
+    overlapPercent: number;
+  } | null>(null);
 
   const sampleRows = rows.slice(0, 2);
   const mappedProductColumn = columns.some(column => column.role === 'produkt');
@@ -141,6 +184,7 @@ export const PriceListImportDialog: React.FC<PriceListImportDialogProps> = ({ op
     setFileName('');
     setError('');
     setIsImporting(false);
+    setDuplicateWarning(null);
   };
 
   const handleOpenChange = (nextOpen: boolean) => {
@@ -152,18 +196,18 @@ export const PriceListImportDialog: React.FC<PriceListImportDialogProps> = ({ op
     if (!file) return;
     setError('');
     setFileName(file.name);
-    setPriceListName(file.name.replace(/\.csv$/i, ''));
+    setPriceListName(file.name.replace(/\.(csv|xlsx|xls)$/i, ''));
 
     try {
-      const text = await file.text();
-      const parsed = parseCsv(text);
+      const isExcelFile = /\.(xlsx|xls)$/i.test(file.name);
+      const parsed = isExcelFile ? await parseXlsx(file) : parseCsv(await file.text());
       if (parsed.columns.length === 0 || parsed.rows.length === 0) {
-        throw new Error('CSV-filen mangler kolonner eller rader.');
+        throw new Error('Filen mangler kolonner eller rader.');
       }
       setColumns(parsed.columns);
       setRows(parsed.rows);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Kunne ikke lese CSV-filen.');
+      setError(err instanceof Error ? err.message : 'Kunne ikke lese filen.');
     }
   };
 
@@ -183,10 +227,38 @@ export const PriceListImportDialog: React.FC<PriceListImportDialogProps> = ({ op
 
     setIsImporting(true);
     setError('');
+    setDuplicateWarning(null);
+    try {
+      // Check for duplicate products before importing
+      const dupeCheck = await checkDuplicatePriceList(columns, rows);
+      if (dupeCheck.hasDuplicates) {
+        setDuplicateWarning({
+          overlappingListName: dupeCheck.overlappingListName,
+          overlapCount: dupeCheck.overlapCount,
+          newFileCount: dupeCheck.newFileCount,
+          overlapPercent: dupeCheck.overlapPercent,
+        });
+        setIsImporting(false);
+        return;
+      }
+      await importPriceListProducts(priceListName, columns, rows);
+      handleOpenChange(false);
+      await onImported();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Import feilet.');
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  const handleForceImport = async () => {
+    setDuplicateWarning(null);
+    setIsImporting(true);
+    setError('');
     try {
       await importPriceListProducts(priceListName, columns, rows);
-      await onImported();
       handleOpenChange(false);
+      await onImported();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Import feilet.');
     } finally {
@@ -196,26 +268,26 @@ export const PriceListImportDialog: React.FC<PriceListImportDialogProps> = ({ op
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden z-[700]">
+      <DialogContent className="max-w-5xl max-h-[90vh] z-[700] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileSpreadsheet className="h-5 w-5 text-primary" />
-            Legg til CSV-prisliste
+            Importer fil
           </DialogTitle>
           <DialogDescription>
-            Last inn en materialprisliste, navngi kolonnene og velg hva hver kolonne betyr før import.
+            Last inn en CSV- eller Excel-fil, navngi kolonnene og velg hva hver kolonne betyr før import.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="overflow-y-auto pr-1 space-y-5">
+        <div className="min-h-0 flex-1 overflow-y-auto pr-1 space-y-5">
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4">
             <label className="border-2 border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors">
               <Upload className="h-8 w-8 text-gray-400 mb-2" />
-              <span className="text-sm font-medium text-gray-900">Velg CSV-fil</span>
-              <span className="text-xs text-gray-500 mt-1">Semikolon, komma og tab støttes</span>
+              <span className="text-sm font-medium text-gray-900">Velg CSV- eller Excel-fil</span>
+              <span className="text-xs text-gray-500 mt-1">CSV, XLSX og XLS støttes</span>
               <input
                 type="file"
-                accept=".csv,text/csv"
+                accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
                 className="hidden"
                 onChange={(event) => handleFileChange(event.target.files?.[0])}
               />
@@ -223,7 +295,7 @@ export const PriceListImportDialog: React.FC<PriceListImportDialogProps> = ({ op
 
             <div className="space-y-3 rounded-lg border bg-gray-50 p-4">
               <div>
-                <label className="block text-xs font-medium uppercase text-gray-500 mb-1">Prislistenavn</label>
+                <label className="block text-xs font-medium uppercase text-gray-500 mb-1">Navn</label>
                 <Input
                   value={priceListName}
                   onChange={(event) => setPriceListName(event.target.value)}
@@ -248,6 +320,39 @@ export const PriceListImportDialog: React.FC<PriceListImportDialogProps> = ({ op
             <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
               <AlertCircle className="h-4 w-4 mt-0.5" />
               <span>{error}</span>
+            </div>
+          )}
+
+          {duplicateWarning && (
+            <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+              <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+              <div>
+                <p className="font-medium">Mulige duplikater oppdaget</p>
+                <p className="mt-0.5 text-amber-700">
+                  {duplicateWarning.overlapPercent}% av produktene i denne filen ({duplicateWarning.overlapCount} av{' '}
+                  {duplicateWarning.newFileCount}) finnes allerede i &ldquo;{duplicateWarning.overlappingListName}&rdquo;.
+                  Importering av duplikater kan gi feil prissetting i AI-tilbudsgeneratoren.
+                </p>
+                <div className="flex gap-2 mt-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-amber-300 text-amber-800 hover:bg-amber-100"
+                    onClick={() => setDuplicateWarning(null)}
+                    disabled={isImporting}
+                  >
+                    Avbryt
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="bg-amber-600 hover:bg-amber-700 text-white"
+                    onClick={handleForceImport}
+                    disabled={isImporting}
+                  >
+                    {isImporting ? 'Importerer…' : 'Importer likevel'}
+                  </Button>
+                </div>
+              </div>
             </div>
           )}
 
@@ -320,9 +425,13 @@ export const PriceListImportDialog: React.FC<PriceListImportDialogProps> = ({ op
           <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={isImporting}>
             Avbryt
           </Button>
-          <Button onClick={handleImport} disabled={isImporting || columns.length === 0} className="gap-2">
+          <Button
+            onClick={handleImport}
+            disabled={isImporting || columns.length === 0 || duplicateWarning !== null}
+            className="gap-2"
+          >
             <Check className="h-4 w-4" />
-            {isImporting ? 'Importerer...' : 'Importer prisliste'}
+            {isImporting ? 'Sjekker…' : 'Importer'}
           </Button>
         </DialogFooter>
       </DialogContent>

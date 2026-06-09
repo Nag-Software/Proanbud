@@ -20,6 +20,7 @@ import {
   PriceListColumnMapping,
   PriceListImportRow,
 } from '@/lib/types';
+import { resolveEfoVaregruppeName } from '@/lib/efo-varegrupper';
 
 // Helper function to ensure user is authenticated
 const getCurrentUserId = (): string => {
@@ -75,7 +76,9 @@ const mapProductData = (id: string, data: any, fallbackCategoryId: string): Prod
   beskrivelse: data.beskrivelse || '',
   sourcePriceListId: data.sourcePriceListId || '',
   sourcePriceListName: data.sourcePriceListName || '',
-  varekategori: data.varekategori || '',
+  varegruppe: data.varegruppe || data.varekategori || '',
+  varegruppeKode: data.varegruppeKode || '',
+  varekategori: data.varegruppe || data.varekategori || '',
   ean: data.ean || '',
   nobb: data.nobb || '',
   veilPris: data.veilPris || 0,
@@ -85,6 +88,82 @@ const mapProductData = (id: string, data: any, fallbackCategoryId: string): Prod
   opprettet: data.opprettet || Date.now(),
   oppdatert: data.oppdatert || Date.now(),
 });
+
+const mapCatalogSnapshot = (snapshot: DataSnapshot): {
+  categories: Category[];
+  subcategories: Subcategory[];
+  products: Product[];
+} => {
+  const categories: Category[] = [];
+  const subcategories: Subcategory[] = [];
+  const products: Product[] = [];
+
+  if (!snapshot.exists()) {
+    return { categories, subcategories, products };
+  }
+
+  snapshot.forEach((categorySnapshot) => {
+    const categoryId = categorySnapshot.key!;
+    const categoryData = categorySnapshot.val();
+
+    if (!categoryData || typeof categoryData !== 'object') return;
+
+    if (!categoryData.kategoriId) {
+      const navn = typeof categoryData.navn === 'string' ? categoryData.navn.trim() : '';
+      if (navn) {
+        categories.push({
+          id: categoryId,
+          navn,
+          beskrivelse: categoryData.beskrivelse || '',
+          opprettet: categoryData.opprettet || Date.now(),
+          oppdatert: categoryData.oppdatert || Date.now(),
+        });
+      }
+    }
+
+    categorySnapshot.forEach((itemSnapshot) => {
+      const data = itemSnapshot.val();
+      if (!data || typeof data !== 'object') return;
+
+      if (data.produktnavn) {
+        products.push(mapProductData(itemSnapshot.key!, data, categoryId));
+        return;
+      }
+
+      if (data.kategoriId) {
+        subcategories.push({
+          id: itemSnapshot.key!,
+          navn: data.navn,
+          kategoriId: data.kategoriId,
+          beskrivelse: data.beskrivelse || '',
+          opprettet: data.opprettet || Date.now(),
+          oppdatert: data.oppdatert || Date.now(),
+        });
+      }
+    });
+  });
+
+  return {
+    categories: categories.sort((a, b) => a.navn.localeCompare(b.navn)),
+    subcategories: subcategories.sort((a, b) => a.navn.localeCompare(b.navn)),
+    products: products.sort((a, b) => a.produktnavn.localeCompare(b.produktnavn)),
+  };
+};
+
+export const getCatalogData = async (): Promise<{
+  categories: Category[];
+  subcategories: Subcategory[];
+  products: Product[];
+}> => {
+  try {
+    const userId = getCurrentUserId();
+    const catalogRef = ref(db, `users/${userId}/katalog`);
+    const snapshot = await get(catalogRef);
+    return mapCatalogSnapshot(snapshot);
+  } catch (error: any) {
+    throw handleDatabaseError(error, 'henting av katalogdata');
+  }
+};
 
 const getOrCreateCategoryByName = async (userId: string, categoryName: string): Promise<string> => {
   const resolvedName = categoryName.trim() || 'Materialer';
@@ -144,6 +223,28 @@ const valueForRole = (row: PriceListImportRow, columns: PriceListColumnMapping[]
   if (!column) return '';
   return row.values[column.index]?.trim() || '';
 };
+
+const valueForVaregruppe = (row: PriceListImportRow, columns: PriceListColumnMapping[]) => {
+  return valueForRole(row, columns, 'varegruppeNavn') || valueForRole(row, columns, 'varegruppe') || valueForRole(row, columns, 'varekategori');
+};
+
+const valueForVaregruppeKode = (row: PriceListImportRow, columns: PriceListColumnMapping[]) => {
+  const explicitCode = valueForRole(row, columns, 'varegruppeKode');
+  if (explicitCode) return explicitCode;
+  const groupValue = valueForRole(row, columns, 'varegruppe') || valueForRole(row, columns, 'varekategori');
+  return /^\d{4,6}$/.test(groupValue.trim()) ? groupValue.trim() : '';
+};
+
+const IMPORT_UPDATE_CHUNK_SIZE = 400;
+
+const commitImportUpdates = async (updates: Record<string, unknown>) => {
+  const entries = Object.entries(updates);
+  for (let index = 0; index < entries.length; index += IMPORT_UPDATE_CHUNK_SIZE) {
+    await update(ref(db), Object.fromEntries(entries.slice(index, index + IMPORT_UPDATE_CHUNK_SIZE)));
+  }
+};
+
+const normalizeLookupKey = (value: string) => value.trim().toLowerCase();
 
 // ============================================================================
 // CATEGORY OPERATIONS
@@ -757,6 +858,79 @@ export const getPriceLists = async (): Promise<PriceList[]> => {
   }
 };
 
+export const deletePriceList = async (priceListId: string): Promise<{ deletedCount: number }> => {
+  try {
+    const userId = getCurrentUserId();
+    const catalogRef = ref(db, `users/${userId}/katalog`);
+    const catalogSnapshot = await get(catalogRef);
+    const updates: Record<string, unknown> = {
+      [`users/${userId}/prislister/${priceListId}`]: null,
+    };
+    let deletedCount = 0;
+
+    if (catalogSnapshot.exists()) {
+      catalogSnapshot.forEach((categorySnapshot) => {
+        const categoryId = categorySnapshot.key || '';
+        const categoryData = categorySnapshot.val();
+        if (!categoryId || !categoryData || typeof categoryData !== 'object') return;
+
+        const subcategoryIds = new Set<string>();
+        const remainingProductSubcategories = new Set<string>();
+        let hasRemainingProducts = false;
+        let hasProductsToDelete = false;
+
+        categorySnapshot.forEach((itemSnapshot) => {
+          const itemData = itemSnapshot.val();
+          const itemId = itemSnapshot.key || '';
+          if (!itemId || !itemData || typeof itemData !== 'object') return;
+
+          if (itemData.kategoriId && !itemData.produktnavn) {
+            subcategoryIds.add(itemId);
+            return;
+          }
+
+          if (!itemData.produktnavn) return;
+
+          if (itemData.sourcePriceListId === priceListId) {
+            updates[`users/${userId}/katalog/${categoryId}/${itemId}`] = null;
+            hasProductsToDelete = true;
+            deletedCount += 1;
+          } else {
+            hasRemainingProducts = true;
+            if (itemData.underkategoriId) {
+              remainingProductSubcategories.add(itemData.underkategoriId);
+            }
+          }
+        });
+
+        if (hasProductsToDelete) {
+          const isImportedCategory = String(categoryData.beskrivelse || '').toLowerCase().includes('importert fra prisliste');
+          if (!hasRemainingProducts && isImportedCategory) {
+            const categoryPrefix = `users/${userId}/katalog/${categoryId}/`;
+            Object.keys(updates).forEach((path) => {
+              if (path.startsWith(categoryPrefix)) {
+                delete updates[path];
+              }
+            });
+            updates[`users/${userId}/katalog/${categoryId}`] = null;
+          } else {
+            subcategoryIds.forEach((subcategoryId) => {
+              if (!remainingProductSubcategories.has(subcategoryId)) {
+                updates[`users/${userId}/katalog/${categoryId}/${subcategoryId}`] = null;
+              }
+            });
+          }
+        }
+      });
+    }
+
+    await commitImportUpdates(updates);
+    return { deletedCount };
+  } catch (error: any) {
+    throw handleDatabaseError(error, 'sletting av prisliste');
+  }
+};
+
 export const importPriceListProducts = async (
   priceListName: string,
   columns: PriceListColumnMapping[],
@@ -769,24 +943,64 @@ export const importPriceListProducts = async (
     const priceListId = newPriceListRef.key!;
     const resolvedPriceListName = priceListName.trim() || `Prisliste ${new Date().toLocaleDateString('nb-NO')}`;
     let importedCount = 0;
+    const importUpdates: Record<string, unknown> = {};
 
     const rowsWithProduct = rows.filter(row => valueForRole(row, columns, 'produkt'));
     const categoryCache = new Map<string, string>();
     const subcategoryCache = new Map<string, string>();
+    const catalogRef = ref(db, `users/${userId}/katalog`);
+    const catalogSnapshot = await get(catalogRef);
+
+    if (catalogSnapshot.exists()) {
+      catalogSnapshot.forEach((categorySnapshot) => {
+        const categoryData = categorySnapshot.val();
+        const categoryId = categorySnapshot.key || '';
+        if (!categoryId || !categoryData || typeof categoryData !== 'object') return;
+
+        if (!categoryData.kategoriId && typeof categoryData.navn === 'string') {
+          categoryCache.set(normalizeLookupKey(categoryData.navn), categoryId);
+        }
+
+        categorySnapshot.forEach((itemSnapshot) => {
+          const itemData = itemSnapshot.val();
+          if (itemData?.kategoriId && !itemData?.produktnavn && typeof itemData?.navn === 'string') {
+            subcategoryCache.set(`${categoryId}:${normalizeLookupKey(itemData.navn)}`, itemSnapshot.key || '');
+          }
+        });
+      });
+    }
 
     for (const row of rowsWithProduct) {
-      const varekategori = valueForRole(row, columns, 'varekategori') || 'Materialer';
-      let categoryId = categoryCache.get(varekategori);
+      const varegruppeKode = valueForVaregruppeKode(row, columns);
+      const varegruppeInput = valueForVaregruppe(row, columns);
+      const varegruppe = resolveEfoVaregruppeName(varegruppeInput) || varegruppeKode || 'Materialer';
+      const categoryCacheKey = normalizeLookupKey(varegruppe);
+      let categoryId = categoryCache.get(categoryCacheKey);
       if (!categoryId) {
-        categoryId = await getOrCreateCategoryByName(userId, varekategori);
-        categoryCache.set(varekategori, categoryId);
+        const categoryRef = push(catalogRef);
+        categoryId = categoryRef.key!;
+        categoryCache.set(categoryCacheKey, categoryId);
+        const timestamp = Date.now();
+        importUpdates[`users/${userId}/katalog/${categoryId}/navn`] = varegruppe.trim() || 'Materialer';
+        importUpdates[`users/${userId}/katalog/${categoryId}/beskrivelse`] = 'Importert fra prisliste';
+        importUpdates[`users/${userId}/katalog/${categoryId}/opprettet`] = timestamp;
+        importUpdates[`users/${userId}/katalog/${categoryId}/oppdatert`] = timestamp;
       }
 
-      const subcategoryCacheKey = `${categoryId}:${resolvedPriceListName}`;
+      const subcategoryCacheKey = `${categoryId}:${normalizeLookupKey(resolvedPriceListName)}`;
       let subcategoryId = subcategoryCache.get(subcategoryCacheKey);
       if (!subcategoryId) {
-        subcategoryId = await getOrCreateSubcategoryByName(userId, categoryId, resolvedPriceListName);
+        const subcategoryRef = push(ref(db, `users/${userId}/katalog/${categoryId}`));
+        subcategoryId = subcategoryRef.key!;
         subcategoryCache.set(subcategoryCacheKey, subcategoryId);
+        const timestamp = Date.now();
+        importUpdates[`users/${userId}/katalog/${categoryId}/${subcategoryId}`] = {
+          navn: resolvedPriceListName,
+          kategoriId: categoryId,
+          beskrivelse: 'Produkter importert fra prisliste',
+          opprettet: timestamp,
+          oppdatert: timestamp,
+        };
       }
 
       const produktnavn = valueForRole(row, columns, 'produkt');
@@ -794,13 +1008,25 @@ export const importPriceListProducts = async (
       const minPris = toNumber(valueForRole(row, columns, 'minPris'));
       const rabatt = toNumber(valueForRole(row, columns, 'rabatt'));
       const enhetspris = minPris || (veilPris && rabatt ? Math.round(veilPris * (1 - rabatt / 100)) : veilPris);
-      const rawColumns = columns.reduce<Record<string, string>>((acc, column) => {
-        acc[column.displayName || column.originalName || `Kolonne ${column.index + 1}`] = row.values[column.index] || '';
+      const rawColumns = columns.reduce<Record<string, {
+        originalName: string;
+        displayName: string;
+        role: PriceListColumnMapping['role'];
+        value: string;
+      }>>((acc, column) => {
+        const fallbackName = `Kolonne ${column.index + 1}`;
+        acc[`column_${column.index}`] = {
+          originalName: column.originalName || fallbackName,
+          displayName: column.displayName || column.originalName || fallbackName,
+          role: column.role,
+          value: row.values[column.index] || '',
+        };
         return acc;
       }, {});
 
+      const timestamp = Date.now();
       const productRef = push(ref(db, `users/${userId}/katalog/${categoryId}`));
-      await set(productRef, {
+      importUpdates[`users/${userId}/katalog/${categoryId}/${productRef.key}`] = {
         produktnavn,
         produsent: valueForRole(row, columns, 'produsent'),
         enhet: valueForRole(row, columns, 'enhet') || 'stk',
@@ -811,29 +1037,136 @@ export const importPriceListProducts = async (
         beskrivelse: valueForRole(row, columns, 'beskrivelse'),
         sourcePriceListId: priceListId,
         sourcePriceListName: resolvedPriceListName,
-        varekategori,
+        varegruppe,
+        varegruppeKode,
+        varekategori: varegruppe,
         ean: valueForRole(row, columns, 'ean'),
         nobb: valueForRole(row, columns, 'nobb'),
         veilPris,
         rabatt,
         minPris,
         rawColumns,
-        opprettet: Date.now(),
-        oppdatert: Date.now(),
-      });
+        opprettet: timestamp,
+        oppdatert: timestamp,
+      };
       importedCount += 1;
     }
 
-    await set(newPriceListRef, {
+    importUpdates[`users/${userId}/prislister/${priceListId}`] = {
       navn: resolvedPriceListName,
       rowCount: importedCount,
       columns,
       opprettet: Date.now(),
       oppdatert: Date.now(),
-    });
+    };
+
+    await commitImportUpdates(importUpdates);
 
     return { priceListId, importedCount };
   } catch (error: any) {
     throw handleDatabaseError(error, 'import av prisliste');
+  }
+};
+
+export interface DuplicateCheckResult {
+  hasDuplicates: boolean;
+  overlappingListName: string;
+  overlapCount: number;
+  newFileCount: number;
+  overlapPercent: number;
+}
+
+/**
+ * Checks whether the products in a new price file significantly overlap with
+ * any existing price list. Used to prevent duplicate data in the AI quote engine.
+ *
+ * A file is considered a duplicate if ≥ 50 % of its identifiable products
+ * already exist in a single existing price list (matched by NOBB, EAN or
+ * normalized product name).
+ */
+export const checkDuplicatePriceList = async (
+  columns: PriceListColumnMapping[],
+  rows: PriceListImportRow[]
+): Promise<DuplicateCheckResult> => {
+  const noResult: DuplicateCheckResult = {
+    hasDuplicates: false,
+    overlappingListName: '',
+    overlapCount: 0,
+    newFileCount: 0,
+    overlapPercent: 0,
+  };
+
+  const produktColumn = columns.find(c => c.role === 'produkt');
+  const nobbColumn = columns.find(c => c.role === 'nobb');
+  const eanColumn = columns.find(c => c.role === 'ean');
+
+  // Build a set of identifiers for the new file
+  const nobbSet = new Set<string>();
+  const eanSet = new Set<string>();
+  const nameSet = new Set<string>();
+
+  let newFileCount = 0;
+
+  rows.forEach(row => {
+    const navn = produktColumn ? row.values[produktColumn.index]?.trim() : '';
+    if (!navn) return;
+    newFileCount += 1;
+
+    const nobb = nobbColumn ? row.values[nobbColumn.index]?.trim() : '';
+    const ean = eanColumn ? row.values[eanColumn.index]?.trim() : '';
+    if (nobb) nobbSet.add(nobb);
+    if (ean) eanSet.add(ean);
+    nameSet.add(navn.toLowerCase());
+  });
+
+  if (newFileCount === 0) return noResult;
+
+  try {
+    const userId = getCurrentUserId();
+    const catalogRef = ref(db, `users/${userId}/katalog`);
+    const snapshot = await get(catalogRef);
+
+    if (!snapshot.exists()) return { ...noResult, newFileCount };
+
+    // Count overlapping products per existing price list
+    const overlap = new Map<string, { count: number; name: string }>();
+
+    snapshot.forEach(catSnapshot => {
+      catSnapshot.forEach(itemSnapshot => {
+        const data = itemSnapshot.val();
+        if (!data?.produktnavn || !data.sourcePriceListId) return;
+
+        let matched = false;
+        if (!matched && data.nobb && nobbSet.has(String(data.nobb).trim())) matched = true;
+        if (!matched && data.ean && eanSet.has(String(data.ean).trim())) matched = true;
+        if (!matched && nameSet.has(String(data.produktnavn).trim().toLowerCase())) matched = true;
+
+        if (matched) {
+          const listId: string = data.sourcePriceListId;
+          const existing = overlap.get(listId) ?? { count: 0, name: data.sourcePriceListName || 'Ukjent prisliste' };
+          overlap.set(listId, { count: existing.count + 1, name: existing.name });
+        }
+      });
+    });
+
+    // Find the price list with the highest overlap
+    let best = { count: 0, name: '' };
+    overlap.forEach(({ count, name }) => {
+      if (count > best.count) best = { count, name };
+    });
+
+    const overlapPercent = Math.round((best.count / newFileCount) * 100);
+    const hasDuplicates = overlapPercent >= 50;
+
+    return {
+      hasDuplicates,
+      overlappingListName: best.name,
+      overlapCount: best.count,
+      newFileCount,
+      overlapPercent,
+    };
+  } catch {
+    // If the check itself fails, allow the import (fail open)
+    return { ...noResult, newFileCount };
   }
 };

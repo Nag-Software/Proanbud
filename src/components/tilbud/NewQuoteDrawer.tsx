@@ -41,6 +41,7 @@ import {
 import { createTilbud, updateTilbud, getTilbudById, TilbudFormData, getUniqueCategoriesFromQuotes } from '@/lib/services/tilbudService';
 import { getCustomers } from '@/lib/services/customerService';
 import { getBusinessContextForAI, getBusinessSettings, uploadAttachment } from '@/lib/services/businessService';
+import { auth } from '@/lib/firebase';
 import { Kunde, PriceComponent, AIPriceSuggestion, BusinessSettings, Tilbud } from '@/lib/types';
 import { useBreakpoint } from '@/hooks/useResponsive';
 import { generateQuoteEmailHtml } from '@/lib/email/generateQuoteEmailHtml';
@@ -201,7 +202,6 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
   useEffect(() => {
     if (open) {
       loadCustomers();
-      productCatalogRef.current?.refresh();
     }
   }, [open]);
 
@@ -533,66 +533,6 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
     void attemptClose();
   };
 
-  const generateCatalogPayload = async () => {
-    const snapshot = productCatalogRef.current?.getCatalogData() || await productCatalogRef.current?.refresh();
-    if (!snapshot) return null;
-
-    const { categories, subcategories, products } = snapshot;
-    const newCatalog: Record<string, any> = {
-      priceListProducts: [],
-    };
-    const subcategoryLookup = new Map<string, { categoryId: string; entry: any }>();
-
-    categories.forEach(cat => {
-      newCatalog[cat.id] = {
-        'category-name': cat.navn,
-        'category-description': cat.beskrivelse || '',
-        subcategories: [],
-      };
-    });
-
-    subcategories.forEach(subcat => {
-      const category = newCatalog[subcat.kategoriId];
-      if (!category) return;
-      const entry = {
-        'subcategory-name': subcat.navn,
-        'subcategory-description': subcat.beskrivelse || '',
-        products: [] as any[],
-      };
-      category.subcategories.push(entry);
-      subcategoryLookup.set(subcat.id, { categoryId: subcat.kategoriId, entry });
-    });
-
-    products.forEach(product => {
-      const productPayload = {
-        produktnavn: product.produktnavn,
-        produsent: product.produsent,
-        enhet: product.enhet,
-        enhetspris: product.enhetspris,
-        påslag: product.påslag,
-        beskrivelse: product.beskrivelse || '',
-        prisliste: product.sourcePriceListName || '',
-        prislisteId: product.sourcePriceListId || '',
-        varekategori: product.varekategori || '',
-        ean: product.ean || '',
-        nobb: product.nobb || '',
-        veilPris: product.veilPris || 0,
-        rabatt: product.rabatt || 0,
-        minPris: product.minPris || 0,
-      };
-
-      if (product.sourcePriceListId || product.sourcePriceListName) {
-        newCatalog.priceListProducts.push(productPayload);
-      }
-
-      const subRef = subcategoryLookup.get(product.underkategoriId);
-      if (!subRef) return;
-      subRef.entry.products.push(productPayload);
-    });
-
-    return newCatalog;
-  };
-
   const runAiAnalysis = async () => {
     clarificationBypassRef.current = false;
     setCurrentStep(1);
@@ -601,29 +541,25 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
 
     try {
       const businessInfo = await getBusinessContextForAI();
-      const catalogPayload = await generateCatalogPayload();
       const requestBody: Record<string, unknown> = {
         prompt: buildAnalysisPrompt(),
         businessInfo,
       };
-      if (catalogPayload) {
-        requestBody.catalog = catalogPayload;
-      }
+
+      const idToken = await auth.currentUser?.getIdToken();
 
       const response = await fetch('/api/ai-pricing', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
+        },
         body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) throw new Error('AI-tjeneste feilet: ' + response.statusText);
 
       const responseText = await response.json();
-      console.log("RAW API RESPONSE:", responseText);
-      console.log("RESPONSE components:", responseText.components);
-      if (responseText.components && responseText.components.length > 0) {
-        console.log("First component:", responseText.components[0]);
-      }
 
       const aiSuggestion: AIPriceSuggestion = responseText;
 
@@ -655,8 +591,6 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
           componentTotal: Number(comp.componentTotal ?? comp.total ?? comp.component_total) || 0,
         };
 
-        console.log('Processing component:', numericComp);
-
         const componentWithCorrectMapping = {
           ...numericComp,
           quantity: numericComp.amount,
@@ -668,10 +602,7 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
           catalogSource: comp.catalogSource || comp.catalog_source || "",
           isEditable: true,
         };
-
-        console.log('Component with mapping:', componentWithCorrectMapping);
         const calculatedAmount = calculateAmountWithMarkup(componentWithCorrectMapping);
-        console.log('Calculated amount:', calculatedAmount);
 
         return {
           ...componentWithCorrectMapping,
@@ -679,7 +610,6 @@ export const NewQuoteDrawer: React.FC<NewQuoteDrawerProps> = ({ open, onOpenChan
         };
       });
 
-      console.log("ADJUSTED COMPONENTS:", adjustedComponents);
       setQuoteData(prev => ({
         ...prev,
         aiSuggestion: convertedSuggestion,

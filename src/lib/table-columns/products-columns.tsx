@@ -2,6 +2,21 @@ import { ColumnDef } from "@tanstack/react-table"
 import { Button } from "@/components/ui/button"
 import { Trash2 } from "lucide-react"
 import { Product } from "@/lib/types"
+import { isVaregruppeCode, resolveEfoVaregruppeName } from "@/lib/efo-varegrupper"
+
+const getReadableVaregruppe = (product: Product) => {
+  const rawValue = product.varegruppe || product.varekategori || "";
+  const resolved = resolveEfoVaregruppeName(rawValue);
+  if (resolved) return resolved;
+
+  const rawColumns = Object.values(product.rawColumns || {});
+  const nameColumn = rawColumns.find(column => {
+    const label = `${column.displayName} ${column.originalName}`.toLowerCase();
+    return !isVaregruppeCode(column.value) && label.includes("varegruppe") && (label.includes("navn") || label.includes("tekst"));
+  });
+
+  return nameColumn?.value || rawValue;
+};
 
 export const getProductColumns = (
   onProductClick: (product: Product) => void,
@@ -23,25 +38,11 @@ export const getProductColumns = (
     ),
   },
   {
-    accessorKey: "sourcePriceListName",
-    header: "Prisliste",
+    accessorKey: "varegruppe",
+    header: "Varegruppe",
     cell: ({ row }) => {
-      const value = row.getValue("sourcePriceListName") as string | undefined
-      return value ? (
-        <span className="inline-flex rounded-full bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700 border border-emerald-100">
-          {value}
-        </span>
-      ) : (
-        <span className="text-gray-400 text-sm">Manuell</span>
-      )
+      return <div className="text-gray-600">{getReadableVaregruppe(row.original)}</div>;
     },
-  },
-  {
-    accessorKey: "varekategori",
-    header: "Varekategori",
-    cell: ({ row }) => (
-      <div className="text-gray-600">{row.getValue("varekategori") || ""}</div>
-    ),
   },
   {
     accessorKey: "nobb",

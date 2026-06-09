@@ -20,6 +20,20 @@ interface ClarificationResponse {
   reason?: string;
 }
 
+function extractJsonText(output: unknown): string {
+  if (typeof output !== 'string') {
+    return typeof output === 'object' && output !== null ? JSON.stringify(output) : '';
+  }
+
+  const trimmed = output.trim();
+  const fencedMatch = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+  if (fencedMatch?.[1]) {
+    return fencedMatch[1].trim();
+  }
+
+  return trimmed;
+}
+
 const clarificationInstructions = (runContext: RunContext<ClarificationContext>, _agent: Agent<ClarificationContext>) => {
   const { projectDescription, history, maxQuestions } = runContext.context;
   const historyText = history.length
@@ -76,12 +90,7 @@ async function getAIConfig() {
 }
 
 function parseClarificationOutput(output: string): ClarificationResponse {
-  const cleaned = output
-    .replace(/^```json\s*/i, '')
-    .replace(/^```\s*/i, '')
-    .replace(/```$/i, '')
-    .trim();
-  const parsed = JSON.parse(cleaned);
+  const parsed = JSON.parse(extractJsonText(output));
 
   return {
     question: typeof parsed.question === 'string' ? parsed.question : '',
@@ -140,7 +149,7 @@ async function runClarificationWorkflow(input: ClarificationContext): Promise<Cl
       throw new Error('AI returnerte ikke et avklaringsspørsmål');
     }
 
-    return parseClarificationOutput(result.finalOutput);
+    return parseClarificationOutput(String(result.finalOutput));
   });
 }
 
